@@ -266,12 +266,12 @@ class Monitoring (object):
 			self.increaseTimer = False
 			self.t = Timer(1, self._timer_MonitorPaths, recurring = True)
 			
-			self.f = open("output.%s.csv"%postfix, "w")
+			self.f = open("ext/results/output.%s.csv"%postfix, "w")
 			#self.f.write("Experiment,Switch,SRC_IP,DST_IP,SRC_PORT,DST_PORT,Packet_Count,Byte_Count,Duration_Sec,Duration_Nsec,Delta_Packet_Count,Delta_Byte_Count,Delta_Duration_Sec,Delta_Duration_Nsec\n")
 			self.f.write("Experiment, dpid, nw_src, nw_dst, dl_src, dl_dst, nw_proto, out_port, pkt_count, byte_count, dur_sec, dur_nsec, dlta_pkt_count, dlta_byte_count, dlta_dur_sec, dlta_dur_nsec, cur_thruput\n\n")
 			self.f.flush()
 			
-			self.f2 = open("delay.%s.csv"%postfix, "w")
+			self.f2 = open("ext/results/delay.%s.csv"%postfix, "w")
 			self.f2.write("MeasurementType,Src/Initiator,Dst/Switch,Delay\n")
 			self.f2.flush()
 			

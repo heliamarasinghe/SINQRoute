@@ -803,7 +803,7 @@ def saveMeasurements(mesurPoint):
 
 	numFlowRules = getNumFlowRules()
 
-	dataFile = open("measure.csv", "a")
+	dataFile = open("ext/results/measurements.csv", "a")
 	dataFile.write("\nreroute\t%r\n"%reroute)
 	dataFile.write("bwUnderAlloc\t%r\n"%bwUnderAlloc)
 	dataFile.write("mesurPoint\t%s\n"%mesurPoint)
