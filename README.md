@@ -1,6 +1,6 @@
 # SINQRoute
 
-SINQRouteMan:
+##SINQRouteMan:
   C++ source code that has following components;
   1.  SdnCtrlClient to communicate with SINQRouteCtrl API
   2.  Topology generation file to generate logical copy of substrate topology graph at resource manager level
