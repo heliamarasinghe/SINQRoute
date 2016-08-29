@@ -445,7 +445,7 @@ class Forwarding(EventMixin):
 	
 
 	def installSinqroutePath(self, flowPath):
-		install_path(flowPath.path, flowPath.match, flowPath.qos)
+		install_path(flowPath.path, flowPath.match, flowPath.alocQos)
 		monitoring = False
 		if monitoring:
 			self.raiseEvent(NewFlow(flowPath.path, flowPath.match, adj))	# Trigger monitoring module measure throughput, packet-loss and path latency by installing monitoring flows

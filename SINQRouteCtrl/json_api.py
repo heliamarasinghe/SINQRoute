@@ -23,28 +23,34 @@ import fcntl, os
 import errno
 import time
 import struct
+import itertools
+from numpy.ma.timer_comparison import cur
 #import threading
 
 
 
 log = core.getLogger()
+API_DELAY = 1							# Response time of the controller API (socket listener sleep)
 
 # State Variables. Not to be changed Manually-------------------------------------------------------------------------------------------------------------------------------
 reroute = False							# Do NOT Change! To be changed from ResManager(over API) to enable rerouting. When rerouting is on, controller shutdown with "Ctrl+C" gives problems
 topoChange = False						# Do NOT Change! This will be sent to ResManager(over API) to inform that a change has been occured in the substrate topology
 ctrlStable = True						# Do NOT Change! True = STABLE, False = TRANSIENT. Unless the controller is in STABLE state, ResManager will discard information obtained over API
 #---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
+brknUniLinkSet = set()					# keeps broken unidirectional links temporarily until opposite link event is fired to treat once
 maxEpPaths = 7							# Maximum number of alternative shortest paths that will be considered for each broken path (This number has no effect if it goes over max available paths) 
 subLinkBwCap = 20						# Substrate link bandwidth capacity
 qosToBw = {1:1, 2:2, 3:3, 4:4, 5:5}				# QoS class to bandwidth map. {class : bandwith-req}. QoS 1 is considered minimum and hardcoded in rerouteFlows(flowsToReroute, brknLink)
 bwUnderAlloc = True						# If True, when there aren't any paths with sufficient bandwidth, highest available bandwidth path will be selected
 minLatency = True						# If True, reroute will select on minimum latency path. Else minimum HOP count will be used
 
-bkupPathAlloc = True
+
+bkupPathReroute = True
+shotPathReroute = False
 maxBkupCalcs = 5
 bkupsPerFlowPath = defaultdict(lambda:defaultdict(lambda:None))	# keeps flowPathId to backup path mapping		usage: bkupsPerFlowPath[flowPathId][linkObj] = pathObj
 bkupsOnLink = defaultdict(lambda:defaultdict(lambda:None))	# keeps links to backup flowPaths mapping. 		usage: bkupsOnLink[linkObj][bkupPathId] = pathObj
+bkupsToRecalc = {}
 #srlgPerFlow = defaultdict(set)					# flowPathId to Shared Risk Link Group map
 
 flowsOnLnk = defaultdict(lambda:defaultdict(lambda:None))	# keeps links to flowPaths mapping. 			usage: flowsOnLink[linkObj][flowPathId] = flowPathObj
@@ -265,7 +271,7 @@ def addRemoveFlows(resManPaths, addPaths):
 
 				# Installing Foward flowPath
 				fwPath = Path(srcSwDpid, dstSwDpid, fwPrevSwDict, fwFirstPort)
-				fwFlowPath = FlowPath(fwMatch, fwPath, pathQos)
+				fwFlowPath = FlowPath(fwMatch, fwPath, alocQos=pathQos, reqQos=pathQos)
 				core.opennetmon_forwarding.installSinqroutePath(fwFlowPath)
 				allocFlowIdToPath[flowPathId].add(fwFlowPath)
 				#changedPaths[flowPathId] = fwPath
@@ -284,7 +290,7 @@ def addRemoveFlows(resManPaths, addPaths):
 
 				# Installing Reverse flowPath
 				rePath = Path(dstSwDpid, srcSwDpid, rePrevSwDict, reFirstPort)
-				reFlowPath = FlowPath(reMatch, rePath, pathQos)
+				reFlowPath = FlowPath(reMatch, rePath, alocQos=pathQos, reqQos=pathQos)
 				core.opennetmon_forwarding.installSinqroutePath(reFlowPath)
 				allocFlowIdToPath[flowPathId].add(reFlowPath)
 				for currSwDpid in rePrevSwDict.keys():
@@ -307,7 +313,7 @@ def addRemoveFlows(resManPaths, addPaths):
 			else:	
 				# Removing Foward flowPath
 				fwPath = Path(srcSwDpid, dstSwDpid, fwPrevSwDict, fwFirstPort)
-				fwFlowPath = FlowPath(fwMatch, fwPath, pathQos)
+				fwFlowPath = FlowPath(fwMatch, fwPath, alocQos=pathQos, reqQos=pathQos)
 				core.opennetmon_forwarding.deleteSinqroutePath(fwFlowPath)
 				allocFlowIdToPath[flowPathId].remove(fwFlowPath)
 
@@ -322,7 +328,7 @@ def addRemoveFlows(resManPaths, addPaths):
 
 				# Removing Reverse flowPath
 				rePath = Path(dstSwDpid, srcSwDpid, rePrevSwDict, reFirstPort)
-				reFlowPath = FlowPath(reMatch, rePath, pathQos)
+				reFlowPath = FlowPath(reMatch, rePath, alocQos=pathQos, reqQos=pathQos)
 				core.opennetmon_forwarding.deleteSinqroutePath(reFlowPath)
 				allocFlowIdToPath[flowPathId].remove(reFlowPath)
 				del allocFlowIdToPath[flowPathId]	# Delete flowPathId from allocFlowIdToPath[] once both paths removed
@@ -359,7 +365,7 @@ def addRemoveBkups(addedPathDict, rmvdPathDict):
 	
 	
 	if addedPathDict is not None:
-		graph = createTopologyGraph()
+		
 		for vnpId in addedPathDict.keys():
 			for pathNum in addedPathDict[vnpId].keys():
 
@@ -368,17 +374,34 @@ def addRemoveBkups(addedPathDict, rmvdPathDict):
 				# Populating addedLinkSet, which is intersected with shortest path link set to find path with minimum number of shared links
 				addedPath = addedPathDict[vnpId][pathNum]
 				adedLinkSet = set()
+				adedPrvSwDict = {}
 				for index in range(len(addedPath.nodeAry)-1, 0, -1):
 					currSwDpid = str_to_dpid(idToStrDpid[addedPath.nodeAry[index]])
 					prevSwDpid = str_to_dpid(idToStrDpid[addedPath.nodeAry[index-1]])
+					adedPrvSwDict[prevSwDpid] = currSwDpid
+					
 					linkObj = Link(prevSwDpid, adj[prevSwDpid][currSwDpid], currSwDpid)
+					
 					adedLinkSet.add(linkObj)
+					
+					
+				
 				
 				# Add source and destination to network graph and find epPaths
 				srcDc = addedPath.nodeAry[0]
 				dstDc  = addedPath.nodeAry[len(addedPath.nodeAry)-1]
+				srcSwDpid = str_to_dpid(idToStrDpid[addedPath.nodeAry[0]])
+				secSwDpid = str_to_dpid(idToStrDpid[addedPath.nodeAry[1]])
+				dstSwDpid = str_to_dpid(idToStrDpid[addedPath.nodeAry[len(addedPath.nodeAry)-1]])
+				adedPathObj = Path(srcSwDpid, dstSwDpid, adedPrvSwDict, adj[srcSwDpid][secSwDpid])
+				
+				calcBidirecBkups(adedPathObj)
+				
 				srcSwDpidStr = idToStrDpid[srcDc]
 				dstSwDpidStr = idToStrDpid[dstDc]
+				
+				
+				
 				graph.add_edge('s', srcSwDpidStr, weight=0)
 				graph.add_edge(dstSwDpidStr, 't', weight=0)
 				e=EppsteinShortestPathAlgorithm(graph)
@@ -387,6 +410,7 @@ def addRemoveBkups(addedPathDict, rmvdPathDict):
 				# For each epPath find the number of common links with allocated path.
 				numBkup=0
 				bkupPQ = PriorityQueue(maxQ=False)
+				print "\tCalculating Backup paths from  %s\t%s"%(srcSwDpidStr, dstSwDpidStr)
 				for cost, epPath in e.get_successive_shortest_paths():
 					numBkup+=1
 					if numBkup==maxBkupCalcs:
@@ -398,21 +422,31 @@ def addRemoveBkups(addedPathDict, rmvdPathDict):
 							epLinkSet.add(epLink)
 					
 					numShrdLinks = len(epLinkSet.intersection(adedLinkSet))		# shared links in allocated and backup paths will be minimized
-					bkupPQ.push(numComnLinks, epPath)
+					srlgPcnt = (numShrdLinks * 100)/float(len(adedLinkSet))
+					#print "\t",srlgPcnt,"\t",epPath
+					bkupPQ.push(srlgPcnt, epPath)
 					
-				# Get the Eppstein shortest path with minimum number of common links
-				minShrdLinks, minShrdPath = bkupPQ.pop()
+				graph.remove_edge('s', srcSwDpidStr)
+				graph.remove_edge(dstSwDpidStr, 't')
+				
+				# Get the Eppstein shortest path with minimum intersection percentage with shared risk links
+				minSrlgPcnt, minSrlgPath = bkupPQ.pop()
 				srcSwDpid = str_to_dpid(srcSwDpidStr)
 				dstSwDpid = str_to_dpid(dstSwDpidStr)
-				fwFirstPort = adj[str_to_dpid(minShrdPath[0])][str_to_dpid(minShrdPath[1])]
-				reFirstPort = adj[str_to_dpid(minShrdPath[-2])][str_to_dpid(minShrdPath[-1])]
+				print "\tSelected Path %.2f  "%minSrlgPcnt, minSrlgPath
+				fwFstSw, fwSecSw = minSrlgPath[1]
+				reFstSw, reSecSw = minSrlgPath[-2]
+				#print "\tfwFstSw = %s \t fwSecSw = %s"%(fwFstSw,fwSecSw)
+				#print "\treFstSw = %s \t reSecSw = %s"%(reFstSw,reSecSw)			
+				fwFirstPort = adj[str_to_dpid(fwFstSw)][str_to_dpid(fwSecSw)]
+				reFirstPort = adj[str_to_dpid(reFstSw)][str_to_dpid(reSecSw)]
 
 				fwPrevSwDict = {}
 				rePrevSwDict = {}
 				fwPrevSwDict[srcSwDpid] = None
 				rePrevSwDict[dstSwDpid] = None
 
-				for pre, cur in minShrdPath:						
+				for pre, cur in minSrlgPath:						
 					if pre is not 's' and cur is not 't':
 						fwPrevSwDict[str_to_dpid(cur)] = str_to_dpid(pre)
 						rePrevSwDict[str_to_dpid(pre)] = str_to_dpid(cur)
@@ -441,6 +475,79 @@ def addRemoveBkups(addedPathDict, rmvdPathDict):
 	# find intersection set S for allocated path and shortest path
 	# create a heapq and put epPaths with len(S)
 	# get min intersection path and put it to bkupPaths and bkupsOnLink dictionaries
+	
+	
+def calcBidirecBkups(pathObj):
+	
+	srcSwDpidStr = dpid_to_str(pathObj.src)
+	dstSwDpidStr = dpid_to_str(pathObj.dst)
+	
+	graph = createTopologyGraph()
+	graph.add_edge('s', srcSwDpidStr, weight=0)
+	graph.add_edge(dstSwDpidStr, 't', weight=0)
+	e=EppsteinShortestPathAlgorithm(graph)
+	e._pre_process()
+
+	# For each epPath find the number of common links with allocated path.
+	numBkup=0
+	bkupPQ = PriorityQueue(maxQ=False)
+	print "\tCalculating Backup paths from  %s\t%s"%(srcSwDpidStr, dstSwDpidStr)
+	for cost, epPath in e.get_successive_shortest_paths():
+		numBkup+=1
+		if numBkup==maxBkupCalcs:
+			break
+		epLinkSet = set()
+		for pre, cur in epPath:						
+			if pre is not 's' and cur is not 't':
+				epLink = Link(str_to_dpid(pre), adj[str_to_dpid(pre)][str_to_dpid(cur)], str_to_dpid(cur))
+				epLinkSet.add(epLink)
+		
+		numShrdLinks = len(epLinkSet.intersection(adedLinkSet))		# shared links in allocated and backup paths will be minimized
+		srlgPcnt = (numShrdLinks * 100)/float(len(adedLinkSet))
+		#print "\t",srlgPcnt,"\t",epPath
+		bkupPQ.push(srlgPcnt, epPath)
+	
+	# Get the Eppstein shortest path with minimum intersection percentage with shared risk links
+	minSrlgPcnt, minSrlgPath = bkupPQ.pop()
+	print "\tSelected Path %.2f  "%minSrlgPcnt, minSrlgPath
+	fwFstSw, fwSecSw = minSrlgPath[1]
+	reFstSw, reSecSw = minSrlgPath[-2]
+	#print "\tfwFstSw = %s \t fwSecSw = %s"%(fwFstSw,fwSecSw)
+	#print "\treFstSw = %s \t reSecSw = %s"%(reFstSw,reSecSw)			
+	fwFirstPort = adj[str_to_dpid(fwFstSw)][str_to_dpid(fwSecSw)]
+	reFirstPort = adj[str_to_dpid(reFstSw)][str_to_dpid(reSecSw)]
+
+	fwPrevSwDict = {}
+	rePrevSwDict = {}
+	fwPrevSwDict[pathObj.src] = None
+	rePrevSwDict[pathObj.dst] = None
+
+	for pre, cur in minSrlgPath:						
+		if pre is not 's' and cur is not 't':
+			fwPrevSwDict[str_to_dpid(cur)] = str_to_dpid(pre)
+			rePrevSwDict[str_to_dpid(pre)] = str_to_dpid(cur)
+
+	fwPath = Path(pathObj.src, pathObj.dst, fwPrevSwDict, fwFirstPort)
+	rePath = Path(pathObj.dst, pathObj.src, rePrevSwDict, reFirstPort)
+
+	# Associating calculated backup paths with links. If a link failed, broken backups must be recalculated
+	for currSwDpid in fwPrevSwDict.keys():
+		prevSwDpid = fwPrevSwDict[currSwDpid]
+		if prevSwDpid is not None:
+			fwLink = Link(prevSwDpid, adj[prevSwDpid][currSwDpid], currSwDpid)
+			bkupsOnLink[fwLink][bkupPathId] = fwPath
+			bkupsPerFlowPath[bkupPathId][fwLink] = fwPath
+
+	for currSwDpid in rePrevSwDict.keys():
+		prevSwDpid = rePrevSwDict[currSwDpid]
+		if prevSwDpid is not None:
+			reLink = Link(prevSwDpid, adj[prevSwDpid][currSwDpid], currSwDpid)
+			bkupsOnLink[reLink][bkupPathId] = rePath
+			bkupsPerFlowPath[bkupPathId][reLink] = rePath
+
+
+
+
 
 
 def createTopologyGraph():
@@ -461,16 +568,16 @@ def createTopologyGraph():
 	return graph
 
 def delBrknFlows(brknLink):
-	flowsToReroute = {}
+	brknFlows = {}
 	if len(flowsOnLnk[brknLink].keys())>0: 		# If atleast one flow was available in the broken link
-		# Populating flowsToReroute dictionary
+		# Populating brknFlows dictionary
 		print "\tFlows in %s that are to be deleted :"%brknLink,
 		for flowPathId in flowsOnLnk[brknLink].keys():
 			print "\t %s"%flowPathId,
-			flowsToReroute[flowPathId] = flowsOnLnk[brknLink][flowPathId]
+			brknFlows[flowPathId] = flowsOnLnk[brknLink][flowPathId]
 		print ""
-		for flowPathId in flowsToReroute.keys():
-			brknFlowPath = flowsToReroute[flowPathId]
+		for flowPathId in brknFlows.keys():
+			brknFlowPath = brknFlows[flowPathId]
 			brknQos = brknFlowPath.qos
 			brknPath = brknFlowPath.path
 			
@@ -490,19 +597,19 @@ def delBrknFlows(brknLink):
 						global totBwUsed
 						totBwUsed = totBwUsed - qosToBw[brknQos]
 						linkAlocBw[linkInBrknPath] = linkAlocBw[linkInBrknPath] - qosToBw[brknQos]
-	return flowsToReroute
+	return brknFlows
 
 def delBrknBkups(brknLink):
-	bkupsToRecalc = {}
+	brknBkups = {}
 	if len(bkupsOnLink[brknLink].keys())>0: 		# If atleast one bkup was available in the broken link
-		# Populating bkupsToRecalc dictionary
+		# Populating brknBkups dictionary
 		print "\tBackups in %s that are to be deleted :"%brknLink,
 		for bkupPathId in bkupsOnLink[brknLink].keys():
 			print "\t %s"%bkupPathId,
-			bkupsToRecalc[bkupPathId] = bkupsOnLink[brknLink][bkupPathId]
+			brknBkups[bkupPathId] = bkupsOnLink[brknLink][bkupPathId]
 		print ""
-		for bkupPathId in bkupsToRecalc.keys():
-			brknBkup = bkupsToRecalc[bkupPathId]
+		for bkupPathId in brknBkups.keys():
+			brknBkup = brknBkups[bkupPathId]
 			
 			# Delete bkups from all substrate links of bkupsOnLink datastructure
 			del bkupsOnLink[brknLink][bkupPathId]
@@ -513,7 +620,7 @@ def delBrknBkups(brknLink):
 						linkInBrknBkup = Link(preSw, adj[preSw][curSw], curSw)
 						del bkupsOnLink[linkInBrknBkup][bkupPathId] 
 						
-	return bkupsToRecalc
+	return brknBkups
 
 #-------------------------------------- Measured Throughput code --------------------------------------- 
 # linkCurTruput = get_monitored_linkTruputs()
@@ -533,7 +640,7 @@ def rerouteFlows(flowsToReroute, linkObj, remEvnt):
 		print "\tRerouting %s"%flowPathId
 		brknFlowPath =flowsToReroute[flowPathId]
 		brknMatch = brknFlowPath.match
-		brknQos = brknFlowPath.qos
+		curQos = brknFlowPath.curQos
 		brknPath = brknFlowPath.path
 
 		#--------------------------------------------------------------------------------------------------------
@@ -541,7 +648,8 @@ def rerouteFlows(flowsToReroute, linkObj, remEvnt):
 		# Eppstein shortest paths are calculated only once and opposite path is stored in epOpoPath dictionary
 		#--------------------------------------------------------------------------------------------------------
 		epPrevSwDict = {}
-		reqPathBw = qosToBw[brknQos]
+		#reqQos = qosToBw[brknQos]
+		reqQos = brknFlowPath.reqQos
 		print "\tKeys in epOpoPath = ",
 		for flowPath in epOpoPath.keys():
 			print flowPath,"\t",
@@ -586,7 +694,7 @@ def rerouteFlows(flowsToReroute, linkObj, remEvnt):
 							epPathBw = linkAvlblBw
 
 			
-				if epPathBw >= reqPathBw:					# path has sufficient bandwidth. Create prevDict
+				if epPathBw >= reqQos:					# path has sufficient bandwidth. Create prevDict
 					for pre, cur in epPath:
 						if pre is not 's' and cur is not 't':
 							epPrevSwDict[str_to_dpid(cur)] = str_to_dpid(pre)
@@ -594,7 +702,7 @@ def rerouteFlows(flowsToReroute, linkObj, remEvnt):
 					suficntBw = True
 					print "\tSufficient BW:",
 					print epPath,
-					print "\tAvlbl = %d, Req = %d"%(epPathBw, reqPathBw)
+					print "\tAvlbl = %d, Req = %d"%(epPathBw, reqQos)
 					epOpoPath[flowPathId] = epOpoPrevSwDict			# Include opposit path in epOpoPath
 					break							# We dont need other paths when sufficient bandwith path found
 				elif epPathBw <1:
@@ -602,7 +710,7 @@ def rerouteFlows(flowsToReroute, linkObj, remEvnt):
 				else:
 					print "\tInsufficient BW:",
 					print epPath, 
-					print "\tAvlbl = %d, Req = %d"%(epPathBw, reqPathBw)
+					print "\tAvlbl = %d, Req = %d"%(epPathBw, reqQos)
 					bwPQ.push(epPathBw, epPath)	# if bwUnderAlloc is True: path with max available bandwidth will be selected 
 
 			graph.remove_edge('s', srcSwDpidStr)
@@ -621,8 +729,8 @@ def rerouteFlows(flowsToReroute, linkObj, remEvnt):
 					epOpoPath[flowPathId] = epOpoPrevSwDict
 				
 					
-					bwUnderFlowPath[flowPathId] = bwUnderTpl(req=reqPathBw, alloc=bestEpPathBw)
-					reqPathBw = bestEpPathBw
+					bwUnderFlowPath[flowPathId] = bwUnderTpl(req=reqQos, alloc=bestEpPathBw)
+					curQos = bestEpPathBw
 				else:
 					epOpoPath[flowPathId] = None
 
@@ -653,7 +761,7 @@ def rerouteFlows(flowsToReroute, linkObj, remEvnt):
 			log.debug("\tdst = %s"%dpid_to_str(brknPath.dst))
 
 			# Installing flow-rules in switches for new Eppstein path
-			newFlowPath = FlowPath(brknMatch, newEpPath, reqPathBw)
+			newFlowPath = FlowPath(brknMatch, newEpPath, alocQos=curQos, reqQos=reqQos)
 			print"\tInstalling flowPath ",flowPathId
 			core.opennetmon_forwarding.installSinqroutePath(newFlowPath)
 			allocFlowIdToPath[flowPathId].add(newFlowPath)
@@ -669,11 +777,11 @@ def rerouteFlows(flowsToReroute, linkObj, remEvnt):
 					flowsOnLnk[epPathLink][flowPathId] = newFlowPath
 					print "\tepPathLink: ",epPathLink
 					global totBwUsed
-					totBwUsed = totBwUsed + reqPathBw
+					totBwUsed = totBwUsed + reqQos
 					if linkAlocBw[epPathLink] is None:
-						linkAlocBw[epPathLink] = reqPathBw
+						linkAlocBw[epPathLink] = reqQos
 					else:
-						linkAlocBw[epPathLink] = linkAlocBw[epPathLink] + reqPathBw
+						linkAlocBw[epPathLink] = linkAlocBw[epPathLink] + reqQos
 		
 		
 		else:
@@ -693,39 +801,71 @@ def rerouteFlows(flowsToReroute, linkObj, remEvnt):
 	
 
 def installBkup(flowsToReroute, brknLink, remEvnt=True):
+	instldBkups = {}
 	for flowPathId in flowsToReroute.keys():
 		print "\tRerouting %s"%flowPathId
 		brknFlowPath =flowsToReroute[flowPathId]
 		brknMatch = brknFlowPath.match
-		brknQos = brknFlowPath.qos
+		brknAlocBw = brknFlowPath.alocQos
+		brknReqBw = brknFlowPath.reqQos
 		brknPath = brknFlowPath.path
-
-
-
-
-		# Installing flow-rules in switches for new Eppstein path
-		newFlowPath = FlowPath(brknMatch, newEpPath, reqPathBw)
-		print"\tInstalling flowPath ",flowPathId
-		core.opennetmon_forwarding.installSinqroutePath(newFlowPath)
-		allocFlowIdToPath[flowPathId].add(newFlowPath)
-		#if flowPathId in unAllocFlowsOnLink[linkObj].keys():
-		#	del unAllocFlowsOnLink[linkObj][flowPathId]
-	
-		# Adding new path to flowsOnLnk and adding used bandwidth to linkAlocBw
-		for currSwDpid in epPrevSwDict.keys():
-			prevSwDpid = epPrevSwDict[currSwDpid]
-		
-			if prevSwDpid is not None:
-				epPathLink = Link(prevSwDpid, adj[prevSwDpid][currSwDpid], currSwDpid)
-				flowsOnLnk[epPathLink][flowPathId] = newFlowPath
-				print "\tepPathLink: ",epPathLink
-				global totBwUsed
-				totBwUsed = totBwUsed + reqPathBw
-				if linkAlocBw[epPathLink] is None:
-					linkAlocBw[epPathLink] = reqPathBw
+		#bkupPath = None
+		if flowPathId in bkupsPerFlowPath.keys():
+			print "\tBackup path found"
+			bkupPath = bkupsPerFlowPath[flowPathId][brknLink]
+			bkupPathLinks = bkupPath.get_linkList(adj)
+			# Finding path bandwidth
+			newPathBw = 20
+			listEmpty = True
+			for linkObj in bkupPathLinks:
+				listEmpty = False
+				linkBw = subLinkBwCap - linkAlocBw[linkObj]
+				if newPathBw > linkBw:
+					newPathBw = linkBw
+			alocBw = 0
+			if not listEmpty and newPathBw>0:
+				if newPathBw >= brknReqBw:
+					alocBw = brknReqBw
+					if flowPathId in bwUnderFlowPath.keys():
+						del bwUnderFlowPath[flowPathId]
+			
 				else:
-					linkAlocBw[epPathLink] = linkAlocBw[epPathLink] + reqPathBw
+					alocBw = newPathBw
+					bwUnderFlowPath[flowPathId] = bwUnderTpl(req=brknReqBw, alloc=alocBw)
+	
+				# Installing flow-rules in switches for backup path
+				newFlowPath = FlowPath(brknMatch, bkupPath, alocQos=alocBw, reqQos=brknReqBw)
+				print"\tInstalling Backup flowPath ",flowPathId
+				core.opennetmon_forwarding.installSinqroutePath(newFlowPath)
+				allocFlowIdToPath[flowPathId].add(newFlowPath)
+	
+				# Adding new path to flowsOnLnk and adding used bandwidth to linkAlocBw
+				for bkupLink in bkupPathLinks.keys():
+					
+					flowsOnLnk[bkupLink][flowPathId] = newFlowPath
+					print "\tepPathLink: ",bkupLink
+					global totBwUsed
+					totBwUsed = totBwUsed + alocBw
+					if linkAlocBw[bkupLink] is None:
+						linkAlocBw[bkupLink] = alocBw
+					else:
+						linkAlocBw[bkupLink] = linkAlocBw[bkupLink] + alocBw
+						
+				instldBkups[flowPathId] = bkupPath	
+					
+			else:
+				print "\tZero BW in backup path. Not allocated"
+				unAllocFlowPaths.add(flowPathId)
+				print "\t---Adding %s to unAllocFlowsOnLink"%flowPathId
+				unAllocFlowsOnLink[linkObj][flowPathId] = brknFlowPath
 
+		else:
+			print "\tUnable to find backup path"
+			unAllocFlowPaths.add(flowPathId)
+			print "\t---Adding %s to unAllocFlowsOnLink"%flowPathId
+			unAllocFlowsOnLink[linkObj][flowPathId] = brknFlowPath
+	return instldBkups
+				
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------ #
 #						dcMac and vmMac (Emulating VMs created for each request)						#
@@ -915,16 +1055,28 @@ class ResManIntfs(EventMixin):
 			linkAlocBw[brknLink]=None
 			print "\n - - - - - - - - - - - - Deleting and Rerouting flows on broken-link %s  - - - - - - - - - - - - "%brknLink
 			flowsToReroute = delBrknFlows(brknLink)
-			if len(flowsToReroute.keys())>0: 	# If atleast one flow is deleted as a result of the link failure
-				if bkupPathAlloc:
-					installBkup(flowsToReroute, brknLink, remEvnt=True)
-				elif reroute:
+			instldBkups = None
+			if reroute and len(flowsToReroute.keys())>0: 	# If atleast one flow is deleted as a result of the link failure
+				if bkupPathReroute:
+					instldBkups = installBkup(flowsToReroute, brknLink, remEvnt=True)
+				elif shotPathReroute:
 					rerouteFlows(flowsToReroute, brknLink, remEvnt=True)
 				else:
 					for flowPathId in flowsToReroute.keys():
 						unAllocFlowPaths.add(flowPathId)
 			else:
 				print "\tNo Flows available in the disconnected link to reroute"
+			
+			# New backups are calculated for broken and allocated flows once every pair of unidirectional links 
+			brknFlows = delBrknBkups(brknLink)
+			bkupsToRecalc.update(brknFlows)
+			bkupsToRecalc.update(instldBkups)
+			if opoLink(brknLink) in brknUniLinkSet:
+				brknUniLinkSet.remove(opoLink(brknLink))
+				for flowPathId in bkupsToRecalc.keys():
+					calcBidirecBkups(bkupsToRecalc[flowPathId])
+			else:
+				brknUniLinkSet.add(brknLink)
 
 			totBwAvbl = totBwAvbl - subLinkBwCap
 			numPLsAvbl = numPLsAvbl - 1
@@ -1018,201 +1170,199 @@ class ResManIntfs(EventMixin):
 		fcntl.fcntl(sock, fcntl.F_SETFL, os.O_NONBLOCK)
 		sock.listen(1)
 		dot = True
+		spinner = itertools.cycle(['-', '/', '|', '\\'])
 		print "\nlistning on port 6688 for requests \n",
 		while True:
 		    try:
-			connection, addr = sock.accept()
-			rawData = connection.recv(4096)
+				connection, addr = sock.accept()
+				rawData = connection.recv(4096)
 		    except socket.error, e:
-			err = e.args[0]
-			if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
-				sleep(1)		# decrese this sleep to increase the responce speed of the server
-				if dot:
-					print ".",
-					dot = False
+				err = e.args[0]
+				if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
+ 					sleep(API_DELAY)
+ 					# Spinner Cursor code. Works only in consoles that support \b
+					#stdout.write(spinner.next())
+					#stdout.flush()
+					#stdout.write('\b')
 				else:
-					dot = True
-					print "\b\b\b",
-				continue
-			else:
-				print 'A real error occurred'
-				print e
-				sys.exit(1)
+					print 'A real error occurred'
+					print e
+					sys.exit(1)
 		    else:
-			# got a message, do something :)
-			print >>sys.stderr,'\n\tRequestListner:Json Request:\t "%s"' % str(rawData)
-			#jsonReq = json.loads(rawData.decode('utf-8'))
-			jsonReq = json.loads(rawData.decode('utf-8'))
-			global ctrlStable, topoChange
-		
-			responceDict = OrderedDict()
-			responceDict["ctrl-stable"] = ctrlStable
-			responceDict["topo-change"] = topoChange
-			responceDict["method"] = jsonReq['method']
+				# got a message, do something :)
+				print >>sys.stderr,'\n\tRequestListner:Json Request:\t "%s"' % str(rawData)
+				#jsonReq = json.loads(rawData.decode('utf-8'))
+				jsonReq = json.loads(rawData.decode('utf-8'))
+				global ctrlStable, topoChange
 			
-
-			if jsonReq['method'] == u'set-reroute-flag':		# Set reroute from ResManager to enable rerouting. When rerouting is on, controller shutdown with "Ctrl+C" gives problems
-				global reroute
-				reroute = bool(jsonReq['data'])
-				print "\t\treroute-flag set to = %r"%reroute,
-				if reroute:
-					swNum = 0
-					for dpid in switchConns.keys():
-						swNum+=1
-						_measure_delay_ctrlChannel(dpid, swNum)
-					linkNum = 0
-					for srcDpid in adj.keys():
-						for dstDpid in adj[srcDpid].keys():
-							linkNum = linkNum+1
-							_measure_delay_interswitch(srcDpid, dstDpid, linkNum)	# Measuring inter-switch link delays since rerouting is based on min-latency path
-					print "\tController Rerouting ON"
-				else:
-					print "\tController Rerouting OFF"
-				#responceDict["method"] = "set-reroute-flag"
-				responceDict["data"] = reroute
-					
-			elif jsonReq['method'] == u'get-switches':
-				switchList = []
-				numSw = 0
-				for dpid in switchConns.keys():
-					switchId = strDpidToId[dpid_to_str(dpid)]
-					switchList.append(switchId)
-				#responceDict["method"] = "get-switches"
-				responceDict["data"] = switchList
+				responceDict = OrderedDict()
+				responceDict["ctrl-stable"] = ctrlStable
+				responceDict["topo-change"] = topoChange
+				responceDict["method"] = jsonReq['method']
 				
-			# In legacy networks, centralized resource allocator does not have accurate link latency values as in SDN. Thus Latency values are not sent to ResMan
-			elif jsonReq['method'] == u'get-links':
-				linkList = []
-				biPaths = defaultdict(lambda:defaultdict(lambda:None))
-				# large json over network result in fragmentation and delays. 
-				# Thus responce is made as small as possible by creating bidirectional links that are identified by src and dst switch ids.
-				for linkObj in linkDelay.keys():
-					srcSwId = strDpidToId[dpid_to_str(linkObj.ssw)]
-					dstSwId = strDpidToId[dpid_to_str(linkObj.dsw)]
-					if biPaths[dstSwId][srcSwId] is None:
-						biPaths[srcSwId][dstSwId] = "%s-%s"%(srcSwId, dstSwId)
-
-				for srcSw in biPaths.keys():
-					for dstSw in biPaths[srcSw].keys():
-						if biPaths[srcSw][dstSw] is not None:
-							#print "\tsrc=%s\tdst=%s\tlink=%s"%(srcSw, dstSw, biPaths[srcSw][dstSw])
-							linkList.append(biPaths[srcSw][dstSw])
-				#responceDict["method"] = "get-links"
-				responceDict["data"] = linkList
-			
-
-			elif jsonReq['method'] == u'add-rem-paths':
-				#addCount = int(jsonReq['data']['add-count'])
-				#remCount = int(jsonReq['data']['rem-count'])
-				#resManRemPaths = defaultdict(lambda:defaultdict(lambda:None))
-				#remCount = len(jsonReq['data']['rem-vnps'])
-				#resManAddPaths = defaultdict(lambda:defaultdict(lambda:None))
-				#addCount = len(jsonReq['data']['add-vnps'])
-				#responceDict["method"] = "add-rem-paths"
-				dataDict = {}
-
-				# Removing paths
-				rmvdPaths = defaultdict(lambda:defaultdict(lambda:None))
-				if jsonReq['data']['rem-vnps'] is not None:
-					for vnp in jsonReq['data']['rem-vnps']:
-						vnpId = vnp["id"]
-						pathNum = 0
-						for path in vnp["paths"]:
-							rmvdPaths[vnpId][pathNum] = pathTupl(qos=path["q"], nodeAry=path["p"])
-							pathNum+=1
-					#deleteFlowRules(resManRemPaths)
-					addRemoveFlows(rmvdPaths, addPaths=False)
-					dataDict["rem-count"] = len(jsonReq['data']['rem-vnps'])
-				else:
-					dataDict["rem-count"] = 0
-
-				# Adding paths
-				addedPaths = defaultdict(lambda:defaultdict(lambda:None))
-				if jsonReq['data']['add-vnps'] is not None:
-					for vnp in jsonReq['data']['add-vnps']:
-						vnpId = vnp["id"]
-						pathNum = 0
-						for path in vnp["paths"]:
-							addedPaths[vnpId][pathNum] = pathTupl(qos=path["q"], nodeAry=path["p"])
-							pathNum+=1
-					addRemoveFlows(addedPaths, addPaths=True)
-					dataDict["add-count"] = len(jsonReq['data']['add-vnps'])
-				else:
-					dataDict["add-count"] = 0
-
-				responceDict["data"] = 	dataDict
-
-				if bkupPathAlloc:
-					addRemoveBkups(addedPaths, rmvdPaths)
-					
-					
-
-			elif jsonReq['method'] == u'get-flow-alloc':
-				print "\treceived resMan request get-flow-alloc"
-				pathsPerVnp = defaultdict(lambda:defaultdict(lambda:None))
-				
-				print "\tadding flowpathIds and flowpaths to pathsPerVnp dictionary"
-				for flowPathId in allocFlowIdToPath.keys():
-					floPthSplt = flowPathId.split('-')
-					vnpId = "%s-%s"%(floPthSplt[0],floPthSplt[1])
-					pathNum = floPthSplt[2]
-					pathsPerVnp[vnpId][pathNum] = next(iter(allocFlowIdToPath[flowPathId]))
-					#print "\t\t %s   \tadded"%flowPathId
-				
-				vnpList = []
-				for vnpId in pathsPerVnp.keys():
-					pathList = []
-					for pathNum in pathsPerVnp[vnpId].keys():
-						flowPathObj = pathsPerVnp[vnpId][pathNum]
-						qos = flowPathObj.qos
-						path = flowPathObj.path
-						prevSwDict = path.prev
-						nodeList = []
-						watchDogCount = 0
-						#print prevSwDict
-						currSw = path.dst		#15
-						prevSw = prevSwDict[currSw]	#17
-						nodeList.append(strDpidToId[dpid_to_str(currSw)])
-						while prevSw is not None:	
-							nodeList.append(strDpidToId[dpid_to_str(prevSw)])
-
-							currSw = prevSw
-							prevSw =  prevSwDict[currSw]
-							if watchDogCount > 20:
-								print "watchdog exit"
-								break
-							else:
-								watchDogCount = watchDogCount+1
-						#print nodeList
-						onePath = {"q":qos, "p":nodeList}
-						pathList.append(onePath)
-					oneVnp = {"id":vnpId, "paths":pathList}
-					vnpList.append(oneVnp)
-				dataDict = {"vnps":vnpList}
-				responceDict["data"] = 	dataDict	
-
-				topoChange = False 	# topoChange can be reseted only by reading current flow allocation
-				
-			else:
-				responceDict["method"] = "error"
 	
-			responceJson = json.dumps(responceDict)
-			print "\tResponse to ResMan ",responceJson
-			encodedJson = responceJson.encode('utf-8')
-			msg = encodedJson
-			MSGLEN = len(encodedJson)
-			#MSGLEN = 1024
-			print "\t\tMSGLEN = %d"%MSGLEN,
-			totalsent = 0
-        		while totalsent < MSGLEN:
-           			sent = connection.send(msg[totalsent:])
-            			if sent == 0:
-                			raise RuntimeError("socket connection broken")
-            			totalsent = totalsent + sent
-				print "\tsent = %d \t totalsent = %d"%(sent, totalsent)
-
-
-			#connection.sendall(encodedJson)
+				if jsonReq['method'] == u'set-reroute-flag':		# Set reroute from ResManager to enable rerouting. When rerouting is on, controller shutdown with "Ctrl+C" gives problems
+					global reroute
+					reroute = bool(jsonReq['data'])
+					print "\t\treroute-flag set to = %r"%reroute,
+					if reroute:
+						swNum = 0
+						for dpid in switchConns.keys():
+							swNum+=1
+							_measure_delay_ctrlChannel(dpid, swNum)
+						linkNum = 0
+						for srcDpid in adj.keys():
+							for dstDpid in adj[srcDpid].keys():
+								linkNum = linkNum+1
+								_measure_delay_interswitch(srcDpid, dstDpid, linkNum)	# Measuring inter-switch link delays since rerouting is based on min-latency path
+						print "\tController Rerouting ON"
+					else:
+						print "\tController Rerouting OFF"
+					#responceDict["method"] = "set-reroute-flag"
+					responceDict["data"] = reroute
+						
+				elif jsonReq['method'] == u'get-switches':
+					switchList = []
+					numSw = 0
+					for dpid in switchConns.keys():
+						switchId = strDpidToId[dpid_to_str(dpid)]
+						switchList.append(switchId)
+					#responceDict["method"] = "get-switches"
+					responceDict["data"] = switchList
+					
+				# In legacy networks, centralized resource allocator does not have accurate link latency values as in SDN. Thus Latency values are not sent to ResMan
+				elif jsonReq['method'] == u'get-links':
+					linkList = []
+					biPaths = defaultdict(lambda:defaultdict(lambda:None))
+					# large json over network result in fragmentation and delays. 
+					# Thus responce is made as small as possible by creating bidirectional links that are identified by src and dst switch ids.
+					for linkObj in linkDelay.keys():
+						srcSwId = strDpidToId[dpid_to_str(linkObj.ssw)]
+						dstSwId = strDpidToId[dpid_to_str(linkObj.dsw)]
+						if biPaths[dstSwId][srcSwId] is None:
+							biPaths[srcSwId][dstSwId] = "%s-%s"%(srcSwId, dstSwId)
+	
+					for srcSw in biPaths.keys():
+						for dstSw in biPaths[srcSw].keys():
+							if biPaths[srcSw][dstSw] is not None:
+								#print "\tsrc=%s\tdst=%s\tlink=%s"%(srcSw, dstSw, biPaths[srcSw][dstSw])
+								linkList.append(biPaths[srcSw][dstSw])
+					#responceDict["method"] = "get-links"
+					responceDict["data"] = linkList
+				
+	
+				elif jsonReq['method'] == u'add-rem-paths':
+					#addCount = int(jsonReq['data']['add-count'])
+					#remCount = int(jsonReq['data']['rem-count'])
+					#resManRemPaths = defaultdict(lambda:defaultdict(lambda:None))
+					#remCount = len(jsonReq['data']['rem-vnps'])
+					#resManAddPaths = defaultdict(lambda:defaultdict(lambda:None))
+					#addCount = len(jsonReq['data']['add-vnps'])
+					#responceDict["method"] = "add-rem-paths"
+					dataDict = {}
+	
+					# Removing paths
+					rmvdPaths = defaultdict(lambda:defaultdict(lambda:None))
+					if jsonReq['data']['rem-vnps'] is not None:
+						for vnp in jsonReq['data']['rem-vnps']:
+							vnpId = vnp["id"]
+							pathNum = 0
+							for path in vnp["paths"]:
+								rmvdPaths[vnpId][pathNum] = pathTupl(qos=path["q"], nodeAry=path["p"])
+								pathNum+=1
+						#deleteFlowRules(resManRemPaths)
+						addRemoveFlows(rmvdPaths, addPaths=False)
+						dataDict["rem-count"] = len(jsonReq['data']['rem-vnps'])
+					else:
+						dataDict["rem-count"] = 0
+	
+					# Adding paths
+					addedPaths = defaultdict(lambda:defaultdict(lambda:None))
+					if jsonReq['data']['add-vnps'] is not None:
+						for vnp in jsonReq['data']['add-vnps']:
+							vnpId = vnp["id"]
+							pathNum = 0
+							for path in vnp["paths"]:
+								addedPaths[vnpId][pathNum] = pathTupl(qos=path["q"], nodeAry=path["p"])
+								pathNum+=1
+						addRemoveFlows(addedPaths, addPaths=True)
+						dataDict["add-count"] = len(jsonReq['data']['add-vnps'])
+					else:
+						dataDict["add-count"] = 0
+	
+					responceDict["data"] = 	dataDict
+	
+					if bkupPathReroute:
+						addRemoveBkups(addedPaths, rmvdPaths)
+						
+						
+	
+				elif jsonReq['method'] == u'get-flow-alloc':
+					print "\treceived resMan request get-flow-alloc"
+					pathsPerVnp = defaultdict(lambda:defaultdict(lambda:None))
+					
+					print "\tadding flowpathIds and flowpaths to pathsPerVnp dictionary"
+					for flowPathId in allocFlowIdToPath.keys():
+						floPthSplt = flowPathId.split('-')
+						vnpId = "%s-%s"%(floPthSplt[0],floPthSplt[1])
+						pathNum = floPthSplt[2]
+						pathsPerVnp[vnpId][pathNum] = next(iter(allocFlowIdToPath[flowPathId]))
+						#print "\t\t %s   \tadded"%flowPathId
+					
+					vnpList = []
+					for vnpId in pathsPerVnp.keys():
+						pathList = []
+						for pathNum in pathsPerVnp[vnpId].keys():
+							flowPathObj = pathsPerVnp[vnpId][pathNum]
+							qos = flowPathObj.qos
+							path = flowPathObj.path
+							prevSwDict = path.prev
+							nodeList = []
+							watchDogCount = 0
+							#print prevSwDict
+							currSw = path.dst		#15
+							prevSw = prevSwDict[currSw]	#17
+							nodeList.append(strDpidToId[dpid_to_str(currSw)])
+							while prevSw is not None:	
+								nodeList.append(strDpidToId[dpid_to_str(prevSw)])
+	
+								currSw = prevSw
+								prevSw =  prevSwDict[currSw]
+								if watchDogCount > 20:
+									print "watchdog exit"
+									break
+								else:
+									watchDogCount = watchDogCount+1
+							#print nodeList
+							onePath = {"q":qos, "p":nodeList}
+							pathList.append(onePath)
+						oneVnp = {"id":vnpId, "paths":pathList}
+						vnpList.append(oneVnp)
+					dataDict = {"vnps":vnpList}
+					responceDict["data"] = 	dataDict	
+	
+					topoChange = False 	# topoChange can be reseted only by reading current flow allocation
+					
+				else:
+					responceDict["method"] = "error"
+		
+				responceJson = json.dumps(responceDict)
+				print "\tResponse to ResMan ",responceJson
+				encodedJson = responceJson.encode('utf-8')
+				msg = encodedJson
+				MSGLEN = len(encodedJson)
+				#MSGLEN = 1024
+				print "\t\tMSGLEN = %d"%MSGLEN,
+				totalsent = 0
+	        		while totalsent < MSGLEN:
+	           			sent = connection.send(msg[totalsent:])
+	            			if sent == 0:
+	                			raise RuntimeError("socket connection broken")
+	            			totalsent = totalsent + sent
+					print "\tsent = %d \t totalsent = %d"%(sent, totalsent)
+	
+	
+				#connection.sendall(encodedJson)
 			
 
 

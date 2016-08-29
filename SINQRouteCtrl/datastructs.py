@@ -2,6 +2,7 @@
 import pox.openflow.libopenflow_01 as of
 from pox.lib.util import dpid_to_str
 import heapq
+from numpy.ma.timer_comparison import cur
 
 
 class Link(object):
@@ -24,6 +25,17 @@ class Path(object):
 		self.dst = dst
 		self.prev = prev
 		self.first_port = first_port
+		
+	def get_linkList(self, adj):
+		curSw = self.dst
+		preSw = self.prev[curSw]
+		linkList = []
+		while preSw is not None:
+			linkObj = Link(preSw, adj[preSw][curSw], curSw)
+			linkList.append(linkObj)
+			curSw = preSw
+			preSw = self.prev[curSw]
+		return linkList.reverse()	# return list of links from srcSw to dstSw
 	
 	def __repr__(self):				# return a printable representation of the object
 		ret = dpid_to_str(self.dst)
@@ -79,10 +91,11 @@ class ofp_match_withHash(of.ofp_match):
 		return hash((self.wildcards, self.in_port, self.dl_src, self.dl_dst, self.dl_vlan, self.dl_vlan_pcp, self.dl_type, self.nw_tos, self.nw_proto, self.nw_src, self.nw_dst, self.tp_src, self.tp_dst))
 
 class FlowPath(object):
-	def __init__(self, match, path, qos):
+	def __init__(self, match, path, alocQos, reqQos):
 		self.match = match
 		self.path = path
-		self.qos = qos
+		self.reqQoS = reqQos
+		self.alocQos = alocQos
 	def __hash__(self):						# Allows linkToFlowMap[Link]
 		return hash((self.match, self.path))
 
