@@ -80,7 +80,7 @@ class EppsteinShortestPathAlgorithm(object):
         
         _reverse_graph =  self._G.reverse(copy=True)
         _reverse_pred, _dist = nx.bellman_ford(_reverse_graph,'t') 
-        print "\t\t",time.ctime(), "reverse_pred, & dist by using bellman ford "
+        #print "\t\t",time.ctime(), "reverse_pred, & dist by using bellman ford "
         _pred = defaultdict(dict)
         for node, neighbor in _reverse_pred.iteritems():
             _pred[neighbor]=node
@@ -233,14 +233,14 @@ class EppsteinShortestPathAlgorithm(object):
             build side_track
         """
         import time
-        print "\t\t",time.ctime(),"EPPSTEIN STARTED"
-        print "\t\ttotal_nodes",len(self._G.nodes()),"total_edges",len(self._G.edges())
+        print "\t\t",time.ctime(),"EPPSTEIN STARTED  with ",
+        print "total_nodes = ",len(self._G.nodes()),"total_edges = ",len(self._G.edges())
         self._all_shortest_paths()
-        print "\t\t",time.ctime(), "all shortest paths completed"
+        #print "\t\t",time.ctime(), "all shortest paths completed"
         sidetrack_edges = self.__get_sidetrack_edges(self._G)
         self.sidetrack_edges=sidetrack_edges
         self._init_path_tree()
-        print "\t\t",time.ctime(), "Initialization has been done"
+        #print "\t\t",time.ctime(), "Initialization has been done"
         
     def retrieve_k_best(self):
         while(self.path_tree):

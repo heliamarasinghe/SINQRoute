@@ -2,7 +2,7 @@
 import pox.openflow.libopenflow_01 as of
 from pox.lib.util import dpid_to_str
 import heapq
-from numpy.ma.timer_comparison import cur
+#from numpy.ma.timer_comparison import cur
 
 
 class Link(object):
@@ -12,6 +12,9 @@ class Link(object):
 		self.dsw = dsw
 	def __str__(self):
 		return "%s:%s->%s"%(dpid_to_str(self.ssw), self.sp, dpid_to_str(self.dsw))
+	
+	def __repr__(self):
+		return str(self)
 
 	def __hash__(self):						# Allows linkToFlowMap[Link]
 		return hash((self.ssw, self.sp, self.dsw))
@@ -31,11 +34,14 @@ class Path(object):
 		preSw = self.prev[curSw]
 		linkList = []
 		while preSw is not None:
+			print"\tcurSw = %s \t preSw = %s"%(dpid_to_str(curSw), dpid_to_str(preSw))
 			linkObj = Link(preSw, adj[preSw][curSw], curSw)
 			linkList.append(linkObj)
 			curSw = preSw
 			preSw = self.prev[curSw]
-		return linkList.reverse()	# return list of links from srcSw to dstSw
+		linkList.reverse()	# return list of links from srcSw to dstSw
+		#print linkList
+		return linkList
 	
 	def __repr__(self):				# return a printable representation of the object
 		ret = dpid_to_str(self.dst)
@@ -94,7 +100,7 @@ class FlowPath(object):
 	def __init__(self, match, path, alocQos, reqQos):
 		self.match = match
 		self.path = path
-		self.reqQoS = reqQos
+		self.reqQos = reqQos
 		self.alocQos = alocQos
 	def __hash__(self):						# Allows linkToFlowMap[Link]
 		return hash((self.match, self.path))

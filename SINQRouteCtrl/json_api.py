@@ -24,7 +24,7 @@ import errno
 import time
 import struct
 import itertools
-from numpy.ma.timer_comparison import cur
+#from numpy.ma.timer_comparison import cur
 #import threading
 
 
@@ -48,9 +48,9 @@ minLatency = True						# If True, reroute will select on minimum latency path. E
 bkupPathReroute = True
 shotPathReroute = False
 maxBkupCalcs = 5
-bkupsPerFlowPath = defaultdict(lambda:defaultdict(lambda:None))	# keeps flowPathId to backup path mapping		usage: bkupsPerFlowPath[flowPathId][linkObj] = pathObj
+bkupsPerFlowPath = defaultdict(lambda:defaultdict(lambda:None))	# keeps flowPathId to backup path mapping		usage: bkupsPerFlowPath[flowPathId][srcSwDpid] = pathObj
 bkupsOnLink = defaultdict(lambda:defaultdict(lambda:None))	# keeps links to backup flowPaths mapping. 		usage: bkupsOnLink[linkObj][bkupPathId] = pathObj
-bkupsToRecalc = {}
+
 #srlgPerFlow = defaultdict(set)					# flowPathId to Shared Risk Link Group map
 
 flowsOnLnk = defaultdict(lambda:defaultdict(lambda:None))	# keeps links to flowPaths mapping. 			usage: flowsOnLink[linkObj][flowPathId] = flowPathObj
@@ -359,8 +359,11 @@ def addRemoveBkups(addedPathDict, rmvdPathDict):
 		for vnpId in rmvdPathDict.keys():
 			for pathNum in rmvdPathDict[vnpId].keys():
 				bkupPathId = vnpId+"-%d"%pathNum
-				for linkObj in bkupsPerFlowPath[bkupPathId].keys():
-					del bkupsOnLink[linkObj][bkupPathId]
+				for srcDpid in bkupsPerFlowPath[bkupPathId].keys():
+					pathObj = bkupsPerFlowPath[bkupPathId][srcDpid]
+					linkList = pathObj.get_linkList(adj)
+					for linkObj in linkList:
+						del bkupsOnLink[linkObj][bkupPathId]
 				del bkupsPerFlowPath[bkupPathId]
 	
 	
@@ -369,120 +372,38 @@ def addRemoveBkups(addedPathDict, rmvdPathDict):
 		for vnpId in addedPathDict.keys():
 			for pathNum in addedPathDict[vnpId].keys():
 
-				bkupPathId = vnpId+"-%d"%pathNum	# Equivalent to flowPathId. But stored in Bkup datastructures
+				flowPathId = vnpId+"-%d"%pathNum	# Equivalent to flowPathId. But stored in Bkup datastructures
 				
 				# Populating addedLinkSet, which is intersected with shortest path link set to find path with minimum number of shared links
-				addedPath = addedPathDict[vnpId][pathNum]
-				adedLinkSet = set()
+				adedBiDiPath = addedPathDict[vnpId][pathNum]
+				srcSwDpid = str_to_dpid(idToStrDpid[adedBiDiPath.nodeAry[0]])
+				secSwDpid = str_to_dpid(idToStrDpid[adedBiDiPath.nodeAry[1]])
+				dstSwDpid = str_to_dpid(idToStrDpid[adedBiDiPath.nodeAry[len(adedBiDiPath.nodeAry)-1]])
 				adedPrvSwDict = {}
-				for index in range(len(addedPath.nodeAry)-1, 0, -1):
-					currSwDpid = str_to_dpid(idToStrDpid[addedPath.nodeAry[index]])
-					prevSwDpid = str_to_dpid(idToStrDpid[addedPath.nodeAry[index-1]])
-					adedPrvSwDict[prevSwDpid] = currSwDpid
+				adedPrvSwDict[srcSwDpid] = None
+				for index in range(len(adedBiDiPath.nodeAry)-1, 0, -1):
+					currSwDpid = str_to_dpid(idToStrDpid[adedBiDiPath.nodeAry[index]])
+					prevSwDpid = str_to_dpid(idToStrDpid[adedBiDiPath.nodeAry[index-1]])
+					adedPrvSwDict[currSwDpid] = prevSwDpid
 					
-					linkObj = Link(prevSwDpid, adj[prevSwDpid][currSwDpid], currSwDpid)
-					
-					adedLinkSet.add(linkObj)
-					
-					
+				#print "\n\tsrcSwDpid = %s"%dpid_to_str(srcSwDpid)
+				#print "\tdstSwDpid = %s"%dpid_to_str(dstSwDpid)
+				#print adedPrvSwDict
+				#for curSwDpid in adedPrvSwDict.keys():
+				#	print "\t\tprev[%s] = %s"%(dpid_to_str(curSwDpid), dpid_to_str(adedPrvSwDict[curSwDpid]))
 				
-				
-				# Add source and destination to network graph and find epPaths
-				srcDc = addedPath.nodeAry[0]
-				dstDc  = addedPath.nodeAry[len(addedPath.nodeAry)-1]
-				srcSwDpid = str_to_dpid(idToStrDpid[addedPath.nodeAry[0]])
-				secSwDpid = str_to_dpid(idToStrDpid[addedPath.nodeAry[1]])
-				dstSwDpid = str_to_dpid(idToStrDpid[addedPath.nodeAry[len(addedPath.nodeAry)-1]])
 				adedPathObj = Path(srcSwDpid, dstSwDpid, adedPrvSwDict, adj[srcSwDpid][secSwDpid])
-				
-				calcBidirecBkups(adedPathObj)
-				
-				srcSwDpidStr = idToStrDpid[srcDc]
-				dstSwDpidStr = idToStrDpid[dstDc]
-				
-				
-				
-				graph.add_edge('s', srcSwDpidStr, weight=0)
-				graph.add_edge(dstSwDpidStr, 't', weight=0)
-				e=EppsteinShortestPathAlgorithm(graph)
-				e._pre_process()
-
-				# For each epPath find the number of common links with allocated path.
-				numBkup=0
-				bkupPQ = PriorityQueue(maxQ=False)
-				print "\tCalculating Backup paths from  %s\t%s"%(srcSwDpidStr, dstSwDpidStr)
-				for cost, epPath in e.get_successive_shortest_paths():
-					numBkup+=1
-					if numBkup==maxBkupCalcs:
-						break
-					epLinkSet = set()
-					for pre, cur in epPath:						
-						if pre is not 's' and cur is not 't':
-							epLink = Link(str_to_dpid(pre), adj[str_to_dpid(pre)][str_to_dpid(cur)], str_to_dpid(cur))
-							epLinkSet.add(epLink)
-					
-					numShrdLinks = len(epLinkSet.intersection(adedLinkSet))		# shared links in allocated and backup paths will be minimized
-					srlgPcnt = (numShrdLinks * 100)/float(len(adedLinkSet))
-					#print "\t",srlgPcnt,"\t",epPath
-					bkupPQ.push(srlgPcnt, epPath)
-					
-				graph.remove_edge('s', srcSwDpidStr)
-				graph.remove_edge(dstSwDpidStr, 't')
-				
-				# Get the Eppstein shortest path with minimum intersection percentage with shared risk links
-				minSrlgPcnt, minSrlgPath = bkupPQ.pop()
-				srcSwDpid = str_to_dpid(srcSwDpidStr)
-				dstSwDpid = str_to_dpid(dstSwDpidStr)
-				print "\tSelected Path %.2f  "%minSrlgPcnt, minSrlgPath
-				fwFstSw, fwSecSw = minSrlgPath[1]
-				reFstSw, reSecSw = minSrlgPath[-2]
-				#print "\tfwFstSw = %s \t fwSecSw = %s"%(fwFstSw,fwSecSw)
-				#print "\treFstSw = %s \t reSecSw = %s"%(reFstSw,reSecSw)			
-				fwFirstPort = adj[str_to_dpid(fwFstSw)][str_to_dpid(fwSecSw)]
-				reFirstPort = adj[str_to_dpid(reFstSw)][str_to_dpid(reSecSw)]
-
-				fwPrevSwDict = {}
-				rePrevSwDict = {}
-				fwPrevSwDict[srcSwDpid] = None
-				rePrevSwDict[dstSwDpid] = None
-
-				for pre, cur in minSrlgPath:						
-					if pre is not 's' and cur is not 't':
-						fwPrevSwDict[str_to_dpid(cur)] = str_to_dpid(pre)
-						rePrevSwDict[str_to_dpid(pre)] = str_to_dpid(cur)
-
-				fwPath = Path(srcSwDpid, dstSwDpid, fwPrevSwDict, fwFirstPort)
-				rePath = Path(dstSwDpid, srcSwDpid, rePrevSwDict, reFirstPort)
-
-				# Associating calculated backup paths with links. If a link failed, broken backups must be recalculated
-				for currSwDpid in fwPrevSwDict.keys():
-					prevSwDpid = fwPrevSwDict[currSwDpid]
-					if prevSwDpid is not None:
-						fwLink = Link(prevSwDpid, adj[prevSwDpid][currSwDpid], currSwDpid)
-						bkupsOnLink[fwLink][bkupPathId] = fwPath
-						bkupsPerFlowPath[bkupPathId][fwLink] = fwPath
-
-				for currSwDpid in rePrevSwDict.keys():
-					prevSwDpid = rePrevSwDict[currSwDpid]
-					if prevSwDpid is not None:
-						reLink = Link(prevSwDpid, adj[prevSwDpid][currSwDpid], currSwDpid)
-						bkupsOnLink[reLink][bkupPathId] = rePath
-						bkupsPerFlowPath[bkupPathId][reLink] = rePath
-				
-				
-
-	# get set of links in each path
-	# find intersection set S for allocated path and shortest path
-	# create a heapq and put epPaths with len(S)
-	# get min intersection path and put it to bkupPaths and bkupsOnLink dictionaries
+				graph = createTopologyGraph()
+				calcBiDiBkups(graph, flowPathId, adedPathObj)
 	
 	
-def calcBidirecBkups(pathObj):
+def calcBiDiBkups(graph, flowPathId, pathObj):
 	
 	srcSwDpidStr = dpid_to_str(pathObj.src)
 	dstSwDpidStr = dpid_to_str(pathObj.dst)
+	adedLinkSet = set(pathObj.get_linkList(adj))
 	
-	graph = createTopologyGraph()
+	
 	graph.add_edge('s', srcSwDpidStr, weight=0)
 	graph.add_edge(dstSwDpidStr, 't', weight=0)
 	e=EppsteinShortestPathAlgorithm(graph)
@@ -507,44 +428,52 @@ def calcBidirecBkups(pathObj):
 		#print "\t",srlgPcnt,"\t",epPath
 		bkupPQ.push(srlgPcnt, epPath)
 	
+	graph.remove_edge('s', srcSwDpidStr)
+	graph.remove_edge(dstSwDpidStr, 't')
+	
+	
 	# Get the Eppstein shortest path with minimum intersection percentage with shared risk links
 	minSrlgPcnt, minSrlgPath = bkupPQ.pop()
-	print "\tSelected Path %.2f  "%minSrlgPcnt, minSrlgPath
-	fwFstSw, fwSecSw = minSrlgPath[1]
-	reFstSw, reSecSw = minSrlgPath[-2]
-	#print "\tfwFstSw = %s \t fwSecSw = %s"%(fwFstSw,fwSecSw)
-	#print "\treFstSw = %s \t reSecSw = %s"%(reFstSw,reSecSw)			
-	fwFirstPort = adj[str_to_dpid(fwFstSw)][str_to_dpid(fwSecSw)]
-	reFirstPort = adj[str_to_dpid(reFstSw)][str_to_dpid(reSecSw)]
-
-	fwPrevSwDict = {}
-	rePrevSwDict = {}
-	fwPrevSwDict[pathObj.src] = None
-	rePrevSwDict[pathObj.dst] = None
-
-	for pre, cur in minSrlgPath:						
-		if pre is not 's' and cur is not 't':
-			fwPrevSwDict[str_to_dpid(cur)] = str_to_dpid(pre)
-			rePrevSwDict[str_to_dpid(pre)] = str_to_dpid(cur)
-
-	fwPath = Path(pathObj.src, pathObj.dst, fwPrevSwDict, fwFirstPort)
-	rePath = Path(pathObj.dst, pathObj.src, rePrevSwDict, reFirstPort)
-
-	# Associating calculated backup paths with links. If a link failed, broken backups must be recalculated
-	for currSwDpid in fwPrevSwDict.keys():
-		prevSwDpid = fwPrevSwDict[currSwDpid]
-		if prevSwDpid is not None:
-			fwLink = Link(prevSwDpid, adj[prevSwDpid][currSwDpid], currSwDpid)
-			bkupsOnLink[fwLink][bkupPathId] = fwPath
-			bkupsPerFlowPath[bkupPathId][fwLink] = fwPath
-
-	for currSwDpid in rePrevSwDict.keys():
-		prevSwDpid = rePrevSwDict[currSwDpid]
-		if prevSwDpid is not None:
-			reLink = Link(prevSwDpid, adj[prevSwDpid][currSwDpid], currSwDpid)
-			bkupsOnLink[reLink][bkupPathId] = rePath
-			bkupsPerFlowPath[bkupPathId][reLink] = rePath
-
+	if len(minSrlgPath) != 0:
+		print "\tSelected Path %.2f  "%minSrlgPcnt, minSrlgPath
+		fwFstSw, fwSecSw = minSrlgPath[1]
+		reFstSw, reSecSw = minSrlgPath[-2]
+		#print "\tfwFstSw = %s \t fwSecSw = %s"%(fwFstSw,fwSecSw)
+		#print "\treFstSw = %s \t reSecSw = %s"%(reFstSw,reSecSw)			
+		fwFirstPort = adj[str_to_dpid(fwFstSw)][str_to_dpid(fwSecSw)]
+		reFirstPort = adj[str_to_dpid(reFstSw)][str_to_dpid(reSecSw)]
+	
+		fwPrevSwDict = {}
+		rePrevSwDict = {}
+		fwPrevSwDict[pathObj.src] = None
+		rePrevSwDict[pathObj.dst] = None
+	
+		for pre, cur in minSrlgPath:						
+			if pre is not 's' and cur is not 't':
+				fwPrevSwDict[str_to_dpid(cur)] = str_to_dpid(pre)
+				rePrevSwDict[str_to_dpid(pre)] = str_to_dpid(cur)
+	
+		fwPath = Path(pathObj.src, pathObj.dst, fwPrevSwDict, fwFirstPort)
+		rePath = Path(pathObj.dst, pathObj.src, rePrevSwDict, reFirstPort)
+		bkupsPerFlowPath[flowPathId][pathObj.src] = fwPath
+		bkupsPerFlowPath[flowPathId][pathObj.dst] = rePath
+	
+		# Associating calculated backup paths with links. If a link failed, broken backups must be recalculated
+		for currSwDpid in fwPrevSwDict.keys():
+			prevSwDpid = fwPrevSwDict[currSwDpid]
+			if prevSwDpid is not None:
+				fwLink = Link(prevSwDpid, adj[prevSwDpid][currSwDpid], currSwDpid)
+				bkupsOnLink[fwLink][flowPathId] = fwPath
+				
+	
+		for currSwDpid in rePrevSwDict.keys():
+			prevSwDpid = rePrevSwDict[currSwDpid]
+			if prevSwDpid is not None:
+				reLink = Link(prevSwDpid, adj[prevSwDpid][currSwDpid], currSwDpid)
+				bkupsOnLink[reLink][flowPathId] = rePath
+			
+	else:
+		print "Unable to find a path for %s from %s to %s"%(flowPathId, srcSwDpidStr, dstSwDpidStr)
 
 
 
@@ -567,6 +496,7 @@ def createTopologyGraph():
 	graph.add_weighted_edges_from(edges)
 	return graph
 
+
 def delBrknFlows(brknLink):
 	brknFlows = {}
 	if len(flowsOnLnk[brknLink].keys())>0: 		# If atleast one flow was available in the broken link
@@ -578,7 +508,7 @@ def delBrknFlows(brknLink):
 		print ""
 		for flowPathId in brknFlows.keys():
 			brknFlowPath = brknFlows[flowPathId]
-			brknQos = brknFlowPath.qos
+			brknQos = brknFlowPath.alocQos
 			brknPath = brknFlowPath.path
 			
 			# Delete flow-rules from switches in the brknFlowPath
@@ -599,6 +529,7 @@ def delBrknFlows(brknLink):
 						linkAlocBw[linkInBrknPath] = linkAlocBw[linkInBrknPath] - qosToBw[brknQos]
 	return brknFlows
 
+
 def delBrknBkups(brknLink):
 	brknBkups = {}
 	if len(bkupsOnLink[brknLink].keys())>0: 		# If atleast one bkup was available in the broken link
@@ -608,8 +539,14 @@ def delBrknBkups(brknLink):
 			print "\t %s"%bkupPathId,
 			brknBkups[bkupPathId] = bkupsOnLink[brknLink][bkupPathId]
 		print ""
+
+		#print "\tbkupPathIds to delete"
 		for bkupPathId in brknBkups.keys():
+			#print "\t\t",bkupPathId
 			brknBkup = brknBkups[bkupPathId]
+			# Delete bkups from bkupsPerFlowPath data-structure
+			if bkupPathId in bkupsPerFlowPath.keys():
+				del bkupsPerFlowPath[bkupPathId]
 			
 			# Delete bkups from all substrate links of bkupsOnLink datastructure
 			del bkupsOnLink[brknLink][bkupPathId]
@@ -618,7 +555,8 @@ def delBrknBkups(brknLink):
 				if preSw is not None:
 					if adj[preSw][curSw] is not None:	# deleting bkups from good links in the broken path
 						linkInBrknBkup = Link(preSw, adj[preSw][curSw], curSw)
-						del bkupsOnLink[linkInBrknBkup][bkupPathId] 
+						if bkupPathId in bkupsOnLink[linkInBrknBkup].keys():
+							del bkupsOnLink[linkInBrknBkup][bkupPathId] 
 						
 	return brknBkups
 
@@ -632,7 +570,7 @@ def delBrknBkups(brknLink):
 # For this work, we use static allocated bandwith values to select least latency paths with sufficient bandwidth
 #-------------------------------------- Measured Throughput code --------------------------------------- 
 
-def rerouteFlows(flowsToReroute, linkObj, remEvnt):
+def rerouteFlows(flowsToReroute, brknLink, remEvnt):
 		
 	graph = createTopologyGraph()		
 	# Calculating new flowPaths for deleted FlowPaths and verifying sufficient bandwidth is available
@@ -640,7 +578,7 @@ def rerouteFlows(flowsToReroute, linkObj, remEvnt):
 		print "\tRerouting %s"%flowPathId
 		brknFlowPath =flowsToReroute[flowPathId]
 		brknMatch = brknFlowPath.match
-		curQos = brknFlowPath.curQos
+		curQos = brknFlowPath.alocQos
 		brknPath = brknFlowPath.path
 
 		#--------------------------------------------------------------------------------------------------------
@@ -765,8 +703,8 @@ def rerouteFlows(flowsToReroute, linkObj, remEvnt):
 			print"\tInstalling flowPath ",flowPathId
 			core.opennetmon_forwarding.installSinqroutePath(newFlowPath)
 			allocFlowIdToPath[flowPathId].add(newFlowPath)
-			#if flowPathId in unAllocFlowsOnLink[linkObj].keys():
-			#	del unAllocFlowsOnLink[linkObj][flowPathId]
+			#if flowPathId in unAllocFlowsOnLink[brknLink].keys():
+			#	del unAllocFlowsOnLink[brknLink][flowPathId]
 		
 			# Adding new path to flowsOnLnk and adding used bandwidth to linkAlocBw
 			for currSwDpid in epPrevSwDict.keys():
@@ -789,7 +727,7 @@ def rerouteFlows(flowsToReroute, linkObj, remEvnt):
 			unAllocFlowPaths.add(flowPathId)
 			#epOpoPath[flowPathId] = None
 			print "\t---Adding %s to unAllocFlowsOnLink"%flowPathId
-			unAllocFlowsOnLink[linkObj][flowPathId] = brknFlowPath
+			unAllocFlowsOnLink[brknLink][flowPathId] = brknFlowPath
 	
 	
 		
@@ -800,20 +738,24 @@ def rerouteFlows(flowsToReroute, linkObj, remEvnt):
 
 	
 
-def installBkup(flowsToReroute, brknLink, remEvnt=True):
+def installBkup(flowsToInstlBkups, brknLink, remEvnt=True):
 	instldBkups = {}
-	for flowPathId in flowsToReroute.keys():
-		print "\tRerouting %s"%flowPathId
-		brknFlowPath =flowsToReroute[flowPathId]
+	for flowPathId in flowsToInstlBkups.keys():
+		print "\tInstalling Backups for %s"%flowPathId
+		brknFlowPath =flowsToInstlBkups[flowPathId]
 		brknMatch = brknFlowPath.match
 		brknAlocBw = brknFlowPath.alocQos
 		brknReqBw = brknFlowPath.reqQos
 		brknPath = brknFlowPath.path
 		#bkupPath = None
+		
 		if flowPathId in bkupsPerFlowPath.keys():
-			print "\tBackup path found"
-			bkupPath = bkupsPerFlowPath[flowPathId][brknLink]
+			print "\tBackup path found for %s"%flowPathId
+			for linkSrc in bkupsPerFlowPath[flowPathId]:
+				print "\t\tlinkSrc =",dpid_to_str(linkSrc),"\t",bkupsPerFlowPath[flowPathId][linkSrc]
+			bkupPath = bkupsPerFlowPath[flowPathId][brknPath.src]
 			bkupPathLinks = bkupPath.get_linkList(adj)
+			print "bkupPathLinks = ",bkupPathLinks
 			# Finding path bandwidth
 			newPathBw = 20
 			listEmpty = True
@@ -840,10 +782,10 @@ def installBkup(flowsToReroute, brknLink, remEvnt=True):
 				allocFlowIdToPath[flowPathId].add(newFlowPath)
 	
 				# Adding new path to flowsOnLnk and adding used bandwidth to linkAlocBw
-				for bkupLink in bkupPathLinks.keys():
+				for bkupLink in bkupPathLinks:
 					
 					flowsOnLnk[bkupLink][flowPathId] = newFlowPath
-					print "\tepPathLink: ",bkupLink
+					print "\tbkupPathLink: ",bkupLink
 					global totBwUsed
 					totBwUsed = totBwUsed + alocBw
 					if linkAlocBw[bkupLink] is None:
@@ -857,13 +799,13 @@ def installBkup(flowsToReroute, brknLink, remEvnt=True):
 				print "\tZero BW in backup path. Not allocated"
 				unAllocFlowPaths.add(flowPathId)
 				print "\t---Adding %s to unAllocFlowsOnLink"%flowPathId
-				unAllocFlowsOnLink[linkObj][flowPathId] = brknFlowPath
+				unAllocFlowsOnLink[brknLink][flowPathId] = brknFlowPath
 
 		else:
 			print "\tUnable to find backup path"
 			unAllocFlowPaths.add(flowPathId)
 			print "\t---Adding %s to unAllocFlowsOnLink"%flowPathId
-			unAllocFlowsOnLink[linkObj][flowPathId] = brknFlowPath
+			unAllocFlowsOnLink[brknLink][flowPathId] = brknFlowPath
 	return instldBkups
 				
 
@@ -984,6 +926,8 @@ class ResManIntfs(EventMixin):
 		self.pktNum = 0
 		#self.swNum = 0
 		#self.linkEventSet = set()
+		self.bkupsToRecalc = {}
+		
 		def startup():
 			core.openflow.addListeners(self)
 			core.openflow_discovery.addListeners(self)
@@ -1053,8 +997,9 @@ class ResManIntfs(EventMixin):
 			del adj[link.dpid1][link.dpid2]
 			del linkDelay[brknLink]
 			linkAlocBw[brknLink]=None
-			print "\n - - - - - - - - - - - - Deleting and Rerouting flows on broken-link %s  - - - - - - - - - - - - "%brknLink
+			print "\n - - - - - - - - - - - - Deleting and allocating alternatives for flows on broken-link %s  - - - - - - - - - - - - "%brknLink
 			flowsToReroute = delBrknFlows(brknLink)
+			brknBkups = delBrknBkups(brknLink)
 			instldBkups = None
 			if reroute and len(flowsToReroute.keys())>0: 	# If atleast one flow is deleted as a result of the link failure
 				if bkupPathReroute:
@@ -1068,15 +1013,29 @@ class ResManIntfs(EventMixin):
 				print "\tNo Flows available in the disconnected link to reroute"
 			
 			# New backups are calculated for broken and allocated flows once every pair of unidirectional links 
-			brknFlows = delBrknBkups(brknLink)
-			bkupsToRecalc.update(brknFlows)
-			bkupsToRecalc.update(instldBkups)
-			if opoLink(brknLink) in brknUniLinkSet:
-				brknUniLinkSet.remove(opoLink(brknLink))
-				for flowPathId in bkupsToRecalc.keys():
-					calcBidirecBkups(bkupsToRecalc[flowPathId])
+			if brknBkups is not None:
+				self.bkupsToRecalc.update(brknBkups)
+			if instldBkups is not None:
+				self.bkupsToRecalc.update(instldBkups)
+			#print "\tbrknUniLinkSet=",brknUniLinkSet
+			
+			if  brknLink in brknUniLinkSet:
+				print "\tKeys of bkupsToRecalc"
+				for key in self.bkupsToRecalc.keys():
+					print "\t\t",key
+					
+				brknUniLinkSet.remove(brknLink)
+				print "Recalculating backups for deleted and installed backups"
+				graph = createTopologyGraph()
+				#graph.remove_edge(dpid_to_str(link.dpid1), dpid_to_str(link.dpid2))
+				#graph.remove_edge(dpid_to_str(link.dpid2), dpid_to_str(link.dpid1))
+				print "Recalculate backup for "
+				for flowPathId in self.bkupsToRecalc.keys():
+					print "\t\t",flowPathId
+					calcBiDiBkups(graph, flowPathId, self.bkupsToRecalc[flowPathId])
+				self.bkupsToRecalc.clear()
 			else:
-				brknUniLinkSet.add(brknLink)
+				brknUniLinkSet.add(opoLink(brknLink))
 
 			totBwAvbl = totBwAvbl - subLinkBwCap
 			numPLsAvbl = numPLsAvbl - 1
@@ -1314,7 +1273,7 @@ class ResManIntfs(EventMixin):
 						pathList = []
 						for pathNum in pathsPerVnp[vnpId].keys():
 							flowPathObj = pathsPerVnp[vnpId][pathNum]
-							qos = flowPathObj.qos
+							qos = flowPathObj.alocQos
 							path = flowPathObj.path
 							prevSwDict = path.prev
 							nodeList = []
