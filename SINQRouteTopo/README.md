@@ -14,6 +14,8 @@ import re
 
 
 (ii) Put following code in "class CLI( Cmd ):"
+
+
   def do_breaklinks( self, line ):	
     args = line.split()
     if len(args) == 1:
@@ -33,6 +35,7 @@ import re
     		sleep(3)
 	else:
 	    error( 'usage: breaklinks [num of links]\n' )
+
 
   def do_fixlinks( self, line ):
 	print "Bringing up %s links back"%len(self.breakList)
