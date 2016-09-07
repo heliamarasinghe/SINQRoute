@@ -43,3 +43,10 @@ import re
 		self.do_link( line="%s %s up"%(src, dst))
       	sleep(1)
 	self.breakList[:] = []
+
+
+(iii) Recompile miniet code to add changes using 'install.sh' script in miniet/utils/
+
+(iv) Run 20dc_sdnwantopo_new.py and try
+	mininet> breaklinks 5
+	mininet> fixlinks
