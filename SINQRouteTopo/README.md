@@ -1,8 +1,17 @@
+cli.py add two new functions to mininet cli to bring-down/up specified number of randomely selected links (inter-switch only).
+usage:
+	mininet> breaklinks [num]
+		Randomly select a sample size of [num] from interswitch links and send "link [src] [dst] down" command to each of them. 
+	mininet> fixlinks
+		Bring up links broken ONLY through breaklinks command
+
 Edit the file  "mininet/build/linux-x86_64-2.7/mininet/cli.py" or the cli.py file corresponding to OS and;
+
 
 (i) Put following in import section
 from time import sleep
 import re
+
 
 (ii) Put following code in "class CLI( Cmd ):"
   def do_breaklinks( self, line ):	
