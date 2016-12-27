@@ -15,7 +15,7 @@
 class SubTopoGenerator {
 
 public:
-	static void generateSubTopo(vector <int>&, vector <string>&);
+	static void generateSubTopo(vector <int>&, vector <string>&, int);
 
 };
 

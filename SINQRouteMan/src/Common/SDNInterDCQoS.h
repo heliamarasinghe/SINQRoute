@@ -8,23 +8,25 @@
 #ifndef COMMON_SDNINTERDCQOS_H_
 #define COMMON_SDNINTERDCQOS_H_
 
-#include "Sommet.h"
-#include "Tracesommet.h"
-#include "SubstrateLink.h"
+
+
 #include "SubstrateNode.h"
-#include "MetaSubstratePath.h"
-#include "MetaEmbeddingNodes.h"
-#include "VirtualLinkRequest.h"
-#include "VirtualNodeRequirement.h"
 #include "NodeQoSClass.h"
+#include "SubstrateLink.h"
 #include "LinkQoSClass.h"
+#include "VirtualNodeRequirement.h"
+#include "VirtualLinkRequest.h"
 #include "ResRangeCost.h"
 #include "VNTopology.h"
 #include "VNRequestTopology.h"
+#include "MetaSubstratePath.h"
+#include "MetaEmbeddingNodes.h"
 #include "SubstratePathStruct.h"
 #include "EmbdeddingVirtualNodeTrace.h"
 #include "EmbdeddingVNTrace.h"
 #include "EmbdeddingVLinkTrace.h"
+#include "TraceVertice.h"
+#include "Vertice.h"
 
 ILOSTLBEGIN
 
@@ -36,7 +38,7 @@ public:
 	typedef IloArray<Substrate_Node> Substrate_Graph_tab;   				// table to save a set of nodes
 	typedef IloArray<Substrate_Link> Substrate_Link_tab; 					// table to save a set of links
 	typedef IloArray<Meta_Substrate_Path> Meta_Substrate_Path_tab;          // table to save routing meta-paths
-	typedef IloArray<Sommet> Sommet_tab;                   					// table to save a set of nodes
+	typedef IloArray<Sommet> Vertices_tab;                   					// table to save a set of nodes
 	typedef IloArray<Virtual_Link_Request> VNP_traffic_tab;               	// table to save traffic matrix
 	typedef IloArray<Virtual_Node_Requirement> VN_node_requirement_tab;     // table to save VN nodes location and required resources
 	typedef IloArray<Meta_Embedding_Nodes> Meta_Embedding_Nodes_tab;        // table to save potantial src and est embdedding of virtual links
@@ -46,14 +48,14 @@ public:
 	//-------------------------------------------------------------------------------------------------------------------                                                                                                                 -
 	//                            		 Declarations of Common Functions                                      			-                                                                                                                -
 	//-------------------------------------------------------------------------------------------------------------------
-	static void table_initialization(IloNumArray&, const IloInt&);
+	static void arrayZeroInitialize(IloNumArray&, const IloInt&);
 	static void substrate_Graph_creation(Substrate_Graph_tab&, Substrate_Link_tab&, IloInt&, IloInt&, IloEnv&);
 	static void adjacency_list_creation(Substrate_Graph_tab&, IloInt&, IloEnv& );
 	static void substrate_graph_printing(Substrate_Graph_tab&, IloEnv, IloInt);
 	static void traffic_matrix_printing(VNP_traffic_tab&, IloInt&);
 	static void printing_meta_path(Meta_Substrate_Path_tab&, IloInt&, IloEnv&);
 
-	static void search_parent_node_position(Sommet_tab&, IloInt&, IloInt&, IloInt&);
+	static void search_parent_node_position(Vertices_tab&, IloInt&, IloInt&, IloInt&);
 	static IloInt search_common_arc(IloNumArray&, IloNumArray&);
 	static void add_meta_path(Meta_Substrate_Path_tab&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloNumArray&, Substrate_Graph_tab&, IloInt&, IloEnv&);
 	static IloInt search_vnp_request(VNP_traffic_tab&,IloInt&, IloInt&, IloInt&, IloInt&);

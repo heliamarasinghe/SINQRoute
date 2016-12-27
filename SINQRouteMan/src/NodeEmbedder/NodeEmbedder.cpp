@@ -18,21 +18,21 @@ void  NodeEmbedder::shortest_path(Substrate_Graph_tab& Vect_Substrate_Graph,  Me
 	IloInt lab=0, compteur_noeud=0, parent_node=0, last_node=0, nbr_path=0, id_node=1, find_cycle=0, test_cycle=0;
 	IloInt nb_in_out_link=0, max_paths=0;
 	IloInt adjacents_ind=0;
-	Sommet_tab    node_arb(env,GN);
+	Vertices_tab    node_arb(env,GN);
 
-	IloNumArray table_adj(env, MAX_INCIDENCE);
+	IloNumArray table_adj(env, MAX_SIZE);
 
 
-	priority_queue <Trace_sommet, vector<Trace_sommet>, less<vector<Trace_sommet>::value_type> > q;
+	priority_queue <Trace_vertice, vector<Trace_vertice>, less<vector<Trace_vertice>::value_type> > q;
 
 	//---------------------------
 	//  initialisation          -
 	//---------------------------
 
-	table_initialization(table_adj, MAX_INCIDENCE);
+	arrayZeroInitialize(table_adj, MAX_SIZE);
 	Vect_Substrate_Graph[(IloInt)(candidSrcSnode-1)].GetNode_Adjacent_Table(table_adj);
 
-	node_arb[compteur_noeud].SetSommet_Id((int)id_node);
+	node_arb[compteur_noeud].SetVertice_Id((int)id_node);
 	node_arb[compteur_noeud].setCurrent((int)candidSrcSnode);
 	node_arb[compteur_noeud].setPrevious(0);
 	node_arb[compteur_noeud].SetFils_tab(table_adj);
@@ -45,7 +45,7 @@ void  NodeEmbedder::shortest_path(Substrate_Graph_tab& Vect_Substrate_Graph,  Me
 	j=0;
 	last_node = candidSrcSnode;
 
-	while ((j<MAX_INCIDENCE)&&( more==0))
+	while ((j<MAX_SIZE)&&( more==0))
 	{
 		IloInt current_node = (IloInt) table_adj[j];
 		IloBool non_nul = (current_node !=0);
@@ -56,7 +56,7 @@ void  NodeEmbedder::shortest_path(Substrate_Graph_tab& Vect_Substrate_Graph,  Me
 
 			precedent = id_node - 1;
 			pere = current_node;
-			q.push(Trace_sommet((int)lab, (int)precedent,(int)pere));
+			q.push(Trace_vertice((int)lab, (int)precedent,(int)pere));
 		}
 		else
 			more=1;
@@ -101,11 +101,11 @@ void  NodeEmbedder::shortest_path(Substrate_Graph_tab& Vect_Substrate_Graph,  Me
 			nbr_path++;
 
 
-		node_arb[compteur_noeud].SetSommet_Id((int)id_node);
+		node_arb[compteur_noeud].SetVertice_Id((int)id_node);
 		node_arb[compteur_noeud].setCurrent((int)pere);
 		node_arb[compteur_noeud].setPrevious((int)precedent);
 
-		table_initialization(table_adj, MAX_INCIDENCE);
+		arrayZeroInitialize(table_adj, MAX_SIZE);
 
 		if (pere != candidDestSnode)
 		{
@@ -114,7 +114,7 @@ void  NodeEmbedder::shortest_path(Substrate_Graph_tab& Vect_Substrate_Graph,  Me
 			more=0 ;
 			j=0;
 
-			while ((j<MAX_INCIDENCE)&&( more==0))
+			while ((j<MAX_SIZE)&&( more==0))
 			{
 				IloInt current_node =  (IloInt) table_adj[j];
 				IloBool non_nul = (current_node !=0);
@@ -127,7 +127,7 @@ void  NodeEmbedder::shortest_path(Substrate_Graph_tab& Vect_Substrate_Graph,  Me
 
 					if  (current_node != candidSrcSnode)
 					{
-						q.push(Trace_sommet((int)lab, (int)precedent, (int)current_node));
+						q.push(Trace_vertice((int)lab, (int)precedent, (int)current_node));
 
 					}
 				}
@@ -158,8 +158,8 @@ void  NodeEmbedder::shortest_path(Substrate_Graph_tab& Vect_Substrate_Graph,  Me
 
 			find_src= 0;
 			l=i;
-			IloNumArray node_tab(env, MAX_INCIDENCE);
-			table_initialization(node_tab, MAX_INCIDENCE);
+			IloNumArray node_tab(env, MAX_SIZE);
+			arrayZeroInitialize(node_tab, MAX_SIZE);
 			IloInt nbre_node=0;
 			node_tab[nbre_node] = (IloNum)candidDestSnode;
 			nbre_node++;
@@ -216,7 +216,7 @@ IloInt NodeEmbedder::search_min_path_unit_cost(Meta_Substrate_Path_tab& path_vec
 {
 	IloInt current_path_cost=0, min_path_cost=10000;
 
-	IloInt find_arc=0, k=0,h=0, length = 3*MAX_INCIDENCE, req_num=0, more_arc=0, u_arc=0;
+	IloInt find_arc=0, k=0,h=0, length = 3*MAX_SIZE, req_num=0, more_arc=0, u_arc=0;
 
 	IloNumArray  arc_list(env_0,length);
 
@@ -227,7 +227,7 @@ IloInt NodeEmbedder::search_min_path_unit_cost(Meta_Substrate_Path_tab& path_vec
 
 		if(found_req)
 		{
-			table_initialization(arc_list,length);
+			arrayZeroInitialize(arc_list,length);
 			path_vect[k].GetUsed_Arc_Tab(arc_list);
 
 			more_arc =0;
@@ -265,7 +265,7 @@ IloInt NodeEmbedder::search_max_path_unit_cost(Meta_Substrate_Path_tab& path_vec
 {
 	IloInt current_path_cost=0, max_path_cost=0;
 
-	IloInt find_arc=0, k=0,h=0, length = 3*MAX_INCIDENCE, req_num=0, more_arc=0, u_arc=0;
+	IloInt find_arc=0, k=0,h=0, length = 3*MAX_SIZE, req_num=0, more_arc=0, u_arc=0;
 
 	IloNumArray  arc_list(env_0,length);
 
@@ -276,7 +276,7 @@ IloInt NodeEmbedder::search_max_path_unit_cost(Meta_Substrate_Path_tab& path_vec
 
 		if(found_req)
 		{
-			table_initialization(arc_list,length);
+			arrayZeroInitialize(arc_list,length);
 			path_vect[k].GetUsed_Arc_Tab(arc_list);
 
 			more_arc =0;
@@ -620,10 +620,10 @@ IloInt NodeEmbedder::calculate_cost_potantial_emb_shortestpath(Meta_Substrate_Pa
 {
 
 	IloInt emb_cost=0, src_request=0, dest_request=0, vlink_num=0, current_vnp=0, nb_hops=0;
-	IloInt k=0,l=0, current_arc=0, more_arc=0, path_cost=0, exit=0, length = MAX_INCIDENCE;
+	IloInt k=0,l=0, current_arc=0, more_arc=0, path_cost=0, exit=0, length = MAX_SIZE;
 
-	IloNumArray used_arc_tab(env_0,MAX_INCIDENCE);
-	table_initialization(used_arc_tab, MAX_INCIDENCE);
+	IloNumArray used_arc_tab(env_0,MAX_SIZE);
+	arrayZeroInitialize(used_arc_tab, MAX_SIZE);
 
 	while ((k < nb_path)&&(exit==0)){
 		src_request = (IloInt) emb_path_vect[k].getSrcSnodeOfPath();
@@ -640,7 +640,7 @@ IloInt NodeEmbedder::calculate_cost_potantial_emb_shortestpath(Meta_Substrate_Pa
 			emb_path_vect[k].GetUsed_Arc_Tab(used_arc_tab);
 			l=0;
 			more_arc=0;
-			while ((l<MAX_INCIDENCE)&&(more_arc==0)){
+			while ((l<MAX_SIZE)&&(more_arc==0)){
 				current_arc = (IloInt)used_arc_tab[l];
 				IloBool non_nul = (current_arc !=0);
 				if (non_nul)

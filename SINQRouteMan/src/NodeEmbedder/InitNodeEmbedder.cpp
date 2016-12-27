@@ -120,7 +120,7 @@ void NodeEmbedder::embedInitNodes(){
 			file3>>class_QoS>>cpu>>memory>>storage>>blade;
 			//		 1->5	 1->5
 
-			table_initialization(location_vect, MAX_NB_LOCATION);
+			arrayZeroInitialize(location_vect, MAX_NB_LOCATION);
 
 			for(IloInt j=0;j<MAX_NB_LOCATION;j++)
 			{
@@ -234,7 +234,7 @@ void NodeEmbedder::embedInitNodes(){
 			VNode_Potantial_Location_Vect[itr].SetVNP_Id(vnp_id);
 			VNode_Potantial_Location_Vect[itr].SetPeriod(period);
 
-			table_initialization(vect_location,MAX_NB_LOCATION);
+			arrayZeroInitialize(vect_location,MAX_NB_LOCATION);
 
 			for (IloInt j=0;j<MAX_NB_LOCATION;j++)
 			{
@@ -337,9 +337,9 @@ void NodeEmbedder::embedInitNodes(){
 			//IloInt hops = Link_Class_QoS_Vect[vLinkQosCls-1].GetQoS_Class_Max_Hops();//cout<<"\t\t hops = "<<hops<<endl;
 			//cout<<"\t\t"<<j<<"\t"<<src<<"\t"<<dest<<"\t"<<vnp_id<<"\t"<<virtual_link_class<<"\t\t"<<vLinkId<<"\t\t"<<hops<<endl;
 
-			table_initialization(candidate_src_vect,MAX_NB_LOCATION);
+			arrayZeroInitialize(candidate_src_vect,MAX_NB_LOCATION);
 			search_candidate_location(srcVnode, VNode_Potantial_Location_Vect, vnpId, candidate_src_vect,newVnodesInTslot);//cout<<"\t search_candidate_location for src \tDone"<<endl;
-			table_initialization(candidate_dest_vect,MAX_NB_LOCATION);
+			arrayZeroInitialize(candidate_dest_vect,MAX_NB_LOCATION);
 			search_candidate_location(destVnode, VNode_Potantial_Location_Vect, vnpId, candidate_dest_vect,newVnodesInTslot);//cout<<"\t search_candidate_location for dest \tDone"<<endl;
 
 			IloInt k=0;
@@ -665,7 +665,7 @@ void NodeEmbedder::embedInitNodes(){
 		cout<<"\n\tPrinting vNode embedding solution"<<endl;
 		IloInt nb_accepted_vnode=0;
 		IloNumArray accepted_vnp_requests(env, numOfVnps);
-		table_initialization(accepted_vnp_requests, numOfVnps);
+		arrayZeroInitialize(accepted_vnp_requests, numOfVnps);
 
 		Virtual_Node_Embedding_tab Vnode_Embedding_Vect(env,NB_VNODE_SNODE);
 

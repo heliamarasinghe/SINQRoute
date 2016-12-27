@@ -87,7 +87,7 @@ void TrafficGenerator::generateInitTraffic(){
 		  {
 		    file3 >> class_QoS >> cpu >> memory >> storage >> blade;
 
-		   table_initialization(location_vect, length_vect);
+		   arrayZeroInitialize(location_vect, length_vect);
 		    for(j=0;j<MAX_NB_LOCATION;j++)
 			 {
 			  file3>>loc;
@@ -167,7 +167,7 @@ void TrafficGenerator::generateInitTraffic(){
 				  IloNumArray    vect_VNP_node_location(env,length*rand_nb_node);
 			      IloInt nbr_elet= length*rand_nb_node;
 
-				  table_initialization(vect_VNP_node_location,nbr_elet);
+				  arrayZeroInitialize(vect_VNP_node_location,nbr_elet);
 				  h=0;
 				  cout<<"debug"<<vect_VNP_node_location[0]<<endl;
 		          ////cin.get();
@@ -175,7 +175,7 @@ void TrafficGenerator::generateInitTraffic(){
 				   {
 
 						 vn_node = k+1;
- 					     table_initialization(vect_location,length);
+ 					     arrayZeroInitialize(vect_location,length);
 					     nb_loc = 1 + (IloInt)((double)rand() / ((double)RAND_MAX + 1) * MAX_NB_LOCATION);
 					     node_cls = 1 + (IloInt)((double)rand() / ((double)RAND_MAX + 1) *NB_NODE_CLASS);
 
@@ -187,7 +187,7 @@ void TrafficGenerator::generateInitTraffic(){
 						 	   used_node = (IloInt) findElementInVector(embedding_node_location, vect_VNP_node_location, h);
 					                   cout<<"embedding_node_location: "<<embedding_node_location<<endl;
 
-							   table_initialization(vect_forbidden_location,length);
+							   arrayZeroInitialize(vect_forbidden_location,length);
 							   Node_Class_QoS_Vect[node_cls-1].GetNode_Location_Tab(vect_forbidden_location);
 
 							   //allowed_loc = (IloInt) search_elt_in_table(embedding_node_location, vect_forbidden_location, length);
@@ -446,10 +446,10 @@ void TrafficGenerator::generateInitTraffic(){
 
 									 hops = (IloInt) Link_Class_QoS_Vect[virtual_link_class-1].GetQoS_Class_Max_Hops();
 
-									 table_initialization(candidate_src_vect,length);
+									 arrayZeroInitialize(candidate_src_vect,length);
 	 								 search_candidate_location(src, VNode_Location_Vect, vnp_id, candidate_src_vect,NB_VNP_NODE);
 
-									 table_initialization(candidate_dest_vect,length);
+									 arrayZeroInitialize(candidate_dest_vect,length);
 									 search_candidate_location(dest, VNode_Location_Vect, vnp_id, candidate_dest_vect,NB_VNP_NODE);
 
 
@@ -631,7 +631,7 @@ void TrafficGenerator::generateInitTraffic(){
 
 							for (i=0;i<comp_vn_node;i++)
 							 {
-								  table_initialization(vect_location,length);
+								  arrayZeroInitialize(vect_location,length);
 
 								  vn_node = (IloInt)VNode_Location_Vect[i].GetVirtual_Node_Id();
 								  node_cls = (IloInt)VNode_Location_Vect[i].GetQoS_Class();

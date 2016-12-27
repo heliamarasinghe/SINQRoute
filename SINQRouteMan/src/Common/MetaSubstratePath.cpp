@@ -22,7 +22,7 @@ Meta_Substrate_Path::Meta_Substrate_Path() {
 	Candidate_Embdding_Nodes_Id=0;
 	NB_Hops = 0;
 
-	for(k=0;k<MAX_INCIDENCE;k++)
+	for(k=0;k<MAX_SIZE;k++)
 	{
 		Used_Node_Tab[k]=0;
 		Used_Arc_Tab[k]=0;
@@ -34,7 +34,7 @@ Meta_Substrate_Path::~Meta_Substrate_Path() {
 	// TODO Auto-generated destructor stub
 }
 
-void Meta_Substrate_Path::SetMeta_substrate_path_Id(IloInt n)
+void Meta_Substrate_Path::setMetaSubPathId(IloInt n)
 {
 	Meta_substrate_path_Id=n;
 }
@@ -43,7 +43,7 @@ IloInt Meta_Substrate_Path::getCandidShortestPathId()
 	return Meta_substrate_path_Id;
 }
 
-void Meta_Substrate_Path::SetSrc_path(IloInt s)
+void Meta_Substrate_Path::setMetaSubPathSrc(IloInt s)
 {
 	Src_path = s;
 }
@@ -53,7 +53,7 @@ IloInt Meta_Substrate_Path::getSrcSnodeOfPath()
 	return Src_path;
 }
 
-void Meta_Substrate_Path::SetDest_path(IloInt d)
+void Meta_Substrate_Path::setMetaSubPathDst(IloInt d)
 {
 	Dest_path = d;
 }
@@ -64,7 +64,7 @@ IloInt Meta_Substrate_Path::getDestSnodeOfPath()
 }
 
 
-void Meta_Substrate_Path::SetVirtual_Link_Id(IloInt id)
+void Meta_Substrate_Path::setMetaSubPathVlinkId(IloInt id)
 {
 	Virtual_Link_Id=id;
 }
@@ -74,7 +74,7 @@ IloInt Meta_Substrate_Path::getCorrespVlinkId()
 	return Virtual_Link_Id;
 }
 
-void Meta_Substrate_Path::SetVNP_Id(IloInt id)
+void Meta_Substrate_Path::setMetaSubPathVnpId(IloInt id)
 {
 	VNP_Id=id;
 }
@@ -84,7 +84,7 @@ IloInt Meta_Substrate_Path::GetVNP_Id()
 	return VNP_Id;
 }
 
-void Meta_Substrate_Path::SetCandidate_Embdding_Nodes_Id(IloInt id)
+void Meta_Substrate_Path::setMetaSubPathReqId(IloInt id)
 {
 	Candidate_Embdding_Nodes_Id=id;
 }
@@ -107,28 +107,28 @@ IloInt Meta_Substrate_Path::getNumOfHopsInShortestPath()
 void Meta_Substrate_Path::SetUsed_Node_Tab(IloNumArray& node_tab)
 {
 	IloInt i;
-	for(i=0;i<MAX_INCIDENCE;i++)
+	for(i=0;i<MAX_SIZE;i++)
 		Used_Node_Tab[i]=(int)node_tab[i];
 }
 
 void Meta_Substrate_Path::GetUsed_Node_Tab(IloNumArray& node_used_tab)
 {
 	IloInt i;
-	for(i=0;i<MAX_INCIDENCE;i++)
+	for(i=0;i<MAX_SIZE;i++)
 		node_used_tab[i]= Used_Node_Tab[i];
 }
 
 void Meta_Substrate_Path::SetUsed_Arc_Tab(IloNumArray& arc_tab)
 {
 	IloInt i;
-	for(i=0;i<MAX_INCIDENCE;i++)
+	for(i=0;i<MAX_SIZE;i++)
 		Used_Arc_Tab[i]=(int)arc_tab[i];
 }
 
 void Meta_Substrate_Path::GetUsed_Arc_Tab(IloNumArray& arc_used_tab)
 {
 	IloInt i;
-	for(i=0;i<MAX_INCIDENCE;i++)
+	for(i=0;i<MAX_SIZE;i++)
 		arc_used_tab[i]= Used_Arc_Tab[i];
 }
 

@@ -14,8 +14,8 @@
 class Substrate_Node {
 private:
 	IloInt Node_Id;
-	int Arc_List[MAX_INCIDENCE];             // list of incomming/outgoing links in original graph
-	int Node_Adjacent_Table[MAX_INCIDENCE];     // list of adjacents nodes in original graph
+	int Arc_List[MAX_SIZE];             // list of incomming/outgoing links in original graph
+	int Node_Adjacent_Table[MAX_SIZE];     // list of adjacents nodes in original graph
 public:
 	Substrate_Node();
 	virtual ~Substrate_Node();

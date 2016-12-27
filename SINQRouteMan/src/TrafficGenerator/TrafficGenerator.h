@@ -79,7 +79,7 @@ public:
 
 	//static IloInt  Check_nb_hops_in_shortest_path(Substrate_Graph_tab&, IloInt&, IloInt&, IloEnv&);
 	static void search_cpu_requirement_src_dest_nodes(IloInt&, IloInt&, IloInt&, VN_node_requirement_tab&, Node_QoS_Class_tab&, IloInt&, IloInt&);
-	static void search_parent_node_position(Sommet_tab&, IloInt&, IloInt&, IloInt& );
+	static void search_parent_node_position(Vertices_tab&, IloInt&, IloInt&, IloInt& );
 	static void find_next_node(IloNumArray& arc_vect ,IloInt& current_node,IloInt& node_suivant, IloInt& c_arc,Substrate_Graph_tab& vect_OG, IloEnv& env_3);
 
 

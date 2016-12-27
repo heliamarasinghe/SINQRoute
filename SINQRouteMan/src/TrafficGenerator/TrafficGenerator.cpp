@@ -20,9 +20,9 @@
 
       IloInt i=0, j=0, l=0, find_src=0, current_node=0, more=0, label=0, valid_node=0, precedent=0, pere=0,  compteur_chemins=0;
       IloInt lab=0, compteur_noeud=0, nbre_node, parent_node=0, last_node=0, nbr_path=0, id_node=1, find_cycle=0, test_cycle=0;
-      IloInt more_H_hops=0, length=MAX_INCIDENCE, nb_in_out_link=0, max_paths=0;
+      IloInt more_H_hops=0, length=MAX_SIZE, nb_in_out_link=0, max_paths=0;
   	IloInt adjacents_ind=0;
-      Sommet_tab    node_arb(env1,GN);
+      Vertices_tab    node_arb(env1,GN);
 
       //IloInt selected_node=0;
   	//IloInt nbr_node=0;
@@ -31,16 +31,16 @@
       IloNumArray table_adj(env1, length);
       IloNumArray node_tab(env1, length);
 
-      priority_queue <Trace_sommet, vector<Trace_sommet>, less<vector<Trace_sommet>::value_type> > q;
+      priority_queue <Trace_vertice, vector<Trace_vertice>, less<vector<Trace_vertice>::value_type> > q;
 
       //---------------------------
       //  initialisation          -
       //---------------------------
 
-  	table_initialization(table_adj, length);
+  	arrayZeroInitialize(table_adj, length);
       tab_OG[(IloInt)(source-1)].GetNode_Adjacent_Table(table_adj);
 
-      node_arb[compteur_noeud].SetSommet_Id((int)id_node);
+      node_arb[compteur_noeud].SetVertice_Id((int)id_node);
       node_arb[compteur_noeud].setCurrent((int)source);
       node_arb[compteur_noeud].setPrevious(0);
       node_arb[compteur_noeud].SetFils_tab(table_adj);
@@ -64,7 +64,7 @@
 
   		       precedent = id_node - 1;
   		       pere = current_node;
-  		       q.push(Trace_sommet((int)lab, (int)precedent,(int)pere));
+  		       q.push(Trace_vertice((int)lab, (int)precedent,(int)pere));
   		    }
   		   else
   		       more=1;
@@ -109,11 +109,11 @@
   				 nbr_path++;
 
 
-  				node_arb[compteur_noeud].SetSommet_Id((int)id_node);
+  				node_arb[compteur_noeud].SetVertice_Id((int)id_node);
   				node_arb[compteur_noeud].setCurrent((int)pere);
   				node_arb[compteur_noeud].setPrevious((int)precedent);
 
-  				table_initialization(table_adj, length);
+  				arrayZeroInitialize(table_adj, length);
 
   				if (pere != destination)
   				 {
@@ -135,7 +135,7 @@
 
   							  if  (current_node != source)
   							   {
-  								 q.push(Trace_sommet((int)lab, (int)precedent, (int)current_node));
+  								 q.push(Trace_vertice((int)lab, (int)precedent, (int)current_node));
 
   							   }
   						  }
@@ -166,7 +166,7 @@
 
   		       find_src= 0;
   		       l=i;
-  		       table_initialization(node_tab, length);
+  		       arrayZeroInitialize(node_tab, length);
   		       nbre_node=0;
   		       node_tab[nbre_node] = (IloNum)destination;
   		       nbre_node++;
@@ -229,7 +229,7 @@
       IloInt max_path_cost=0;
       //IloInt current_path_cost=0;
 
-      IloInt k=0,h=0, length = MAX_INCIDENCE, req_num=0, more_arc=0, u_arc=0, c_vnp=0;
+      IloInt k=0,h=0, length = MAX_SIZE, req_num=0, more_arc=0, u_arc=0, c_vnp=0;
       //IloInt find_arc=0;
 
       IloInt src_path=0, dest_path=0, src_cost=0, dest_cost=0, path_cost=0, src_dest_cost=0, unit_path_cost=0;
@@ -246,7 +246,7 @@
 
      			if ((found_req)&&(found_vnp))
      			 {
-     				 table_initialization(arc_list,length);
+     				 arrayZeroInitialize(arc_list,length);
      	 			 path_vect[k].GetUsed_Arc_Tab(arc_list);
 
      				 src_path = (IloInt)  path_vect[k].getSrcSnodeOfPath();
@@ -301,7 +301,7 @@
      {
       IloInt  min_path_cost=10000;
 
-      IloInt k=0,h=0, length = MAX_INCIDENCE, req_num=0, more_arc=0, u_arc=0, c_vnp=0;
+      IloInt k=0,h=0, length = MAX_SIZE, req_num=0, more_arc=0, u_arc=0, c_vnp=0;
       //IloInt find_arc=0;
       IloInt src_path=0, dest_path=0, src_cost=0, dest_cost=0, path_cost=0, src_dest_cost=0, unit_path_cost=0;
 
@@ -317,7 +317,7 @@
 
      			if ((found_req)&&(found_vnp))
      			 {
-     				 table_initialization(arc_list,length);
+     				 arrayZeroInitialize(arc_list,length);
      	 			 path_vect[k].GetUsed_Arc_Tab(arc_list);
 
      				 src_path = (IloInt)  path_vect[k].getSrcSnodeOfPath();
@@ -404,7 +404,7 @@
        //                                      Search Parent Node Position                                 *
        //***************************************************************************************************
 
-        void TrafficGenerator::search_parent_node_position(Sommet_tab& arbo_tab, IloInt& length_arbo ,IloInt& search_node, IloInt& position_node)
+        void TrafficGenerator::search_parent_node_position(Vertices_tab& arbo_tab, IloInt& length_arbo ,IloInt& search_node, IloInt& position_node)
 
              {
                 IloInt find_node=0, h=0 , node_id=0;

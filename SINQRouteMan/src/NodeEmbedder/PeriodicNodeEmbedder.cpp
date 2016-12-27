@@ -10,7 +10,7 @@
 void NodeEmbedder::embedPeriodicNodes(int currTslot){
 
 	cout<<"\n\t *** Periodic Node Embedder ***"<<endl;
-	
+	int prevTslot = currTslot-1;
 
 	const char*  f1_subTopo="DataFiles/init/f1_subTopo.txt";					// init/f1_subTopo.txt
 	const char*  f2_linkQoS="DataFiles/init/f2_linkQoS.txt";					// init/f2_linkQoS.txt
@@ -24,7 +24,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 	snprintf(f6_vnReqNode, sizeof(char) * 50, "DataFiles/t%i/f6_vnReqNode.txt", currTslot);					// currTslot/f6_vnReqNode.txt
 	//const char*  f11_ph2EmbeddedVnodes="DataFiles/t0/f11_ph2EmbeddedVnodes.txt";		
 	char prv_f11_ph2EmbeddedVnodes[50];
-	snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_ph2EmbeddedVnodes.txt", currTslot-1); // prevTslot/f11_ph2EmbeddedVnodes.txt
+	snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_ph2EmbeddedVnodes.txt", prevTslot); // prevTslot/f11_ph2EmbeddedVnodes.txt
 	char f7_vnReqLink[50];
 	snprintf(f7_vnReqLink, sizeof(char) * 50, "DataFiles/t%i/f7_vnReqLink.txt", currTslot);					// currTslot/f7_vnReqLink.txt
 
@@ -67,7 +67,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 
 	IloInt current_virtual_link_id=0, current_vnp_id=0, vlink_src=0, vlink_dest=0, length=0, next_virtual_link=0, virtual_link_profit=0;
 
-	IloInt period=0, NB_RESERVED=0, NB_ADD=0, PIP_profit=0, nb_used_arc=0, nb_embedding_path=0, vect_length=MAX_INCIDENCE;
+	IloInt period=0, NB_RESERVED=0, NB_ADD=0, PIP_profit=0, nb_used_arc=0, nb_embedding_path=0, vect_length=MAX_SIZE;
 
 	IloInt exit_src=0, exit_dest=0, virtual_link_class=0, current_period=0, node_cost=0, nb_accepted_req=0, nb_previous_vnode=0;
 	IloInt vlink_src_cls=0, vlink_dest_cls =0, src_cpu=0, memory=0, storage=0, blade=0, dest_cpu=0, src_memory=0, src_storage=0, dest_memory=0, dest_storage=0, length_vect=0, loc=0, node_cls=0, cpu=0, Nb_reserved_vnode=0;
@@ -235,7 +235,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 		    //file5>>class_QoS>>cpu;
 
 		    file3 >> class_QoS >> cpu >> memory >> storage >> blade;
-            table_initialization(location_vect, length_vect);
+            arrayZeroInitialize(location_vect, length_vect);
 
 		    for(j=0;j<MAX_NB_LOCATION;j++)
 			 {
@@ -322,7 +322,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 				  VNode_Potantial_Location_Vect[i].SetVNP_Id((IloInt)vnp_id);
                   VNode_Potantial_Location_Vect[i].SetPeriod((IloInt)period);
 
-				  table_initialization(vect_location,length);
+				  arrayZeroInitialize(vect_location,length);
 
 				  for (j=0;j<length;j++)
 				   {
@@ -429,10 +429,10 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 
 				 //cout<<"\t"<<j<<"\t\t"<<src<<"\t"<<dest<<"\t"<<vnp_id<<"\t"<<virtual_link_class<<"\t\t"<<virtual_link_id<<"\t\t"<<hops<<endl;
 
-				 table_initialization(candidate_src_vect,length);
+				 arrayZeroInitialize(candidate_src_vect,length);
 				 search_candidate_location(src, VNode_Potantial_Location_Vect, vnp_id, candidate_src_vect,NB_VNP_NODE);
 
-				 table_initialization(candidate_dest_vect,length);
+				 arrayZeroInitialize(candidate_dest_vect,length);
 			     search_candidate_location(dest, VNode_Potantial_Location_Vect, vnp_id, candidate_dest_vect,NB_VNP_NODE);
 
 				 //cout<<"\tvirtual_link_id:"<<virtual_link_id<<endl;
@@ -732,7 +732,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 		//-------------------------------------
 
 		IloNumArray accepted_vnp_requests(env, NB_VNP);
-        table_initialization(accepted_vnp_requests, NB_VNP);
+        arrayZeroInitialize(accepted_vnp_requests, NB_VNP);
 
 		Virtual_Node_Embedding_tab Vnode_Embedding_Vect(env,NB_VNODE_SNODE);
 

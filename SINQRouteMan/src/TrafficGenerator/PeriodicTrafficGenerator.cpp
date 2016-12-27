@@ -26,6 +26,8 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 	// * Verify whether the periodicTrafficGenerator require f9_ph1AcceptedVlinks.txt or f12_ph2AcceptedVlinks.txt
 	char prv_f12_ph2AcceptedVlinks[50];
 	snprintf(prv_f12_ph2AcceptedVlinks, sizeof(char) * 50, "DataFiles/t%i/f12_ph2AcceptedVlinks.txt", prevTslot);		// currTslot/f12_ph2AcceptedVlinks.txt
+	//char f17_ctrlUpdatedNalocs[50];
+	//snprintf(f17_ctrlUpdatedNalocs, sizeof(char) * 50, "DataFiles/t%i/f17_ctrlUpdatedNalocs.txt", prevTslot);		// currTslot/f12_ph2AcceptedVlinks.txt
 
 	// Files being written
 	char f4_vnReqTopo[50];
@@ -138,7 +140,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 			  {
 			     file3>>class_QoS>>cpu>>gpu>>memory>>storage>>blades;
 
-	            table_initialization(location_vect, length_vect);
+	            arrayZeroInitialize(location_vect, length_vect);
 
 			    for(j=0;j<MAX_NB_LOCATION;j++)
 				 {
@@ -214,7 +216,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 			  cout<<"nb_dropped_requests:"<<nb_dropped_vnp_requests<<endl;
 
 			  IloNumArray   Dropped_VNP_Request_Vect(env,nb_dropped_vnp_requests);
-			  table_initialization(Dropped_VNP_Request_Vect, nb_dropped_vnp_requests);
+			  arrayZeroInitialize(Dropped_VNP_Request_Vect, nb_dropped_vnp_requests);
 
 			  h=0;
 
@@ -351,12 +353,12 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 					  IloNumArray    vect_VNP_node_location(env,nbr_elet);
 
 
-					  table_initialization(vect_VNP_node_location,nbr_elet);
+					  arrayZeroInitialize(vect_VNP_node_location,nbr_elet);
 					  h=0;
 					  for(k=0; k<rand_nb_node;k++)
 					    {
 						   vn_node = k+1;
-	 					   table_initialization(vect_location,length);
+	 					   arrayZeroInitialize(vect_location,length);
 						   nb_loc = 1 + (IloInt)((double)rand() / ((double)RAND_MAX + 1) * MAX_NB_LOCATION);
 						   node_cls = 1 + (IloInt)((double)rand() / ((double)RAND_MAX + 1) *NB_NODE_CLASS);
 
@@ -367,7 +369,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 								   used_node = (IloInt) findElementInVector(embedding_node_location, vect_VNP_node_location, h);
 
-								   table_initialization(vect_forbidden_location,length);
+								   arrayZeroInitialize(vect_forbidden_location,length);
 							       Node_Class_QoS_Vect[node_cls-1].GetNode_Location_Tab(vect_forbidden_location);
 
 								   //allowed_loc = (IloInt) search_elt_in_table(embedding_node_location, vect_forbidden_location, length);
@@ -520,51 +522,51 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 		 	//********************************************************************************************************
 
 	           IloNumArray  used_bw_vect(env,NB_LINK);
-	           table_initialization(used_bw_vect,NB_LINK);
+	           arrayZeroInitialize(used_bw_vect,NB_LINK);
 
 			   IloNumArray  bw_unit_cost_vect(env,NB_LINK);
-	           table_initialization(bw_unit_cost_vect,NB_LINK);
+	           arrayZeroInitialize(bw_unit_cost_vect,NB_LINK);
 
 			   RES_RANGE_COST_Tab BW_RANGE_COST_Vect(env,NB_LINK);
 
 			   IloNumArray  used_cpu_vect(env,NB_NODE);
-	           table_initialization(used_cpu_vect,NB_NODE);
+	           arrayZeroInitialize(used_cpu_vect,NB_NODE);
 
 			   IloNumArray  cpu_unit_cost_vect(env,NB_NODE);
-	           table_initialization(cpu_unit_cost_vect,NB_NODE);
+	           arrayZeroInitialize(cpu_unit_cost_vect,NB_NODE);
 
 			   RES_RANGE_COST_Tab CPU_RANGE_COST_Vect(env,NB_NODE);
 
 			   IloNumArray  used_gpu_vect(env,NB_NODE);
-	           table_initialization(used_gpu_vect,NB_NODE);
+	           arrayZeroInitialize(used_gpu_vect,NB_NODE);
 
 			   IloNumArray  gpu_unit_cost_vect(env,NB_NODE);
-	           table_initialization(gpu_unit_cost_vect,NB_NODE);
+	           arrayZeroInitialize(gpu_unit_cost_vect,NB_NODE);
 
 			   RES_RANGE_COST_Tab GPU_RANGE_COST_Vect(env,NB_NODE);
 
 			   IloNumArray  used_storage_vect(env,NB_NODE);
-	           table_initialization(used_storage_vect,NB_NODE);
+	           arrayZeroInitialize(used_storage_vect,NB_NODE);
 
 			   IloNumArray     storage_unit_cost_vect(env,NB_NODE);
-			   table_initialization(storage_unit_cost_vect,NB_NODE);
+			   arrayZeroInitialize(storage_unit_cost_vect,NB_NODE);
 
 			   RES_RANGE_COST_Tab STORAGE_RANGE_COST_Vect(env,NB_NODE);
 
 			   IloNumArray  used_blades_vect(env,NB_NODE);
-	           table_initialization(used_blades_vect,NB_NODE);
+	           arrayZeroInitialize(used_blades_vect,NB_NODE);
 
 			   IloNumArray     blades_unit_cost_vect(env,NB_NODE);
-			   table_initialization(blades_unit_cost_vect,NB_NODE);
+			   arrayZeroInitialize(blades_unit_cost_vect,NB_NODE);
 
 			   RES_RANGE_COST_Tab BLADES_RANGE_COST_Vect(env,NB_NODE);
 
 
 			   IloNumArray  used_ram_vect(env,NB_NODE);
-	           table_initialization(used_ram_vect,NB_NODE);
+	           arrayZeroInitialize(used_ram_vect,NB_NODE);
 
 			   IloNumArray     ram_unit_cost_vect(env,NB_NODE);
-			   table_initialization(ram_unit_cost_vect,NB_NODE);
+			   arrayZeroInitialize(ram_unit_cost_vect,NB_NODE);
 
 			   RES_RANGE_COST_Tab RAM_RANGE_COST_Vect(env,NB_NODE);
 
@@ -772,10 +774,10 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 										 hops = (IloInt) Link_Class_QoS_Vect[virtual_link_class-1].GetQoS_Class_Max_Hops();
 
-										 table_initialization(candidate_src_vect,length);
+										 arrayZeroInitialize(candidate_src_vect,length);
 		 								 search_candidate_location(src, VNode_Location_Vect, vnp_id, candidate_src_vect,NB_VNP_NODE);
 
-										 table_initialization(candidate_dest_vect,length);
+										 arrayZeroInitialize(candidate_dest_vect,length);
 										 search_candidate_location(dest, VNode_Location_Vect, vnp_id, candidate_dest_vect,NB_VNP_NODE);
 
 										 //cout<<"virtual_link_id:"<<virtual_link_id<<endl;
@@ -1012,7 +1014,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 								for (i=0;i<comp_vn_node;i++)
 								 {
-									  table_initialization(vect_location,length);
+									  arrayZeroInitialize(vect_location,length);
 
 									  vn_node = (IloInt)VNode_Location_Vect[i].GetVirtual_Node_Id();
 									  node_cls = (IloInt)VNode_Location_Vect[i].GetQoS_Class();

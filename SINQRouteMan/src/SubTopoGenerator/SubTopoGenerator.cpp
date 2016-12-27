@@ -9,7 +9,7 @@
 ILOSTLBEGIN
 
 
-void SubTopoGenerator::generateSubTopo(vector<int>& switchVect, vector<string>& linkVect){
+void SubTopoGenerator::generateSubTopo(vector<int>& switchVect, vector<string>& linkVect, int currTslot){
 	cout<<"Generating substrate topology file"<<endl;
 
 	multimap<int, int> linkMap;
@@ -30,7 +30,9 @@ void SubTopoGenerator::generateSubTopo(vector<int>& switchVect, vector<string>& 
 	int numLinks = linkMap.size();
 	//cout<<"\tnumSwitches = "<<numSwitches<<"\tnumLinks"<<numLinks<<endl;
 	try{
-		const char*  f1_subTopo		= "DataFiles/init/f1_subTopo_auto.txt";			// init/f1_subTopo.txt
+		//const char*  f1_subTopo		= "DataFiles/init/f1_subTopo_auto.txt";			// init/f1_subTopo.txt
+		char f1_subTopo[50];
+				snprintf(f1_subTopo, sizeof(char) * 50, "DataFiles/t%i/reEmbed/f1_subTopo.txt", currTslot);							// currTslot/f4_vnReqTopo.txt
 		cout<<"\tWriting Generated topology to "<<f1_subTopo<<endl;
 		ofstream file1(f1_subTopo);
 

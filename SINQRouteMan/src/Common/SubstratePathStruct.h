@@ -21,8 +21,8 @@ class  Substrate_Path_Struct
 	IloInt Cost;
 	IloInt Period;
 
-    int Used_Node_Tab[3*MAX_INCIDENCE];
-    int Used_Arc_Tab[3*MAX_INCIDENCE];
+    int Used_Node_Tab[3*MAX_SIZE];
+    int Used_Arc_Tab[3*MAX_SIZE];
 
     public:
      Substrate_Path_Struct();

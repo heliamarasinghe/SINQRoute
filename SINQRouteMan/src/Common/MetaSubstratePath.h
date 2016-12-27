@@ -21,30 +21,30 @@ private:
 	IloInt Candidate_Embdding_Nodes_Id;
 	IloInt NB_Hops;
 
-	int Used_Node_Tab[MAX_INCIDENCE];
-	int Used_Arc_Tab[MAX_INCIDENCE];
+	int Used_Node_Tab[MAX_SIZE];
+	int Used_Arc_Tab[MAX_SIZE];
 
 public:
 	Meta_Substrate_Path();
 	virtual ~Meta_Substrate_Path();
 
-	void SetMeta_substrate_path_Id(IloInt n);
+	void setMetaSubPathId(IloInt n);
 	IloInt getCandidShortestPathId();
 
-	void SetSrc_path(IloInt s);
+	void setMetaSubPathSrc(IloInt s);
 	IloInt getSrcSnodeOfPath();
 
-	void SetDest_path(IloInt d);
+	void setMetaSubPathDst(IloInt d);
 	IloInt getDestSnodeOfPath();
 
 
-	void SetVirtual_Link_Id(IloInt id);
+	void setMetaSubPathVlinkId(IloInt id);
 	IloInt getCorrespVlinkId();
 
-	void SetVNP_Id(IloInt id);
+	void setMetaSubPathVnpId(IloInt id);
 	IloInt GetVNP_Id();
 
-	void SetCandidate_Embdding_Nodes_Id(IloInt id);
+	void setMetaSubPathReqId(IloInt id);
 	IloInt getCandidSnodeCombiId();
 
 	 void SetNB_Hops(IloInt h);

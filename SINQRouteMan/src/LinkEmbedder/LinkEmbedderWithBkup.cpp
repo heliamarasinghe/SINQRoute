@@ -1,14 +1,15 @@
 /*
- * PeriodicLinkEmbedder.cpp
+ * LinkEmbedderWithBkup.cpp
  *
- *  Created on: Mar 3, 2016
+ *  Created on: Dec 19, 2016
  *      Author: openstack
  */
 
+
 #include "../LinkEmbedder/LinkEmbedder.h"
 
-char* LinkEmbedder::embedPeriodicLinks(int currTslot){
-	cout<<"\n\t*** Executing Periodic Link Embedder ***"<<endl;
+char* LinkEmbedder::embedLinksWithBkup(int currTslot){
+	cout<<"\n\t*** Executing Link Embedder with Backups ***"<<endl;
 
 	//int prevTslot = currTslot-1;
 	IloInt vect_length=MAX_SIZE;
@@ -59,12 +60,12 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		ifstream f1(f1_subTopo);
 		if (!f1)
 			cerr << "ERROR: could not open file"<< f1_subTopo << "for reading"<< endl;
-		IloInt NB_NODE=0, NB_LINK=0;
-		f1>> NB_NODE;
-		f1>> NB_LINK;
+		IloInt numSubNodes=0, numSubLinks=0;
+		f1>> numSubNodes;
+		f1>> numSubLinks;
 
-		Substrate_Link_tab Vect_Link(env,NB_LINK);
-		for(IloInt i=0;i<NB_LINK;i++){
+		Substrate_Link_tab Vect_Link(env,numSubLinks);
+		for(IloInt i=0;i<numSubLinks;i++){
 			IloInt sLink=0, src=0, dest=0;
 			f1>>sLink>>src>>dest;
 			Vect_Link[i].SetArc_Num(sLink);
@@ -148,12 +149,12 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		ifstream f5(f5_subUnitCost);
 		if (!f5)
 			cerr << "ERROR: could not open file "<< f5_subUnitCost<< "for reading"<< endl;
-		IloNumArray    bw_unit_cost_vect(env,NB_LINK);
-		IloNumArray    cpu_unit_cost_vect(env,NB_NODE);
-		for(IloInt j=0;j<NB_LINK;j++)
+		IloNumArray    bw_unit_cost_vect(env,numSubLinks);
+		IloNumArray    cpu_unit_cost_vect(env,numSubNodes);
+		for(IloInt j=0;j<numSubLinks;j++)
 			f5>>bw_unit_cost_vect[j];
 
-		for(IloInt j=0;j<NB_NODE;j++)
+		for(IloInt j=0;j<numSubNodes;j++)
 			f5>>cpu_unit_cost_vect[j];
 		f5.close();
 
@@ -242,8 +243,8 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		//------------------------------------------------------------------------------------------------------------
 		//                             initialization of Available Substrate Resources     -
 		//------------------------------------------------------------------------------------------------------------
-		IloNumArray Available_bw_vect(env,NB_LINK);
-		for(IloInt i=0; i<NB_LINK;i++)
+		IloNumArray Available_bw_vect(env,numSubLinks);
+		for(IloInt i=0; i<numSubLinks;i++)
 			Available_bw_vect[i] = SUBSTRATE_LINK_BW;
 
 		//------------------------------------------------------------------------------------------------------------
@@ -382,13 +383,18 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		prv_f11.close();
 		cout<<"\t\t Retained Vlink embedding entries found \t= "<<numRtndVlinkEmbdFound<<endl;
 
+		//--------------------------------------------------------------------------------------------------------
+		//				Caculating shared backup cost matrix (theta ftom each substrate link to other
+		//--------------------------------------------------------------------------------------------------------
+
+
 		//********************************************************************************************************
-		//                             Network definition
+		//                      		       Network definition
 		//********************************************************************************************************
 		cout<<"\n\t Network definition"<<endl;
-		Substrate_Graph_tab  Vect_Substrate_Graph(env,NB_NODE);
-		substrate_Graph_creation(Vect_Substrate_Graph, Vect_Link, NB_LINK, NB_NODE, env);
-		adjacency_list_creation(Vect_Substrate_Graph, NB_NODE, env);
+		Substrate_Graph_tab  subNetGraph(env,numSubNodes);
+		substrate_Graph_creation(subNetGraph, Vect_Link, numSubLinks, numSubNodes, env);
+		adjacency_list_creation(subNetGraph, numSubNodes, env);
 		//substrate_graph_printing(Vect_Substrate_Graph, env, NB_NODE);
 
 		//------------------------------------------------------------------------------------------
@@ -396,8 +402,8 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		//------------------------------------------------------------------------------------------
 		cout<<"\n\t Calculating Shortest paths"<<endl;
 		IloInt nb_candidate_embedding_nodes = acptdVlinkInCur*NB_MAX_PATH;
-		Meta_Substrate_Path_tab       Path_Vect(env, nb_candidate_embedding_nodes);
-		IloInt numShortestPaths = 0;
+		Meta_Substrate_Path_tab       metaShtstPathVect(env, nb_candidate_embedding_nodes);
+		IloInt shtstPathCount = 0;
 		for(IloInt j=0;j<acptdVlinkInCur;j++){
 
 			IloInt src_vlink = (IloInt)  addedVlinkReqVect[j].getSrcVnode();
@@ -412,14 +418,14 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 			IloInt class_QoS = (IloInt) addedVlinkReqVect[j].getVlinkQosCls();
 			IloInt hops = (IloInt) Link_Class_QoS_Vect[class_QoS-1].GetQoS_Class_Max_Hops();
 			//cout<<"\t "<<j<<"\t "<<src_vlink<<"\t\t "<<dest_vlink<<"\t\t "<<virtual_link_id<<"\t\t "<<vnp_id<<"\t "<<src<<"\t\t "<<dest<<"\t\t "<<class_QoS<<"\t\t "<<hops<<endl;
-			shortest_path(Vect_Substrate_Graph, Path_Vect, src, dest, hops, request_id, vnp_id, virtual_link_id, numShortestPaths, env);
+			shortest_path(subNetGraph, metaShtstPathVect, src, dest, hops, request_id, vnp_id, virtual_link_id, shtstPathCount, env);
 			//cout<<"\t Next"<<endl;
 		}
 
-		cout<<"\t\t numShortestPaths:"<<numShortestPaths<<endl;
+		cout<<"\t\t numShortestPaths:"<<shtstPathCount<<endl;
 		cout<<"\t nb_candidate_embedding_nodes:"<<nb_candidate_embedding_nodes<<endl;
 
-		printing_meta_path(Path_Vect, numShortestPaths, env);
+		if(LINK_DBG) printing_meta_path(metaShtstPathVect, shtstPathCount, env);
 
 		//------------------------------------------------------------------------------------------------------
 		//                                           CPLEX Model                                               -
@@ -458,7 +464,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		//------------------------------------------------------------------------
 		cout<<"\t A- Creation of VN embedding variables 'x' and 'z' "<<endl;
 
-		IloInt x_VECT_LENGTH = creation_path_embedding_var(addedVlinkReqVect, acptdVlinkInCur, Path_Vect, numShortestPaths, x, vlink_embedding_trace_x, env);
+		IloInt x_VECT_LENGTH = creation_path_embedding_var(addedVlinkReqVect, acptdVlinkInCur, metaShtstPathVect, shtstPathCount, x, vlink_embedding_trace_x, env);
 
 		vnp_variable_creation(embedding_trace_z, z, accepted_vnp_id_tab, nb_accepted_vnp, env);
 
@@ -467,7 +473,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		//------------------------------------------------------------------------
 		cout<<"\t B- no partially VN Embedding: accept all virtual links or block all"<<endl;
 
-		no_partially_VN_embedding(addedVlinkReqVect, acptdVlinkInCur, Path_Vect, numShortestPaths, vlink_embedding_trace_x, x, x_VECT_LENGTH,
+		no_partially_VN_embedding(addedVlinkReqVect, acptdVlinkInCur, metaShtstPathVect, shtstPathCount, vlink_embedding_trace_x, x, x_VECT_LENGTH,
 				z, embedding_trace_z, nb_accepted_vnp, ILP_model, env);
 
 		//----------------------------------------------------------------------
@@ -475,7 +481,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		//----------------------------------------------------------------------
 		cout<<"\t C- Substrate Link Bandwidth Capacity constraint"<<endl;
 
-		periodic_substrate_link_bw_constraint(Vect_Link, NB_LINK, addedVlinkReqVect, acptdVlinkInCur, Path_Vect, numShortestPaths, vlink_embedding_trace_x,
+		periodic_substrate_link_bw_constraint(Vect_Link, numSubLinks, addedVlinkReqVect, acptdVlinkInCur, metaShtstPathVect, shtstPathCount, vlink_embedding_trace_x,
 				Link_Class_QoS_Vect, x, x_VECT_LENGTH, ILP_model, Available_bw_vect, env);
 
 
@@ -505,19 +511,19 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 			IloInt bw = (IloInt)Link_Class_QoS_Vect[class_QoS-1].GetQoS_Class_Bandwidth();
 			IloInt j=0, no_more_emb_path=0;
 
-			while ((j < numShortestPaths)&& (no_more_emb_path == 0)){
-				IloInt current_virtual_link_id = (IloInt) Path_Vect[j].getCorrespVlinkId();
-				IloInt current_vnp_id = (IloInt) Path_Vect[j].GetVNP_Id();
+			while ((j < shtstPathCount)&& (no_more_emb_path == 0)){
+				IloInt current_virtual_link_id = (IloInt) metaShtstPathVect[j].getCorrespVlinkId();
+				IloInt current_vnp_id = (IloInt) metaShtstPathVect[j].GetVNP_Id();
 
 				IloBool equal_current_vlink =(current_virtual_link_id == virtual_link_id);
 				IloBool equal_current_vnp_id =( current_vnp_id == vnp_id);
 
 				if((equal_current_vnp_id)&&(equal_current_vlink)){
-					IloInt num_path = (IloInt) Path_Vect[j].getCandidShortestPathId();
-					IloInt src_emb = (IloInt)  Path_Vect[j].getSrcSnodeOfPath();
-					IloInt dest_emb = (IloInt) Path_Vect[j].getDestSnodeOfPath();
+					IloInt num_path = (IloInt) metaShtstPathVect[j].getCandidShortestPathId();
+					IloInt src_emb = (IloInt)  metaShtstPathVect[j].getSrcSnodeOfPath();
+					IloInt dest_emb = (IloInt) metaShtstPathVect[j].getDestSnodeOfPath();
 					arrayZeroInitialize(arc_vect,vect_length);
-					Path_Vect[j].GetUsed_Arc_Tab(arc_vect);
+					metaShtstPathVect[j].GetUsed_Arc_Tab(arc_vect);
 					IloInt src_cost = (IloInt) cpu_unit_cost_vect[src_emb-1];
 					IloInt dest_cost = (IloInt) cpu_unit_cost_vect[dest_emb-1];
 					IloInt emb_path_cost=src_cost*src_cpu + dest_cost*dest_cpu;
@@ -596,8 +602,8 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		env.out()<< "x        = " << xvals << endl;
 		IloInt nb_embedding_path=0;
 
-		cout<<"\n\t\t\tEmbedding solution"<<endl;
-		cout<<"\tvLink\tsPath\tsSrc\tsDest\tUsed sNodes\tUsed sLinks"<<endl;
+		if(LINK_DBG)cout<<"\n\t\t\tEmbedding solution"<<endl;
+		if(LINK_DBG)cout<<"\tvLink\tsPath\tsSrc\tsDest\tUsed sNodes\tUsed sLinks"<<endl;
 
 		for(IloInt i=0;i<x_VECT_LENGTH;i++){
 			IloNum current_value =  (IloNum) xvals[i];
@@ -623,7 +629,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 						search_request(addedVlinkReqVect, acptdVlinkInCur, current_vlink, class_QoS, bid, vnp_id, vlink_src_cls, vlink_dest_cls, Preliminary_Node_Embedding_Vect, nb_vnode);
 						IloInt src_cpu= (IloInt) Node_Class_QoS_Vect[vlink_src_cls-1].getVnodeCpuReq();
 						IloInt dest_cpu= (IloInt) Node_Class_QoS_Vect[vlink_dest_cls-1].getVnodeCpuReq();
-						search_embedding_path(Path_Vect,numShortestPaths, num_path, vnp_id, class_QoS, bid, path_embedding_tab, nb_embedding_path,
+						search_embedding_path(metaShtstPathVect,shtstPathCount, num_path, vnp_id, class_QoS, bid, path_embedding_tab, nb_embedding_path,
 								bw_unit_cost_vect, cpu_unit_cost_vect, Link_Class_QoS_Vect, src_cpu, dest_cpu, env);
 					}
 					j++;
@@ -726,11 +732,11 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 
 		f11<<nb_new_requests<<endl;
 
-		IloNumArray used_arc_vect(env,NB_LINK);
-		arrayZeroInitialize(used_arc_vect, NB_LINK);
+		IloNumArray used_arc_vect(env,numSubLinks);
+		arrayZeroInitialize(used_arc_vect, numSubLinks);
 
-		IloNumArray used_node_vect(env,NB_NODE);
-		arrayZeroInitialize(used_node_vect, NB_NODE);
+		IloNumArray used_node_vect(env,numSubNodes);
+		arrayZeroInitialize(used_node_vect, numSubNodes);
 
 		vect_length = MAX_SIZE;
 
@@ -778,7 +784,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 				if (non_nul)
 				{
 					IloInt find_elt=0;
-					find_elt = (int) findElementInVector(used_node, used_node_vect, NB_NODE);
+					find_elt = (int) findElementInVector(used_node, used_node_vect, numSubNodes);
 					IloBool not_find_node = (find_elt == 0);
 
 					if (not_find_node)
@@ -804,7 +810,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 				if (non_nul)
 				{
 					IloInt find_elt=0;
-					find_elt = (int) findElementInVector(used_arc, used_arc_vect, NB_LINK);
+					find_elt = (int) findElementInVector(used_arc, used_arc_vect, numSubLinks);
 					IloBool not_find_link = (find_elt == 0);
 
 					if (not_find_link)
@@ -872,7 +878,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 				if (non_nul)
 				{
 					IloInt find_elt=0;
-					find_elt = (int) findElementInVector(used_node, used_node_vect, NB_NODE);
+					find_elt = (int) findElementInVector(used_node, used_node_vect, numSubNodes);
 					IloBool not_find_node = (find_elt == 0);
 
 					if (not_find_node)
@@ -900,7 +906,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 				{
 
 					IloInt find_elt=0;
-					find_elt = (int) findElementInVector(used_arc, used_arc_vect, NB_LINK);
+					find_elt = (int) findElementInVector(used_arc, used_arc_vect, numSubLinks);
 					IloBool not_find_link = (find_elt == 0);
 
 					if (not_find_link)
@@ -1061,16 +1067,16 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		//---------------------------------------------------------------
 		//              Performance Evaluation of Embedding solution    -
 		//---------------------------------------------------------------
-		cout<<"\n\t Performance Evaluation results of embedding solution"<<endl;
+		if(LINK_DBG)cout<<"\n\t Performance Evaluation results of embedding solution"<<endl;
 		IloInt nb_used_arc = 0;
-		for (IloInt l=0;l<NB_LINK;l++){
+		for (IloInt l=0;l<numSubLinks;l++){
 			IloInt current_value =(IloInt) used_arc_vect[l];
 			IloBool used_link = (current_value !=0);
 			if (used_link)
 				nb_used_arc++;
 		}
 		IloInt nb_used_node=0;
-		for (IloInt l=0;l<NB_NODE;l++)
+		for (IloInt l=0;l<numSubNodes;l++)
 		{
 			IloInt current_value =(IloInt) used_node_vect[l];
 			IloBool used_node = (current_value !=0);
@@ -1088,32 +1094,32 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		IloNum cpu_efficiency = (IloNum)((used_cpu + reserved_cpu)/available_cpu);
 
 		IloNum nb_hop_per_path = (IloNum)(nb_total_path_hops + nb_reserved_total_path_hops)/(IloNum)(nb_embedding_path + numRtndVlinkEmbdFound);
-
-		cout<<"\t\tPIP new profit:"<<PIP_profit<<endl;
-		cout<<"\t\tPIP reserved profit:"<<Reserved_PIP_profit<<endl;
-		cout<<"\t\tPIP profit:"<<PIP_profit + Reserved_PIP_profit<<endl;
-		cout<<"\t\tPIP new cost:"<<PIP_cost<<endl;
-		cout<<"\t\tPIP reserved cost:"<<Reserved_PIP_cost<<endl;
-		cout<<"\t\tPIP cost:"<<PIP_cost + Reserved_PIP_cost<<endl;
-		cout<<"\t\tnb accepted new vnode:"<<nb_accepted_vnode<<endl;
-		cout<<"\t\tnb accepted reserved vnode:"<<rtndVnodeCount<<endl;
-		cout<<"\t\tnb requests:"<<NB_REQUEST<<endl;
-		cout<<"\t\tnb new requests:"<<acptdVlinkInCur<<endl;
-		cout<<"\t\tnb reserved requests:"<<rtndVlinkCountFrmPrv<<endl;
-		cout<<"\t\tnb accepted new requests:"<<nb_embedding_path<<endl;
-		cout<<"\t\tnb accepted reserved requests:"<<numRtndVlinkEmbdFound<<endl;
 		IloNum acceptance= (IloNum)nb_embedding_path/(IloNum)acptdVlinkInCur;
-		cout<<"\t\tblocking:"<<(1 - acceptance)*100<<"%"<<endl;
-		cout<<"\t\tnew used bw:"<<used_bw<<endl;
-		cout<<"\t\treserved used bw:"<<reserved_bw<<endl;
-		cout<<"\t\tnew used cpu:"<<used_cpu<<endl;
-		cout<<"\t\treserved used cpu:"<<reserved_cpu<<endl;
-		cout<<"\t\tbw efficiency:"<<bw_efficiency<<endl;
-		cout<<"\t\tPIP profit unit of available bw:"<<PIP_profit_unit_available_bw<<endl;
-		cout<<"\t\tcpu efficiency:"<<cpu_efficiency<<endl;
-		cout<<"\t\tPIP profit unit of available cpu:"<<PIP_profit_unit_available_cpu<<endl;
-		cout<<"\t\tnb average hops per VN link:"<<nb_hop_per_path<<endl;
-
+		if(LINK_DBG){
+			cout<<"\t\tPIP new profit:"<<PIP_profit<<endl;
+			cout<<"\t\tPIP reserved profit:"<<Reserved_PIP_profit<<endl;
+			cout<<"\t\tPIP profit:"<<PIP_profit + Reserved_PIP_profit<<endl;
+			cout<<"\t\tPIP new cost:"<<PIP_cost<<endl;
+			cout<<"\t\tPIP reserved cost:"<<Reserved_PIP_cost<<endl;
+			cout<<"\t\tPIP cost:"<<PIP_cost + Reserved_PIP_cost<<endl;
+			cout<<"\t\tnb accepted new vnode:"<<nb_accepted_vnode<<endl;
+			cout<<"\t\tnb accepted reserved vnode:"<<rtndVnodeCount<<endl;
+			cout<<"\t\tnb requests:"<<NB_REQUEST<<endl;
+			cout<<"\t\tnb new requests:"<<acptdVlinkInCur<<endl;
+			cout<<"\t\tnb reserved requests:"<<rtndVlinkCountFrmPrv<<endl;
+			cout<<"\t\tnb accepted new requests:"<<nb_embedding_path<<endl;
+			cout<<"\t\tnb accepted reserved requests:"<<numRtndVlinkEmbdFound<<endl;
+			cout<<"\t\tblocking:"<<(1 - acceptance)*100<<"%"<<endl;
+			cout<<"\t\tnew used bw:"<<used_bw<<endl;
+			cout<<"\t\treserved used bw:"<<reserved_bw<<endl;
+			cout<<"\t\tnew used cpu:"<<used_cpu<<endl;
+			cout<<"\t\treserved used cpu:"<<reserved_cpu<<endl;
+			cout<<"\t\tbw efficiency:"<<bw_efficiency<<endl;
+			cout<<"\t\tPIP profit unit of available bw:"<<PIP_profit_unit_available_bw<<endl;
+			cout<<"\t\tcpu efficiency:"<<cpu_efficiency<<endl;
+			cout<<"\t\tPIP profit unit of available cpu:"<<PIP_profit_unit_available_cpu<<endl;
+			cout<<"\t\tnb average hops per VN link:"<<nb_hop_per_path<<endl;
+		}
 		//-------------------------------------------------------------------------------------------------------------
 		//                                   End of Cplex model                                                       -
 		//-------------------------------------------------------------------------------------------------------------

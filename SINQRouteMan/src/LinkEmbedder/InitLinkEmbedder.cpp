@@ -20,7 +20,7 @@ char* LinkEmbedder::embedInitLinks(){
 	cout<<"\n\t *** Initial Link Embedder ***"<<endl;
 
 
-
+	IloInt vect_length=MAX_SIZE;
 
 	// Files being read
 	const char*  f1_subTopo="DataFiles/init/f1_subTopo.txt";							//k init/f1_subTopo.txt
@@ -43,38 +43,6 @@ char* LinkEmbedder::embedInitLinks(){
 	IloEnv env;
 	try
 		{
-		//********************************************************************************************************
-		//                                             Variables Declaration                                     *
-		//********************************************************************************************************
-
-		//IloInt NB_NODE=0, NB_LINK=0, NB_REQUEST=0, NB_NODE_CLASS=0, NB_LINK_CLASS=0, COUNT_PATH=0;
-		//IloInt NB_VNODE_SNODE=0, x_VECT_LENGTH=0, NB_PATHS=0, NB_VNP=20, NB_VNP_NODE=0, NB_POTANTIAL_EMBEDDING_NODES=0, NB_TOTAL_VNP=0;
-
-		//IloInt i=0,j=0,k=0, l=0;
-		//IloInt src=0, dest=0, clsQoS=0, vnp_id=0, hops=0, bw=0, find_elt=0;
-		//IloInt request_id=0, no_more_arc=0, current_request=0, exit=0, current_val=0;
-		//IloInt nb_accepted_vnode=0, nb_accepted_requests=0;
-		//IloInt used_bw=0, nb_total_path_hops=0, used_cpu=0;
-
-		//IloInt current_link=0, current_class=0,  used_link=0, request_profit=0, current_location=0;
-		//IloInt used_node=0, used_arc=0, unit_cost=0, nb_candidate_embedding_nodes=0;
-
-		//IloInt current_value=0, c_link=0, c_class=0, src_candidate=0, index=0, found=0;
-
-		//IloInt src_emb=0, dest_emb=0, emb_path_cost=0;
-		//IloInt vn_node=0, cpu_node_requirement=0, link=0, vLinkId=0, nb_hops=0, num_candidate_embedding_nodes=0;
-
-		//IloInt current_virtual_link_id=0, current_vnp_id=0, vlink_src=0, vlink_dest=0, virtual_link_profit=0;
-
-		//IloInt period=0, NB_RESERVED=0, NB_ADD=0, PIP_profit=0, nb_used_arc=0, nb_embedding_path=0;
-		IloInt vect_length=MAX_INCIDENCE;
-
-		//IloInt current_period=0, find=0, node_cost=0, path_var_index=0, src_cost=0, dest_cost=0, num_path=0;
-		//IloInt nb_vnode=0, current_arc=0, current_vlink=0, link_cost=0, nb_accepted_vnp=0;
-		//IloInt nb_accepted_req=0, cpu=0, loc=0, length_vect=0;
-
-
-
 		//----------------------------------------------------------------------------------
 		//                           FILE 1: Reading of Network Substrate Topology               -
 		//----------------------------------------------------------------------------------
@@ -131,7 +99,7 @@ char* LinkEmbedder::embedInitLinks(){
 		for(IloInt i=0;i<NB_NODE_CLASS;i++) {
 			IloInt clsQoS=0;
 			f3>>clsQoS>>cpu;
-			table_initialization(location_vect, length_vect);
+			arrayZeroInitialize(location_vect, length_vect);
 			for(IloInt j=0;j<MAX_NB_LOCATION;j++) {
 				f3>>loc;
 				location_vect[j] = (IloNum) loc;
@@ -161,9 +129,9 @@ char* LinkEmbedder::embedInitLinks(){
 		}
 		f4.close();
 
-		//------------------------------------------------------------------------------------------------------------
-		//                                   FILE 5: Reading of substrate bw unit cost  	   		                         -
-		//------------------------------------------------------------------------------------------------------------
+		//-------------------------------------------------------------------------------------------------------------
+		//                                   FILE 5: Reading of substrate bw unit cost  	   		                  -      -
+		//-------------------------------------------------------------------------------------------------------------
 		cout<<"\t Reading of substrate bw unit cost from File: "<<f5_subUnitCost<<endl;
 		ifstream f5(f5_subUnitCost);
 		if (!f5)
@@ -171,28 +139,17 @@ char* LinkEmbedder::embedInitLinks(){
 		IloInt unit_cost=0;
 		IloNumArray    bw_unit_cost_vect(env,NB_LINK);
 		IloNumArray    cpu_unit_cost_vect(env,NB_NODE);
-		for(IloInt j=0;j<NB_LINK;j++) {
-			f5>>unit_cost;
-			bw_unit_cost_vect[j] = unit_cost;
-			//cout<<"BW unit cost of link:"<<j+1<<": "<<unit_cost<<endl;
-		}
+		for(IloInt j=0;j<NB_LINK;j++)
+			f5>>bw_unit_cost_vect[j];
 
-
-		//cout<<"\n\t NB_NODE = "<<NB_NODE<<endl;
-		//cout<<"\n\t cpu_unit_cost_vect.size = "<<cpu_unit_cost_vect.getSize()<<endl;
-		for(IloInt j=0;j<NB_NODE;j++) {
-			//f5>>node_cost;
-			//cpu_unit_cost_vect[j] = (IloNum)node_cost;
+		for(IloInt j=0;j<NB_NODE;j++)
 			f5>>cpu_unit_cost_vect[j];
-			// = (IloNum)node_cost;
-			//cout<<"Substrate node:"<<j+1<<" has a cost of: "<<node_cost<<endl;
-		}
 		f5.close();
-		//------------------------------------------------------------------------------------------
-		//                              FILE 8: Reading of node embedding							             *
-		//------------------------------------------------------------------------------------------
-		cout<<"\t Reading of node embedding from File: "<<f8_ph1EmbeddedVnodes<<endl;
 
+		//---------------------------------------------------------------------------------------------------------------
+		//                  	            FILE 8: Reading of node embedding							        		-
+		//---------------------------------------------------------------------------------------------------------------
+		cout<<"\t Reading of node embedding from File: "<<f8_ph1EmbeddedVnodes<<endl;
 		ifstream f8(f8_ph1EmbeddedVnodes);
 		if (!f8)
 			cerr << "ERROR: could not open file "<< f8_ph1EmbeddedVnodes << "for reading"<< endl;
@@ -200,7 +157,7 @@ char* LinkEmbedder::embedInitLinks(){
 		f8>>nb_vnode;
 		Virtual_Node_Embedding_tab  Preliminary_Node_Embedding_Vect(env, nb_vnode);
 		IloNumArray accepted_vnp_id_tab(env,NB_VNP );
-		table_initialization(accepted_vnp_id_tab, NB_VNP);
+		arrayZeroInitialize(accepted_vnp_id_tab, NB_VNP);
 		IloInt nb_accepted_vnp=0;
 
 		if(LINK_DBG){
@@ -220,8 +177,7 @@ char* LinkEmbedder::embedInitLinks(){
 			Preliminary_Node_Embedding_Vect[i].SetPeriod(period);
 			IloInt find = findElementInVector(vnp_id, accepted_vnp_id_tab, nb_accepted_vnp);
 			IloBool is_new_elet = (find==0);
-			if (is_new_elet)
-			{
+			if (is_new_elet){
 				accepted_vnp_id_tab[nb_accepted_vnp]= (IloNum) vnp_id;
 				nb_accepted_vnp++;
 			}
@@ -231,35 +187,34 @@ char* LinkEmbedder::embedInitLinks(){
 		//                      FILE 9:Reading the VN requests details                                     -
 		//------------------------------------------------------------------------------------------
 		cout<<"\t Reading the VN requests details File: "<<f9_ph1AcceptedVlinks<<endl;
-		ifstream file9(f9_ph1AcceptedVlinks);
-		if (!file9)
+		ifstream f9(f9_ph1AcceptedVlinks);
+		if (!f9)
 			cerr << "ERROR: could not open file `"<< f9_ph1AcceptedVlinks<< "`for reading"<< endl;
 		IloInt current_period=0, numVlinkReq=0, NB_RESERVED=0, NB_ADD=0;
-		file9>>current_period;
-		file9>>numVlinkReq;
-		file9>>NB_RESERVED;
-		file9>>NB_ADD;
-		VNP_traffic_tab  vLinkReqVect(env,numVlinkReq);
+		f9>>current_period;
+		f9>>numVlinkReq;
+		f9>>NB_RESERVED;
+		f9>>NB_ADD;
+		VNP_traffic_tab  addedVlinkReqVect(env,numVlinkReq);
 
 		if(LINK_DBG){
 			cout<<"\n\t Number of virtual link requests (NB_REQUEST) = "<<numVlinkReq<<endl;
-			cout<<"\n\tPrinting vLinkReqVect: \t\tsize = "<<vLinkReqVect.getSize()<<endl;
+			cout<<"\n\tPrinting vLinkReqVect: \t\tsize = "<<addedVlinkReqVect.getSize()<<endl;
 			cout<<"\t\titr\t vSrc\tvDest\tvLink\tclass\tbid\tvnp_id\tperiod"<<endl;
 		}
 		for(IloInt i=0;i<numVlinkReq;i++){
 			IloInt vLinkId=0, src=0, dest=0, clsQoS=0, bid=0, vnp_id=0, period=0;
-			file9>>src>>dest>>vLinkId>>clsQoS>>bid>>vnp_id>>period;
+			f9>>src>>dest>>vLinkId>>clsQoS>>bid>>vnp_id>>period;
 			if(LINK_DBG)cout<<"\t\t"<<i<<"\t"<<src<<"\t"<<dest<<"\t"<<vLinkId<<"\t"<<clsQoS<<"\t"<<bid<<"\t"<<vnp_id<<"\t"<<period<<endl;
-			vLinkReqVect[i].setSrcVnode(src);
-			vLinkReqVect[i].setDestVnode(dest);
-			vLinkReqVect[i].setVlinkId(vLinkId);
-			vLinkReqVect[i].setVlinkQosCls(clsQoS);
-			vLinkReqVect[i].SetBid(bid);
-			vLinkReqVect[i].setVnpId(vnp_id);
-			vLinkReqVect[i].SetPeriod(period);
+			addedVlinkReqVect[i].setSrcVnode(src);
+			addedVlinkReqVect[i].setDestVnode(dest);
+			addedVlinkReqVect[i].setVlinkId(vLinkId);
+			addedVlinkReqVect[i].setVlinkQosCls(clsQoS);
+			addedVlinkReqVect[i].SetBid(bid);
+			addedVlinkReqVect[i].setVnpId(vnp_id);
+			addedVlinkReqVect[i].SetPeriod(period);
 		}
-
-		file9.close();
+		f9.close();
 
 
 
@@ -283,17 +238,16 @@ char* LinkEmbedder::embedInitLinks(){
 		IloInt numShortestPaths=0;
 		for(IloInt j=0;j<numVlinkReq;j++){
 
-			IloInt vLinkSrcVnode = vLinkReqVect[j].getSrcVnode();
-			IloInt vLinkDestVnode = vLinkReqVect[j].getDestVnode();
+			IloInt vLinkSrcVnode = addedVlinkReqVect[j].getSrcVnode();
+			IloInt vLinkDestVnode = addedVlinkReqVect[j].getDestVnode();
 			IloInt request_id = j+1;
-			IloInt vLinkId =  vLinkReqVect[j].getVlinkId();
-			IloInt vnpId = vLinkReqVect[j].getVnpId();
-
+			IloInt vLinkId =  addedVlinkReqVect[j].getVlinkId();
+			IloInt vnpId = addedVlinkReqVect[j].getVnpId();
 
 			IloInt candidSrcSnode = getCandidSnodeForVnode(Preliminary_Node_Embedding_Vect,nb_vnode,vLinkSrcVnode, vnpId);
 			IloInt candidDestSnode = getCandidSnodeForVnode(Preliminary_Node_Embedding_Vect,nb_vnode,vLinkDestVnode, vnpId);
 
-			IloInt clsQoS = vLinkReqVect[j].getVlinkQosCls();
+			IloInt clsQoS = addedVlinkReqVect[j].getVlinkQosCls();
 			IloInt hops = Link_Class_QoS_Vect[clsQoS-1].GetQoS_Class_Max_Hops();
 			//cout<<"\t j = "<<j<<"\t virtual_link_id: "<<vLinkId<<endl;
 			shortest_path(Vect_Substrate_Graph, shortestPathVect, candidSrcSnode, candidDestSnode, hops, request_id, vnpId, vLinkId, numShortestPaths, env);
@@ -305,28 +259,6 @@ char* LinkEmbedder::embedInitLinks(){
 		cout<<"\t shortestPathVect.size ="<<shortestPathVect.getSize()<<endl;
 
 		if(LINK_DBG)printing_meta_path(shortestPathVect, numShortestPaths, env);
-
-
-		//------------------------------------------------------------------------------------------
-		//                      Generate Flow Requests                                     -
-		//------------------------------------------------------------------------------------------
-		//IloInt numFlows = 0;
-
-//		IloInt torSlot = 0;
-//		flowRequest_Tab flowReqVect(env, vLinkReqVect.getSize());	// Initial size of flowReqVect is set to size of vLinkReqVect.  But after randomely generating, extra space is trimmed
-//		generateFlowRequests(vLinkReqVect, Link_Class_QoS_Vect, Preliminary_Node_Embedding_Vect, torSlot, flowReqVect);
-//
-//		cout<<"\n\tPrintitg flowReqVect"<<endl;
-//		cout<<"\t\tflowId\tvLink\ttorSlot"<<endl;
-//		for(IloInt flowItr=0; flowItr<flowReqVect.getSize(); flowItr++){
-//			IloInt flowId = flowReqVect[flowItr].getFlowReqId();
-//			IloInt torSlot = flowReqVect[flowItr].getTorSlot();
-//			IloInt vLinkId = flowReqVect[flowItr].getVlinkId();
-//			cout<<"\t\t"<<flowId<<"\t"<< vLinkId <<"\t"<< torSlot <<endl;
-//		}
-
-
-
 
 		//-------------------------------------------------------------------------------------------------------------
 		//                                           CPLEX Model                                                      -
@@ -373,7 +305,7 @@ char* LinkEmbedder::embedInitLinks(){
 		//------------------------------------------------------------------------
 		cout<<"\n\t A- Creation of VN embedding variables 'x' and 'z' "<<endl;
 
-		IloInt x_VECT_LENGTH =   creation_path_embedding_var(vLinkReqVect, numVlinkReq, shortestPathVect, numShortestPaths, x, vlink_embedding_trace_x, env);
+		IloInt x_VECT_LENGTH =   creation_path_embedding_var(addedVlinkReqVect, numVlinkReq, shortestPathVect, numShortestPaths, x, vlink_embedding_trace_x, env);
 		//IloInt x_VECT_LENGTH =   creation_flow_embedding_var(flowReqVect, vLinkReqVect, numVlinkReq, shortestPathVect, numShortestPaths, x, vlink_embedding_trace_x, env);
 		// x = 1 ;  If shortestPath pi is selected for flow request f,
 		//
@@ -386,7 +318,7 @@ char* LinkEmbedder::embedInitLinks(){
 		//------------------------------------------------------------------------
 		cout<<"\n\t B- no partially VN Embedding: accept all virtual links or block all"<<endl;
 
-		no_partially_VN_embedding(vLinkReqVect, numVlinkReq, shortestPathVect, numShortestPaths, vlink_embedding_trace_x, x, x_VECT_LENGTH, z, embedding_trace_z, nb_accepted_vnp, ILP_model, env);
+		no_partially_VN_embedding(addedVlinkReqVect, numVlinkReq, shortestPathVect, numShortestPaths, vlink_embedding_trace_x, x, x_VECT_LENGTH, z, embedding_trace_z, nb_accepted_vnp, ILP_model, env);
 
 		//----------------------------------------------------------------------
 		// C- Substrate Link Bandwidth Capacity constraint                     -
@@ -394,7 +326,7 @@ char* LinkEmbedder::embedInitLinks(){
 
 		cout<<"\n\t C- Substrate Link Bandwidth Capacity constraint"<<endl;
 
-		substrate_link_bw_constraint(Vect_Link, NB_LINK, vLinkReqVect, numVlinkReq, shortestPathVect, numShortestPaths, vlink_embedding_trace_x,
+		substrate_link_bw_constraint(Vect_Link, NB_LINK, addedVlinkReqVect, numVlinkReq, shortestPathVect, numShortestPaths, vlink_embedding_trace_x,
 				Link_Class_QoS_Vect, x, x_VECT_LENGTH, ILP_model, env);
 
 
@@ -413,11 +345,11 @@ char* LinkEmbedder::embedInitLinks(){
 		//cout<<"NB_REQUEST = "<<NB_REQUEST<<endl;
 		for(IloInt vLinkReqItr=0; vLinkReqItr<numVlinkReq; vLinkReqItr++){
 
-			IloInt bidForVlink = vLinkReqVect[vLinkReqItr].GetBid();
-			IloInt vnpId = vLinkReqVect[vLinkReqItr].getVnpId();
-			IloInt vLinkId = vLinkReqVect[vLinkReqItr].getVlinkId();
-			IloInt srcVnode  = vLinkReqVect[vLinkReqItr].getSrcVnode();
-			IloInt destVnode = vLinkReqVect[vLinkReqItr].getDestVnode();
+			IloInt bidForVlink = addedVlinkReqVect[vLinkReqItr].GetBid();
+			IloInt vnpId = addedVlinkReqVect[vLinkReqItr].getVnpId();
+			IloInt vLinkId = addedVlinkReqVect[vLinkReqItr].getVlinkId();
+			IloInt srcVnode  = addedVlinkReqVect[vLinkReqItr].getSrcVnode();
+			IloInt destVnode = addedVlinkReqVect[vLinkReqItr].getDestVnode();
 			IloInt srcVnodeCls = search_vnode_class(srcVnode, vnpId,Preliminary_Node_Embedding_Vect, nb_vnode);
 			IloInt destVnodeCls = search_vnode_class(destVnode, vnpId,Preliminary_Node_Embedding_Vect, nb_vnode);
 			IloInt srcVnodeCpuReq = Node_Class_QoS_Vect[srcVnodeCls-1].getVnodeCpuReq();
@@ -427,7 +359,7 @@ char* LinkEmbedder::embedInitLinks(){
 
 			substrate_network_revenue += bidForVlink * z[zIndex];					// revenue = sum of link bid values of accepted requests
 
-			IloInt vLinkQosCls = vLinkReqVect[vLinkReqItr].getVlinkQosCls();
+			IloInt vLinkQosCls = addedVlinkReqVect[vLinkReqItr].getVlinkQosCls();
 			IloInt vLinkBwReq = Link_Class_QoS_Vect[vLinkQosCls-1].GetQoS_Class_Bandwidth();
 
 			IloInt j=0, no_more_emb_path=0;
@@ -443,7 +375,7 @@ char* LinkEmbedder::embedInitLinks(){
 					IloInt num_path = shortestPathVect[j].getCandidShortestPathId();
 					IloInt src_emb = shortestPathVect[j].getSrcSnodeOfPath();
 					IloInt dest_emb =   shortestPathVect[j].getDestSnodeOfPath();
-					table_initialization(arc_vect,vect_length);
+					arrayZeroInitialize(arc_vect,vect_length);
 					shortestPathVect[j].GetUsed_Arc_Tab(arc_vect);
 
 					IloInt src_cost = cpu_unit_cost_vect[src_emb-1];
@@ -451,8 +383,7 @@ char* LinkEmbedder::embedInitLinks(){
 
 					IloInt emb_path_cost=src_cost*srcVnodeCpuReq + dest_cost*destVnodeCpuReq;
 
-					IloInt l=0;
-					IloInt exit=0;
+					IloInt l=0, exit=0;
 
 					while (l<vect_length){
 						IloInt current_arc = arc_vect[l];
@@ -588,7 +519,7 @@ char* LinkEmbedder::embedInitLinks(){
 
 						//cout<<"Virtual link: "<<current_vlink<<"  was assigned to substrate path: "<<num_path<<endl;
 
-						search_request(vLinkReqVect, numVlinkReq, current_vlink, clsQoS, bid, vnp_id, vlink_src_cls, vlink_dest_cls, Preliminary_Node_Embedding_Vect, nb_vnode);
+						search_request(addedVlinkReqVect, numVlinkReq, current_vlink, clsQoS, bid, vnp_id, vlink_src_cls, vlink_dest_cls, Preliminary_Node_Embedding_Vect, nb_vnode);
 
 						IloInt src_cpu= Node_Class_QoS_Vect[vlink_src_cls-1].getVnodeCpuReq();
 						IloInt dest_cpu= Node_Class_QoS_Vect[vlink_dest_cls-1].getVnodeCpuReq();
@@ -660,7 +591,7 @@ char* LinkEmbedder::embedInitLinks(){
 
 
 		IloNumArray used_node_vect(env,NB_NODE);
-		table_initialization(used_node_vect, NB_NODE);
+		arrayZeroInitialize(used_node_vect, NB_NODE);
 
 
 		cout<<"\n\t Saving VN embedding solution in FILE: "<<f11_ph2EmbeddedVnodes<<endl;
@@ -703,7 +634,7 @@ char* LinkEmbedder::embedInitLinks(){
 		file11<<nb_embedding_path<<endl;
 
 		IloNumArray used_arc_vect(env,NB_LINK );
-		table_initialization(used_arc_vect, NB_LINK);
+		arrayZeroInitialize(used_arc_vect, NB_LINK);
 
 		VNP_traffic_tab  Updated_Request_Vect(env,nb_accepted_requests);
 
@@ -711,9 +642,9 @@ char* LinkEmbedder::embedInitLinks(){
 		IloInt nb_accepted_req=0;
 		for(IloInt i=0;i<nb_embedding_path;i++){
 			IloNumArray  node_list(env,vect_length);
-			table_initialization(node_list,vect_length);
+			arrayZeroInitialize(node_list,vect_length);
 			IloNumArray  arc_list(env, vect_length);
-			table_initialization(arc_list, vect_length);
+			arrayZeroInitialize(arc_list, vect_length);
 
 			IloInt pathSrc = path_embedding_tab[i].GetSrc_path();
 			IloInt pathDest = path_embedding_tab[i].GetDest_path();
@@ -784,15 +715,15 @@ char* LinkEmbedder::embedInitLinks(){
 
 			file11<<endl;
 
-			IloInt index =   search_request_index(vLinkId, vLinkReqVect, vnp_id);
+			IloInt index =   search_request_index(vLinkId, addedVlinkReqVect, vnp_id);
 
-			IloInt srcVnode = vLinkReqVect[index].getSrcVnode();
-			IloInt destVnode = vLinkReqVect[index].getDestVnode();
-			vLinkId = vLinkReqVect[index].getVlinkId();
-			IloInt clsQoS = vLinkReqVect[index].getVlinkQosCls();
-			IloInt bid = vLinkReqVect[index].GetBid();
-			vnp_id = vLinkReqVect[index].getVnpId();
-			IloInt period = vLinkReqVect[index].GetPeriod();
+			IloInt srcVnode = addedVlinkReqVect[index].getSrcVnode();
+			IloInt destVnode = addedVlinkReqVect[index].getDestVnode();
+			vLinkId = addedVlinkReqVect[index].getVlinkId();
+			IloInt clsQoS = addedVlinkReqVect[index].getVlinkQosCls();
+			IloInt bid = addedVlinkReqVect[index].GetBid();
+			vnp_id = addedVlinkReqVect[index].getVnpId();
+			IloInt period = addedVlinkReqVect[index].GetPeriod();
 
 			Updated_Request_Vect[nb_accepted_req].setSrcVnode(srcVnode);
 			Updated_Request_Vect[nb_accepted_req].setDestVnode(destVnode);
@@ -837,7 +768,7 @@ char* LinkEmbedder::embedInitLinks(){
 				for(IloInt i=0;i<nb_embedding_path;i++){
 					file14<<"0"<<"\t"<<path_embedding_tab[i].GetVNP_Id()<<"\t"<<path_embedding_tab[i].GetClass_QoS()<<"\t";
 					IloNumArray  node_list(env,vect_length);
-					table_initialization(node_list,vect_length);
+					arrayZeroInitialize(node_list,vect_length);
 					path_embedding_tab[i].GetUsed_Node_Tab(node_list);
 					//cout<<"node_list.getSize() = "<<node_list.getSize()<<endl;
 

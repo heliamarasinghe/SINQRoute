@@ -51,6 +51,8 @@ public:
 
 	static char* embedInitLinks();
 	static char* embedPeriodicLinks(int);
+	static char* reEmbedBrokenLinks(int);
+	static char* embedLinksWithBkup(int);
 
 	//void table_initialization(IloNumArray&, IloInt&);
 

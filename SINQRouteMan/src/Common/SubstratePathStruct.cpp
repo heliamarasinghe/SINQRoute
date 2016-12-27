@@ -20,7 +20,7 @@ Substrate_Path_Struct::Substrate_Path_Struct()
 	 Cost=0;
 	 Period=0;
 
-     for(k=0;k<MAX_INCIDENCE;k++)
+     for(k=0;k<MAX_SIZE;k++)
       {
         Used_Node_Tab[k]=0;
         Used_Arc_Tab[k]=0;
@@ -100,27 +100,27 @@ Substrate_Path_Struct::Substrate_Path_Struct()
      void Substrate_Path_Struct::SetUsed_Node_Tab(IloNumArray& node_tab)
       {
         IloInt i;
-        for(i=0;i<MAX_INCIDENCE;i++)
+        for(i=0;i<MAX_SIZE;i++)
           Used_Node_Tab[i]=(int)node_tab[i];
       }
 
      void Substrate_Path_Struct::GetUsed_Node_Tab(IloNumArray& node_used_tab)
       {
         IloInt i;
-        for(i=0;i<MAX_INCIDENCE;i++)
+        for(i=0;i<MAX_SIZE;i++)
           node_used_tab[i]= Used_Node_Tab[i];
       }
 
      void Substrate_Path_Struct::SetUsed_Arc_Tab(IloNumArray& arc_tab)
       {
         IloInt i;
-        for(i=0;i<MAX_INCIDENCE;i++)
+        for(i=0;i<MAX_SIZE;i++)
           Used_Arc_Tab[i]=(int)arc_tab[i];
       }
 
      void Substrate_Path_Struct::GetUsed_Arc_Tab(IloNumArray& arc_used_tab)
       {
         IloInt i;
-        for(i=0;i<MAX_INCIDENCE;i++)
+        for(i=0;i<MAX_SIZE;i++)
           arc_used_tab[i]= Used_Arc_Tab[i];
       }

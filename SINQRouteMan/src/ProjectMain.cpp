@@ -21,25 +21,29 @@ int main (int  argc, char** argv){
 	//bool getLinks = false;
 	bool initGenTopo = false;
 	/*2*/
-	bool ctrlReroute = true;
+	bool ctrlReroute = false;		// Must be false if resManReroute = true
 	/*3*/
-	bool getCurrFlowAlloc = false;
+	bool resManReroute = true;		// Must be false if ctrlReroute = true
 	/*4*/
+	bool getCurrFlowAlloc = false;
+	/*5*/
 	bool updateSubTopo = false;
 	bool updateCurrAloc = false;
-	/*5*/
-	bool updateReq = false;				// If ctrlReroute is FALSE,  Add unallocated virtual links as new requests
 	/*6*/
-	bool allocate = true;
+	bool updateReq = false;				// If ctrlReroute is FALSE,  Add unallocated virtual links as new requests
+	/*7*/
+	bool embedding = true;
+	/*8*/
+	bool deployOnNet = false;
 
-
+	int MAXTSLOT = 1, currTslot = 0;
 	/* 1. Discover switches and links and generate substrate topology */
 	if(initGenTopo){
 		//if(getSwitches)
 		vector<int> switchVect = SdnCtrlClient::getSwitches();
 		//if(getLinks)
 		vector<string> linkVect = SdnCtrlClient::getLinks();
-		SubTopoGenerator::generateSubTopo(switchVect, linkVect);
+		SubTopoGenerator::generateSubTopo(switchVect, linkVect, currTslot);
 	}
 
 
@@ -47,9 +51,9 @@ int main (int  argc, char** argv){
 	if(ctrlReroute)		SdnCtrlClient::setRerouteFlag(true);
 
 
-	int MAXTSLOT = 1, currTslot = 0;
+
 	while(currTslot<MAXTSLOT){
-		cout<<"\n\t ------------ TIME SLOT :  "<<currTslot<<"--------------"<<endl;
+		cout<<"\n\t ------------   TIME SLOT :  "<<currTslot<<"   --------------"<<endl;
 
 	/* 3. Getting Current Flow Allocation from Controller */
 		bool topoChange = false;
@@ -71,28 +75,28 @@ int main (int  argc, char** argv){
 			if(updateSubTopo){
 				vector<int> switchVect = SdnCtrlClient::getSwitches();
 				vector<string> linkVect = SdnCtrlClient::getLinks();
-				SubTopoGenerator::generateSubTopo(switchVect, linkVect);
+				SubTopoGenerator::generateSubTopo(switchVect, linkVect, currTslot);
 			}
 		if(updateCurrAloc)
 			UpdateNetState::updateVlinks(currTslot, currPathsMmap);	// Updating vLinks in f15_ctrlUpdatedEmbedding file
 
 	/* 5. If ctrlReroute is FALSE,  Modify requests to treat unallocated virtual links as new requests*/
-
+		//TODO: Implement resourceManager reallocation
 
 	/* 6. Allocate Node and Link resources using Optimizer */
-		if(allocate){
+		if(embedding){
 			char* f14_ph2RemovedAddedPaths;
 			if(currTslot==0){
 				//TrafficGenerator::generateInitTraffic();
 				//NodeEmbedder::embedInitNodes();
-				f14_ph2RemovedAddedPaths = LinkEmbedder::embedInitLinks();
 			}
 			else{
 				//TrafficGenerator::generatePeriodicTraffic(currTslot);
 				//NodeEmbedder::embedPeriodicNodes(currTslot);
-				f14_ph2RemovedAddedPaths = LinkEmbedder::embedPeriodicLinks(currTslot);
 			}
-			SdnCtrlClient::addRemovePaths(f14_ph2RemovedAddedPaths);
+			//f14_ph2RemovedAddedPaths = LinkEmbedder::embedPeriodicLinks(currTslot);	//Works for both init and periodic
+			f14_ph2RemovedAddedPaths = LinkEmbedder::embedLinksWithBkup(currTslot);		//Works for both init and periodic
+			if(deployOnNet)SdnCtrlClient::addRemovePaths(f14_ph2RemovedAddedPaths);
 		}
 
 		currTslot++;

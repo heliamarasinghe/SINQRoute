@@ -12,7 +12,7 @@
 #include <ilcplex/ilocplex.h>
 
 // Common Constants that result in rebuilding the whole project
-const IloInt MAX_INCIDENCE=20;
+const IloInt MAX_SIZE=20;
 const IloInt MAX_NB_LOCATION=3;
 const IloInt H_PATH=5;
 const IloInt GN=10000;
