@@ -11,7 +11,7 @@
 
 #include "ConstantsCOMMON.h"
 
-class Link_QoS_Class {
+class LinkQoSClass {
 	// QoS Class to Bandwidth (Mbps) map
 	// 1		10
 	// 2		20
@@ -23,13 +23,13 @@ private:
 	IloInt QoS_Class_Bandwidth;
 	IloInt QoS_Class_Max_Hops;
 public:
-	Link_QoS_Class();
-	virtual ~Link_QoS_Class();
+	LinkQoSClass();
+	virtual ~LinkQoSClass();
 
 	IloInt GetQoS_Class_Id();
 	void SetQoS_Class_Id(IloInt class_id);
 
-	IloInt GetQoS_Class_Bandwidth();
+	IloInt getQosClsBw();
 	void SetQoS_Class_Bandwidth(IloInt bw);
 
 	IloInt GetQoS_Class_Max_Hops();

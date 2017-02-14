@@ -34,7 +34,7 @@ static IloInt  Check_nb_hops_in_shortest_path(Substrate_Graph_tab&, IloInt&, Ilo
  */
 
 //***********************************************************************************************************************
-//            						      1 Table Initialisation                                                                               *
+//            						      1 Table Initialisation                                                        *
 //***********************************************************************************************************************
 void SDNInterDCQoS::arrayZeroInitialize(IloNumArray& table, const IloInt& length){
 	for(int p=0;p<length;p++)
@@ -42,100 +42,80 @@ void SDNInterDCQoS::arrayZeroInitialize(IloNumArray& table, const IloInt& length
 }
 
 //***************************************************************************************************
-//                                  2  Original Graph nodes                                          *
+//                                  2  Original Graph nodes                                         *
 //***************************************************************************************************
+//					substrate_Graph_creation(					subNetGraph, 				subLinksAry, 		numSubLinks, 		numSubNodes, 		env);
+void SDNInterDCQoS::substrate_Graph_creation(SubNodesAryType& subNetGraph, SubLinksAryType& subLinksAry, IloInt& numSubLinks, IloInt& numSubNodes, IloEnv& env){
+	IloInt length=MAX_SIZE;
+	IloNumArray linkAry(env, length);
 
-void SDNInterDCQoS::substrate_Graph_creation(Substrate_Graph_tab& orig_graph_tab, Substrate_Link_tab& Vlink, IloInt& nbr_link, IloInt& nbr_node, IloEnv& env_0)
-{
+	for(IloInt i=0;i<numSubNodes;i++){
+		IloInt k=0;
+		arrayZeroInitialize(linkAry,length);
 
-	IloInt i=0,j=0,k=0, length=MAX_SIZE;
-	IloNumArray table_link(env_0, length);
+		for(IloInt j=0;j<numSubLinks;j++){
 
+			IloBool isDstNode = ((IloInt)subLinksAry[j].getDstSnode()== i+1);
+			IloBool isSrcNode = ((IloInt)subLinksAry[j].getSrcSnode()== i+1);
 
-	for(i=0;i<nbr_node;i++)
-	{
-		k=0;
-		arrayZeroInitialize(table_link,length);
-
-		for(j=0;j<nbr_link;j++)
-		{
-
-			IloBool test_dest = ((IloInt)Vlink[j].GetArc_Destination()== i+1);
-			IloBool test_src = ((IloInt)Vlink[j].GetArc_Source()==i+1);
-
-			if ((test_dest)||(test_src))
-			{
-				table_link[k]=(IloNum) Vlink[j].GetArc_Num();
+			if (isDstNode || isSrcNode){
+				linkAry[k]=(IloNum) subLinksAry[j].getSlinkId();
 				k++;
 			}
-
 		}
-
-		orig_graph_tab[i].SetNode_Id(i+1);
-		orig_graph_tab[i].SetArc_List(table_link);
-
+		subNetGraph[i].setNodeId(i+1);
+		subNetGraph[i].setLinkAry(linkAry);
 	}
-	//----------------------------
-	//    Free Used Memory       -
-	//----------------------------
-	table_link.end();
+	linkAry.end(); //    Free Used Memory
 
 }
 //***************************************************************************************************
-//                               3 Adjacency List for each Node                                      *
+//                               3 Adjacency List for each Node                                     *
 //***************************************************************************************************
+// 					adjacency_list_creation(						subNetGraph, 	numSubNodes, 			env);
+void SDNInterDCQoS::adjacency_list_creation(SubNodesAryType& subNetGraph, IloInt& numSubNodes, IloEnv& env_0){
 
-void SDNInterDCQoS::adjacency_list_creation(Substrate_Graph_tab& orig_graph_tab, IloInt& nbr_node, IloEnv& env_0)
-{
-
-	IloInt i=0,j=0,k=0,h=0, more_arc_in=0, more_arc_out=0, length=MAX_SIZE;
+	IloInt length=MAX_SIZE;
 
 	IloNumArray  table_in(env_0, length);
 	IloNumArray  table_out(env_0, length);
 	IloNumArray  table_adjacent(env_0, length);
+	map<IloInt, IloNum> adjNodeCostMap;
 
-
-	for(i=0;i<nbr_node;i++)
-	{
+	for(IloInt i=0;i<numSubNodes;i++){
 		arrayZeroInitialize(table_adjacent, length);
+		adjNodeCostMap.clear();
 		arrayZeroInitialize(table_out, length);
-		orig_graph_tab[i].GetArc_List(table_out);
+		subNetGraph[i].GetArc_List(table_out);
 
-		for(j=0;j<nbr_node;j++)
-		{
+		for(IloInt j=0;j<numSubNodes;j++){
 			IloBool test_different = (j!=i);
-			if (test_different)
-			{
+			if (test_different){
 				arrayZeroInitialize(table_in, length);
-				orig_graph_tab[j].GetArc_List(table_in);
+				subNetGraph[j].GetArc_List(table_in);
 
-				k=0;
-				more_arc_out=0;
+				IloInt k=0, more_arc_out=0;
 
-				while ((k<length)&&(more_arc_out==0))
-				{
+				while ((k<length)&&(more_arc_out==0)){
 					IloBool non_nul = (table_out[k]!=0);
-					if (non_nul)
-					{
-						h=0;
-						more_arc_in=0;
+					if (non_nul){
+						IloInt h=0;
+						IloInt more_arc_in=0;
 
-						while ((h<length) && (more_arc_in==0))
-						{
+						while ((h<length) && (more_arc_in==0)){
 							IloBool non_zero = ( table_in[h] !=0);
-							if (non_zero)
-							{
+							if (non_zero){
 								IloBool same_arc =((IloInt)table_in[h] == (IloInt)table_out[k]);
-								if (same_arc)
+								if (same_arc){
 									table_adjacent[k]= (IloNum)(j+1);
-
+									IloNum cost = 1.0 + (j+1)/100.0;
+									adjNodeCostMap[(IloInt)(j+1)] = cost;
+								}
 								h++;
 							}
 							else
 								more_arc_in=1;
-
 						}
-
 						k++;
 					}
 					else
@@ -144,7 +124,8 @@ void SDNInterDCQoS::adjacency_list_creation(Substrate_Graph_tab& orig_graph_tab,
 			}
 		}
 
-		orig_graph_tab[i].SetNode_Adjacent_Table(table_adjacent);
+		subNetGraph[i].SetNode_Adjacent_Table(table_adjacent);
+		subNetGraph[i].setAdjNodeCostMap(adjNodeCostMap);
 	}
 
 	//----------------------------
@@ -155,11 +136,13 @@ void SDNInterDCQoS::adjacency_list_creation(Substrate_Graph_tab& orig_graph_tab,
 	table_adjacent.end();
 }
 
+
+
 //***************************************************************************************************
 //                                       4  Printing Original Graph Nodes Table                      *
 //***************************************************************************************************
 
-void SDNInterDCQoS::substrate_graph_printing(Substrate_Graph_tab& Vect_Graph , IloEnv env1, IloInt Node_Number)
+void SDNInterDCQoS::substrate_graph_printing(SubNodesAryType& Vect_Graph , IloEnv env1, IloInt Node_Number)
 {
 
 	IloNumArray table_L(env1,MAX_SIZE);
@@ -178,7 +161,7 @@ void SDNInterDCQoS::substrate_graph_printing(Substrate_Graph_tab& Vect_Graph , I
 
 		cout<<"\t\t"<<  Vect_Graph[s].GetNode_Id();
 		Vect_Graph[s].GetArc_List(table_L);
-		Vect_Graph[s].GetNode_Adjacent_Table(table_A);
+		Vect_Graph[s].getAdjNodeArray(table_A);
 
 		int ec =0;
 		cout<<"\t[";
@@ -216,7 +199,7 @@ void SDNInterDCQoS::substrate_graph_printing(Substrate_Graph_tab& Vect_Graph , I
 //***************************************************************************************************/
 
 
-void SDNInterDCQoS::traffic_matrix_printing(VNP_traffic_tab& Connection_Vect, IloInt& nb_connection)
+void SDNInterDCQoS::traffic_matrix_printing(VlinkReqAryType& Connection_Vect, IloInt& nb_connection)
 {
 	IloInt i=0, src=0, dest=0, virtual_link_id=0, vnp_id=0, bid=0, class_QoS=0;
 
@@ -226,7 +209,7 @@ void SDNInterDCQoS::traffic_matrix_printing(VNP_traffic_tab& Connection_Vect, Il
 		dest = (IloInt) Connection_Vect[i].getDestVnode();
 		virtual_link_id = (IloInt) Connection_Vect[i].getVlinkId();
 		class_QoS = (IloInt) Connection_Vect[i].getVlinkQosCls();
-		bid = (IloInt) Connection_Vect[i].GetBid();
+		bid = (IloInt) Connection_Vect[i].getBid();
 		vnp_id = (IloInt) Connection_Vect[i].getVnpId();
 
 		cout<<"Connection source :"<<src<<"      ";
@@ -242,39 +225,33 @@ void SDNInterDCQoS::traffic_matrix_printing(VNP_traffic_tab& Connection_Vect, Il
 //*************************************************************************************************
 //                                         6 Metas Paths Printing                                  *
 //*************************************************************************************************
-// 					printing_meta_path(							Path_Vect, 		COUNT_PATH, 		env);
-void SDNInterDCQoS::printing_meta_path(Meta_Substrate_Path_tab& path_vect, IloInt& Nb_path, IloEnv& env_3)
-{
+// 					printing_meta_path(						metaShtstPathVect, 		shtstPathCount, 		env);
+void SDNInterDCQoS::printing_meta_path(MetaSubPathAryType& metaShtstPathVect, IloInt& shtstPathCount, IloEnv& env){
 
 	IloInt i=0,j=0, more_node=0, more_arc=0, length=MAX_SIZE;
-	IloNumArray node_list(env_3,length);
-	IloNumArray arc_list(env_3,length);
-
+	IloNumArray node_list(env,length);
+	IloNumArray arc_list(env,length);
 
 	cout<<"\n\tPrinting Meta substrate routing paths"<<endl;
 	cout<<"\t\tpathid\tvLinkid\tsSrc\tsDest \t Node-numbers \t Arc-Numbers"<<endl;
-	for(i=0;i<Nb_path;i++)
-	{
+	for(i=0;i<shtstPathCount;i++){
 		arrayZeroInitialize(node_list,length);
 		arrayZeroInitialize(arc_list,length);
 
+		cout<<"\t\t"<<metaShtstPathVect[i].getCandidShortestPathId()<<"\t";
+		cout<<metaShtstPathVect[i].getCorrespVlinkId()<<"\t";
+		cout<<metaShtstPathVect[i].getSrcSnodeOfPath()<<"\t";
+		cout<<metaShtstPathVect[i].getDestSnodeOfPath()<<"\t";
 
-		cout<<"\t\t"<<path_vect[i].getCandidShortestPathId()<<"\t";
-		cout<<path_vect[i].getCorrespVlinkId()<<"\t";
-		cout<<path_vect[i].getSrcSnodeOfPath()<<"\t";
-		cout<<path_vect[i].getDestSnodeOfPath()<<"\t";
 
-
-		path_vect[i].GetUsed_Node_Tab(node_list);
+		metaShtstPathVect[i].getUsedSnodeAry(node_list);
 
 		j=0;
 		more_node=0;
 		cout<<"[";
-		while((j<length)&&(more_node==0))
-		{
+		while((j<length)&&(more_node==0)){
 			IloBool  estvide=(node_list[j]==0);
-			if  (!estvide)
-			{
+			if  (!estvide){
 				cout<< node_list[j]<<" ";
 				j++;
 			}
@@ -282,24 +259,21 @@ void SDNInterDCQoS::printing_meta_path(Meta_Substrate_Path_tab& path_vect, IloIn
 				more_node=1;
 		}
 
-		path_vect[i].GetUsed_Arc_Tab(arc_list);
+		metaShtstPathVect[i].getUsedSlinkAry(arc_list);
 		cout<<"] \t [";
 
 		j=0;
 		more_arc=0;
 
-		while ((j<length) && (more_arc==0))
-		{
+		while ((j<length) && (more_arc==0)){
 			IloBool  estzero=(arc_list[j]==0);
-			if  (!estzero)
-			{
+			if  (!estzero){
 				cout<< arc_list[j]<<" ";
 				j++;
 			}
 			else
 				more_arc=1;
 		}
-
 		cout<<"]"<<endl;
 	}
 	//----------------------------
@@ -313,14 +287,14 @@ void SDNInterDCQoS::printing_meta_path(Meta_Substrate_Path_tab& path_vect, IloIn
 //                                     7 Search Parent Node Position                                 *
 //***************************************************************************************************
 
-void SDNInterDCQoS::search_parent_node_position(Vertices_tab& arbo_tab, IloInt& length_arbo ,IloInt& search_node, IloInt& position_node)
+void SDNInterDCQoS::search_parent_node_position(VerticesAryType& arbo_tab, IloInt& length_arbo ,IloInt& search_node, IloInt& position_node)
 
 {
 	IloInt find_node=0, h=0 , node_id=0;
 
 	while ((find_node ==0) && (h < length_arbo))
 	{
-		node_id = (IloInt) arbo_tab[h].GetSommet_Id();
+		node_id = (IloInt) arbo_tab[h].getVerticeId();
 		IloBool test_equal_node = (search_node == node_id);
 		if (test_equal_node)
 		{
@@ -382,7 +356,7 @@ IloInt  SDNInterDCQoS::search_common_arc(IloNumArray& tab_o, IloNumArray& tab_i)
 //                                       9 Add Meta_Path                                             *
 //***************************************************************************************************
 
-void SDNInterDCQoS::add_meta_path(Meta_Substrate_Path_tab& metaShtstPathVect, IloInt& candidSrcSnode, IloInt& candidDestSnode, IloInt& request_id, IloInt& vnp_id, IloInt& vLinkId, IloNumArray& node_tab, Substrate_Graph_tab& Vect_Substrate_Graph, IloInt& COUNT_PATH,  IloEnv& env){
+void SDNInterDCQoS::add_meta_path(MetaSubPathAryType& metaShtstPathVect, IloInt& candidSrcSnode, IloInt& candidDestSnode, IloInt& request_id, IloInt& vnp_id, IloInt& vLinkId, IloNumArray& node_tab, SubNodesAryType& Vect_Substrate_Graph, IloInt& COUNT_PATH,  IloEnv& env){
 	//				add_meta_path(							metaShtstPathVect, 			src, 						dest, 				request_id, 		vnp_id, 	virtual_link_id, 		node_tab, 				Vect_Substrate_Graph, 	COUNT_PATH, 		env1);
 	//cout<<"in add_meta_path"<<endl;
 
@@ -473,7 +447,7 @@ void SDNInterDCQoS::add_meta_path(Meta_Substrate_Path_tab& metaShtstPathVect, Il
 //                  		       10  search request                                           //
 //-----------------------------------------------------------------------------------//
 
-IloInt SDNInterDCQoS::search_vnp_request(VNP_traffic_tab& traf_vect, IloInt& source, IloInt& destination, IloInt& vnp, IloInt& length_vect)
+IloInt SDNInterDCQoS::search_vnp_request(VlinkReqAryType& traf_vect, IloInt& source, IloInt& destination, IloInt& vnp, IloInt& length_vect)
 {
 	IloInt exit=0, find=0, j=0, cvnp =0;
 	IloInt srce=0, desti=0;
@@ -536,7 +510,7 @@ IloInt SDNInterDCQoS::findElementInVector(IloInt& element, IloNumArray& findInVe
 //      				        12  Search a virtual node connectivity                                   //
 //-----------------------------------------------------------------------------------//
 
-IloInt SDNInterDCQoS::check_node_connected(VNP_traffic_tab& req_vect, IloInt& nb_node, IloInt& vnp_num, IloInt& cnode, IloInt& tab_length)
+IloInt SDNInterDCQoS::check_node_connected(VlinkReqAryType& req_vect, IloInt& nb_node, IloInt& vnp_num, IloInt& cnode, IloInt& tab_length)
 {
 	IloInt find_node=0, csrc=0, cdest=0, cvnp=0;
 	IloInt l=0;
@@ -563,7 +537,7 @@ IloInt SDNInterDCQoS::check_node_connected(VNP_traffic_tab& req_vect, IloInt& nb
 //               	           13  search_candidate_location                                //
 //-----------------------------------------------------------------------------------//
 
-void  SDNInterDCQoS::search_candidate_location(IloInt& node_id, VN_node_requirement_tab& VNode_Loc_Vect, IloInt& vnp_num, IloNumArray& location_tab, IloInt& length)
+void  SDNInterDCQoS::search_candidate_location(IloInt& node_id, VnodeReqAryType& VNode_Loc_Vect, IloInt& vnp_num, IloNumArray& location_tab, IloInt& length)
 {
 	IloInt i=0, find_node=0, c_vnode=0, c_vnp_id=0;
 
@@ -589,7 +563,7 @@ void  SDNInterDCQoS::search_candidate_location(IloInt& node_id, VN_node_requirem
 //                                   14   check_src_dest_adjanticity                                *
 //***************************************************************************************************
 
-IloInt SDNInterDCQoS::check_src_dest_adjanticity(IloInt& srce, IloInt& desti, Substrate_Graph_tab& tab_graph,IloEnv& env_1 )
+IloInt SDNInterDCQoS::check_src_dest_adjanticity(IloInt& srce, IloInt& desti, SubNodesAryType& tab_graph,IloEnv& env_1 )
 {
 
 	IloInt length= MAX_SIZE, more_arc_src=0, more_arc_dest=0, h=0, k=0, node_are_adj=0, current_arc_in=0, current_arc_out=0;
@@ -646,7 +620,7 @@ IloInt SDNInterDCQoS::check_src_dest_adjanticity(IloInt& srce, IloInt& desti, Su
 //                                    15  Search Parent Node Position                                 *
 //***************************************************************************************************
 
-IloInt SDNInterDCQoS::count_number_link(IloInt& desti, Substrate_Graph_tab& tab_graph, IloEnv& env_1)
+IloInt SDNInterDCQoS::count_number_link(IloInt& desti, SubNodesAryType& tab_graph, IloEnv& env_1)
 {
 
 
@@ -678,14 +652,14 @@ IloInt SDNInterDCQoS::count_number_link(IloInt& desti, Substrate_Graph_tab& tab_
 //                                        16  Check #hops in Shortest Path                            *
 //***************************************************************************************************
 
-IloInt  SDNInterDCQoS::Check_nb_hops_in_shortest_path(Substrate_Graph_tab& tab_OG,  IloInt& source, IloInt& destination, IloEnv& env1)
+IloInt  SDNInterDCQoS::Check_nb_hops_in_shortest_path(SubNodesAryType& tab_OG,  IloInt& source, IloInt& destination, IloEnv& env1)
 {
 
 
 	IloInt i=0, j=0, l=0, find_src=0, current_node=0, more=0, label=0, valid_node=0, precedent=0, pere=0,  compteur_chemins=0;
 	IloInt lab=0, compteur_noeud=0, nbre_node, parent_node=0, last_node=0, nbr_path=0, id_node=1, find_cycle=0, test_cycle=0;
 	IloInt length=MAX_SIZE, nb_in_out_link=0, max_paths=0, adjacents_ind=0;
-	Vertices_tab    node_arb(env1,GN);
+	VerticesAryType    node_arb(env1,GN);
 
 	IloNumArray table_adj(env1, length);
 	IloNumArray node_tab(env1, length);
@@ -697,12 +671,12 @@ IloInt  SDNInterDCQoS::Check_nb_hops_in_shortest_path(Substrate_Graph_tab& tab_O
 	//---------------------------
 
 	arrayZeroInitialize(table_adj, length);
-	tab_OG[(IloInt)(source-1)].GetNode_Adjacent_Table(table_adj);
+	tab_OG[(IloInt)(source-1)].getAdjNodeArray(table_adj);
 
-	node_arb[compteur_noeud].SetVertice_Id((int)id_node);
+	node_arb[compteur_noeud].setVerticeId((int)id_node);
 	node_arb[compteur_noeud].setCurrent((int)source);
 	node_arb[compteur_noeud].setPrevious(0);
-	node_arb[compteur_noeud].SetFils_tab(table_adj);
+	node_arb[compteur_noeud].setAdjNodeArray(table_adj);
 
 	id_node++;
 	compteur_noeud++;
@@ -770,7 +744,7 @@ IloInt  SDNInterDCQoS::Check_nb_hops_in_shortest_path(Substrate_Graph_tab& tab_O
 			nbr_path++;
 
 
-		node_arb[compteur_noeud].SetVertice_Id((int)id_node);
+		node_arb[compteur_noeud].setVerticeId((int)id_node);
 		node_arb[compteur_noeud].setCurrent((int)pere);
 		node_arb[compteur_noeud].setPrevious((int)precedent);
 
@@ -779,7 +753,7 @@ IloInt  SDNInterDCQoS::Check_nb_hops_in_shortest_path(Substrate_Graph_tab& tab_O
 		if (pere != destination)
 		{
 
-			tab_OG[(IloInt)(pere - 1)].GetNode_Adjacent_Table(table_adj);
+			tab_OG[(IloInt)(pere - 1)].getAdjNodeArray(table_adj);
 			more=0 ;
 			j=0;
 
@@ -807,7 +781,7 @@ IloInt  SDNInterDCQoS::Check_nb_hops_in_shortest_path(Substrate_Graph_tab& tab_O
 
 		} // pere != destination
 
-		node_arb[compteur_noeud].SetFils_tab(table_adj);
+		node_arb[compteur_noeud].setAdjNodeArray(table_adj);
 		compteur_noeud++;
 		id_node++;
 

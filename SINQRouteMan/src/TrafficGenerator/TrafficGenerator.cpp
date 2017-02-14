@@ -13,7 +13,7 @@
   //                                          H-Shortest Path Algorithm                               *
   //***************************************************************************************************
 
-   void  TrafficGenerator::H_paths(Substrate_Graph_tab& tab_OG,  Meta_Substrate_Path_tab& chemins_tab, IloInt& source,
+   void  TrafficGenerator::H_paths(SubNodesAryType& tab_OG,  MetaSubPathAryType& chemins_tab, IloInt& source,
                          IloInt& destination, IloInt& max_hops, IloInt& request_num, IloInt& vnp, IloInt& link_id ,IloInt& comp_path, IloEnv& env1)
     {
 
@@ -22,7 +22,7 @@
       IloInt lab=0, compteur_noeud=0, nbre_node, parent_node=0, last_node=0, nbr_path=0, id_node=1, find_cycle=0, test_cycle=0;
       IloInt more_H_hops=0, length=MAX_SIZE, nb_in_out_link=0, max_paths=0;
   	IloInt adjacents_ind=0;
-      Vertices_tab    node_arb(env1,GN);
+      VerticesAryType    node_arb(env1,GN);
 
       //IloInt selected_node=0;
   	//IloInt nbr_node=0;
@@ -38,12 +38,12 @@
       //---------------------------
 
   	arrayZeroInitialize(table_adj, length);
-      tab_OG[(IloInt)(source-1)].GetNode_Adjacent_Table(table_adj);
+      tab_OG[(IloInt)(source-1)].getAdjNodeArray(table_adj);
 
-      node_arb[compteur_noeud].SetVertice_Id((int)id_node);
+      node_arb[compteur_noeud].setVerticeId((int)id_node);
       node_arb[compteur_noeud].setCurrent((int)source);
       node_arb[compteur_noeud].setPrevious(0);
-      node_arb[compteur_noeud].SetFils_tab(table_adj);
+      node_arb[compteur_noeud].setAdjNodeArray(table_adj);
 
       id_node++;
       compteur_noeud++;
@@ -109,7 +109,7 @@
   				 nbr_path++;
 
 
-  				node_arb[compteur_noeud].SetVertice_Id((int)id_node);
+  				node_arb[compteur_noeud].setVerticeId((int)id_node);
   				node_arb[compteur_noeud].setCurrent((int)pere);
   				node_arb[compteur_noeud].setPrevious((int)precedent);
 
@@ -118,7 +118,7 @@
   				if (pere != destination)
   				 {
 
-  					 tab_OG[(IloInt)(pere - 1)].GetNode_Adjacent_Table(table_adj);
+  					 tab_OG[(IloInt)(pere - 1)].getAdjNodeArray(table_adj);
   					 more=0 ;
   					 j=0;
 
@@ -146,7 +146,7 @@
 
   				   } // pere != destination
 
-  				   node_arb[compteur_noeud].SetFils_tab(table_adj);
+  				   node_arb[compteur_noeud].setAdjNodeArray(table_adj);
   				   compteur_noeud++;
   				   id_node++;
 
@@ -222,7 +222,7 @@
      //    Search maximum path unit cost value for a given connection									*
      //***************************************************************************************************
 
-     void TrafficGenerator::search_max_path_unit_cost(Meta_Substrate_Path_tab& path_vect, IloInt& nb_paths, IloInt& req_id, IloInt& num_vnp, IloNumArray& bw_cost_vect, IloNumArray& node_cost_vect,
+     void TrafficGenerator::search_max_path_unit_cost(MetaSubPathAryType& path_vect, IloInt& nb_paths, IloInt& req_id, IloInt& num_vnp, IloNumArray& bw_cost_vect, IloNumArray& node_cost_vect,
      								 IloInt& bandwidth, IloInt& cpu_src, IloInt& cpu_dest, IloInt& max_unit_path_cost, IloInt& max_src_dest_cost,  IloEnv& env_0)
 
      {
@@ -247,7 +247,7 @@
      			if ((found_req)&&(found_vnp))
      			 {
      				 arrayZeroInitialize(arc_list,length);
-     	 			 path_vect[k].GetUsed_Arc_Tab(arc_list);
+     	 			 path_vect[k].getUsedSlinkAry(arc_list);
 
      				 src_path = (IloInt)  path_vect[k].getSrcSnodeOfPath();
      			     dest_path = (IloInt)  path_vect[k].getDestSnodeOfPath();
@@ -295,7 +295,7 @@
      //    Search minimum path unit cost value for a given connection							        *
      //***************************************************************************************************
 
-     void TrafficGenerator::search_min_path_unit_cost(Meta_Substrate_Path_tab& path_vect, IloInt& nb_paths, IloInt& req_id, IloInt& num_vnp, IloNumArray& bw_cost_vect, IloNumArray& node_cost_vect,
+     void TrafficGenerator::search_min_path_unit_cost(MetaSubPathAryType& path_vect, IloInt& nb_paths, IloInt& req_id, IloInt& num_vnp, IloNumArray& bw_cost_vect, IloNumArray& node_cost_vect,
      							 IloInt& bandwidth,IloInt& cpu_src, IloInt& cpu_dest,  IloInt& min_unit_path_cost, IloInt& min_src_dest_cost, IloEnv& env_0)
 
      {
@@ -318,7 +318,7 @@
      			if ((found_req)&&(found_vnp))
      			 {
      				 arrayZeroInitialize(arc_list,length);
-     	 			 path_vect[k].GetUsed_Arc_Tab(arc_list);
+     	 			 path_vect[k].getUsedSlinkAry(arc_list);
 
      				 src_path = (IloInt)  path_vect[k].getSrcSnodeOfPath();
      			     dest_path = (IloInt)  path_vect[k].getDestSnodeOfPath();
@@ -366,7 +366,7 @@
      //***************************************************************************************************
 
      void TrafficGenerator::search_cpu_requirement_src_dest_nodes(IloInt& source, IloInt& destination, IloInt& vnp_num,
-     										   VN_node_requirement_tab& loc_vect, Node_QoS_Class_tab& node_qos_vect, IloInt& src_cls, IloInt& dest_cls)
+     										   VnodeReqAryType& loc_vect, NodeQosClsAryType& node_qos_vect, IloInt& src_cls, IloInt& dest_cls)
 
      {
      IloInt l=0, find_node=0, find_src=0, find_dest=0, c_vnode=0, vnp=0;
@@ -404,14 +404,14 @@
        //                                      Search Parent Node Position                                 *
        //***************************************************************************************************
 
-        void TrafficGenerator::search_parent_node_position(Vertices_tab& arbo_tab, IloInt& length_arbo ,IloInt& search_node, IloInt& position_node)
+        void TrafficGenerator::search_parent_node_position(VerticesAryType& arbo_tab, IloInt& length_arbo ,IloInt& search_node, IloInt& position_node)
 
              {
                 IloInt find_node=0, h=0 , node_id=0;
 
        	     while ((find_node ==0) && (h < length_arbo))
        	      {
-       		     node_id = (IloInt) arbo_tab[h].GetSommet_Id();
+       		     node_id = (IloInt) arbo_tab[h].getVerticeId();
        		     IloBool test_equal_node = (search_node == node_id);
        		     if (test_equal_node)
        		      {

@@ -10,22 +10,26 @@
 #define TRAFFICGENERATOR_SUBSTRATENODE_H_
 
 #include "ConstantsCOMMON.h"
+#include <map>
 
-class Substrate_Node {
+class SubstrateNode {
 private:
 	IloInt Node_Id;
 	int Arc_List[MAX_SIZE];             // list of incomming/outgoing links in original graph
 	int Node_Adjacent_Table[MAX_SIZE];     // list of adjacents nodes in original graph
+	std::map<IloInt, IloNum> adjNodeCostMap;
 public:
-	Substrate_Node();
-	virtual ~Substrate_Node();
+	SubstrateNode();
+	virtual ~SubstrateNode();
 
-	void SetNode_Id(IloInt n);
+	void setNodeId(IloInt n);
 	IloInt GetNode_Id();
-	void SetArc_List(IloNumArray& Arc_tab);
+	void setLinkAry(IloNumArray& Arc_tab);
 	void  GetArc_List(IloNumArray& Arc_tab);
 	void SetNode_Adjacent_Table( IloNumArray& SAdj_Tab);
-	void GetNode_Adjacent_Table(IloNumArray& GAdj_Tab);
+	void getAdjNodeArray(IloNumArray& GAdj_Tab);
+	void setAdjNodeCostMap(std::map<IloInt, IloNum> adjNodeCostMap);
+	std::map<IloInt, IloNum> getAdjNodeCostMap();
 };
 
 #endif /* TRAFFICGENERATOR_SUBSTRATENODE_H_ */

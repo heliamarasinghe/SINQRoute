@@ -30,12 +30,12 @@ from cmd import Cmd
 from os import isatty
 from select import poll, POLLIN
 from random import sample
-from time import sleep# ---------------------------------------------------Line Added by Heli
+from time import sleep
 import sys
 import time
 import os
 import atexit
-import re	# ---------------------------------------------------Line Added by Heli
+import re
 
 from mininet.log import info, output, error
 from mininet.term import makeTerms, runX11
@@ -232,7 +232,7 @@ class CLI( Cmd ):
             self.breakList = [ linkList[i] for i in sorted(sample(xrange(len(linkList)), int(args[0]))) ]
 	    for src,dst in self.breakList:
 		self.do_link( line="%s %s down"%(src, dst))
-                sleep(3)
+                sleep(4)
 	else:
 	    error( 'usage: breaklinks [num of links]\n' )
 

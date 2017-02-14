@@ -8,40 +8,40 @@
 
 #include "LinkQoSClass.h"
 
-Link_QoS_Class::Link_QoS_Class() {
+LinkQoSClass::LinkQoSClass() {
 	QoS_Class_Id=0;
 	QoS_Class_Bandwidth=0;
 	QoS_Class_Max_Hops=0;
 
 }
 
-Link_QoS_Class::~Link_QoS_Class() {
+LinkQoSClass::~LinkQoSClass() {
 	// TODO Auto-generated destructor stub
 }
 
-IloInt Link_QoS_Class::GetQoS_Class_Id()
+IloInt LinkQoSClass::GetQoS_Class_Id()
 {
 	return QoS_Class_Id;
 }
-void Link_QoS_Class::SetQoS_Class_Id(IloInt class_id)
+void LinkQoSClass::SetQoS_Class_Id(IloInt class_id)
 {
 	QoS_Class_Id=class_id;
 }
 
-IloInt Link_QoS_Class::GetQoS_Class_Bandwidth()
+IloInt LinkQoSClass::getQosClsBw()
 {
 	return QoS_Class_Bandwidth;
 }
-void Link_QoS_Class::SetQoS_Class_Bandwidth(IloInt bw)
+void LinkQoSClass::SetQoS_Class_Bandwidth(IloInt bw)
 {
 	QoS_Class_Bandwidth=bw;
 }
 
-IloInt Link_QoS_Class::GetQoS_Class_Max_Hops()
+IloInt LinkQoSClass::GetQoS_Class_Max_Hops()
 {
 	return QoS_Class_Max_Hops;
 }
-void Link_QoS_Class::SetQoS_Class_Max_Hops(IloInt h)
+void LinkQoSClass::SetQoS_Class_Max_Hops(IloInt h)
 {
 	QoS_Class_Max_Hops=h;
 }

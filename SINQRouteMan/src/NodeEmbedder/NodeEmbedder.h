@@ -37,7 +37,7 @@ public:
 
 
 typedef IloArray<Embdedding_Virtual_Node_Trace> Virtual_Node_Embedding_tab; 	//  table to save trace of candidate substrate routing paths for VNP requests
-typedef IloArray<Substrate_Path_Struct> Routing_Path_Tab; 						//  table to save selected substrate embedding path attributs
+typedef IloArray<SubstratePath> Routing_Path_Tab; 						//  table to save selected substrate embedding path attributs
 typedef IloArray<VN_Request_Topology> VN_Request_Topology_Tab; 					//  table to save vn topology attributs
 
 
@@ -59,7 +59,7 @@ static void embedPeriodicNodes(int);
 //void traffic_matrix_printing(VNP_traffic_tab&, IloInt&);
 //void printing_meta_path(Meta_Substrate_Path_tab&, IloInt&, IloEnv&);
 
-static void shortest_path(Substrate_Graph_tab&, Meta_Substrate_Path_tab&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloEnv&);
+static void shortest_path(SubNodesAryType&, MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloEnv&);
 //static void search_parent_node_position(Sommet_tab&, IloInt& ,IloInt&, IloInt&);
 //IloInt search_common_arc(IloNumArray&, IloNumArray&);
 //void add_meta_path(Meta_Substrate_Path_tab&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloNumArray&, Substrate_Graph_tab&, IloInt&, IloEnv&);
@@ -70,8 +70,8 @@ static void shortest_path(Substrate_Graph_tab&, Meta_Substrate_Path_tab&, IloInt
 //IloInt check_node_connected(VNP_traffic_tab&, IloInt&, IloInt&, IloInt&, IloInt&);
 
 //void  search_candidate_location(IloInt&, VN_node_requirement_tab&, IloInt&, IloNumArray&, IloInt&);
-static IloInt search_min_path_unit_cost(Meta_Substrate_Path_tab&, IloInt&, IloInt&, IloNumArray&, IloEnv&);
-static IloInt search_max_path_unit_cost(Meta_Substrate_Path_tab&, IloInt&, IloInt&, IloNumArray&, IloEnv&);
+static IloInt search_min_path_unit_cost(MetaSubPathAryType&, IloInt&, IloInt&, IloNumArray&, IloEnv&);
+static IloInt search_max_path_unit_cost(MetaSubPathAryType&, IloInt&, IloInt&, IloNumArray&, IloEnv&);
 
 //IloInt check_src_dest_adjanticity(IloInt&, IloInt&, Substrate_Graph_tab&, IloEnv&);
 //IloInt count_number_link(IloInt&, Substrate_Graph_tab&, IloEnv&);
@@ -87,22 +87,22 @@ static IloInt search_node_embedding(Virtual_Node_Embedding_tab&, IloInt&, IloInt
 //                                                                                                                 -
 //------------------------------------------------------------------------------------------------------------------
 
-static IloInt creation_node_embedding_var(VN_node_requirement_tab&, IloInt&, IloNumVarArray&, Virtual_Node_Embedding_tab&, IloEnv&);
+static IloInt creation_node_embedding_var(VnodeReqAryType&, IloInt&, IloNumVarArray&, Virtual_Node_Embedding_tab&, IloEnv&);
 
-static void no_partially_VN_embedding(VNP_traffic_tab&, IloInt&, IloInt&, IloNumVarArray&, IloNumVarArray&, Meta_Embedding_Nodes_tab&,
+static void no_partially_VN_embedding(VlinkReqAryType&, IloInt&, IloInt&, IloNumVarArray&, IloNumVarArray&, Meta_Embedding_Nodes_tab&,
 								  IloInt&, IloModel&, Virtual_Node_Embedding_tab&, IloInt&, IloEnv&);
 
-static void VNode_embedding_clash_constraint(VN_node_requirement_tab&, IloInt&, Virtual_Node_Embedding_tab&, IloNumVarArray&, IloInt&, IloNumVarArray&, IloModel&, IloEnv&);
+static void VNode_embedding_clash_constraint(VnodeReqAryType&, IloInt&, Virtual_Node_Embedding_tab&, IloNumVarArray&, IloInt&, IloNumVarArray&, IloModel&, IloEnv&);
 
-static void initSnodeResConstraint(IloInt&, Virtual_Node_Embedding_tab&, IloNumVarArray&, IloInt&, IloCplex&, VN_node_requirement_tab&, IloInt&, Node_QoS_Class_tab&, IloEnv&);
-static void  substrate_node_cpu_constraint(IloInt&, Virtual_Node_Embedding_tab&, IloNumVarArray&, IloInt&, IloCplex&, VN_node_requirement_tab&, IloInt&, Node_QoS_Class_tab&, IloNumArray&, IloEnv&);
+static void initSnodeResConstraint(IloInt&, Virtual_Node_Embedding_tab&, IloNumVarArray&, IloInt&, IloCplex&, VnodeReqAryType&, IloInt&, NodeQosClsAryType&, IloEnv&);
+static void  substrate_node_cpu_constraint(IloInt&, Virtual_Node_Embedding_tab&, IloNumVarArray&, IloInt&, IloCplex&, VnodeReqAryType&, IloInt&, NodeQosClsAryType&, IloNumArray&, IloEnv&);
 
-static IloInt calculate_cost_potantial_emb_shortestpath(Meta_Substrate_Path_tab&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloNumArray&, IloNumArray&, IloInt&, IloInt&, IloNumArray&, IloInt&, IloInt&, IloNumArray&, IloInt&, IloInt&, IloEnv&);
+static IloInt calculate_cost_potantial_emb_shortestpath(MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloNumArray&, IloNumArray&, IloInt&, IloInt&, IloNumArray&, IloInt&, IloInt&, IloNumArray&, IloInt&, IloInt&, IloEnv&);
 static IloInt search_var_index(Virtual_Node_Embedding_tab& embed_trace_vect, IloInt& vnode, IloInt& emb_node, IloInt& vnp_id, IloInt& length_tab);
 
-static IloInt search_vnode_class(IloInt&, IloInt&, VN_node_requirement_tab&, IloInt&);
+static IloInt search_vnode_class(IloInt&, IloInt&, VnodeReqAryType&, IloInt&);
 
-static IloInt search_reserved_vnode(VNP_traffic_tab&, IloInt&, IloInt&, IloInt&, IloInt&);
+static IloInt search_reserved_vnode(VlinkReqAryType&, IloInt&, IloInt&, IloInt&, IloInt&);
 };
 
 #endif /* NODEEMBEDDER_NODEEMBEDDER_H_ */

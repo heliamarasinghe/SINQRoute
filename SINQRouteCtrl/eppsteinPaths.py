@@ -42,13 +42,19 @@ total_edges_counter = 0
 
 
 def draw_graph(G):
-    pos = nx.circular_layout(G)
-    nx.draw_networkx_nodes(G, pos, node_size = 700)
-    nx.draw_networkx_edges(G, pos, edgelist = G.edges(), edge_color = 'b', style = 'dashed')
-    nx.draw_networkx_labels(G, pos, font_size=10)
+    
+    #pos = nx.circular_layout(G)                                # 1
+    pos = nx.spring_layout(G)                                  # 2
+    #pos=nx.spectral_layout(G)                                  # 3
+    #pos=nx.random_layout(G)                                    # 4
+    #pos=nx.shell_layout(G)                                      # 4
+    nx.draw_networkx_nodes(G, pos, node_size = 400)
+    #nx.draw_networkx_edges(G, pos, edgelist = G.edges(), edge_color = 'b', style = 'dashed')
+    nx.draw_networkx_edges(G, pos, edgelist=G.edges(), width=1.0, edge_color='k', style='solid', alpha=1.0, edge_cmap=None, edge_vmin=None, edge_vmax=None, ax=None, arrows=False, label=None)
+    nx.draw_networkx_labels(G, pos, font_size=8)
     plt.axis('off')
     plt.savefig('rendered_graph.png')
-    plt.show()
+    #plt.show()
 
 class EppsteinShortestPathAlgorithm(object):
     

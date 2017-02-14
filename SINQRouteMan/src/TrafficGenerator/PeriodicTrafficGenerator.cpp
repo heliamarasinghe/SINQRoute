@@ -84,15 +84,15 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 			file1>> NB_NODE;
 			file1>> NB_LINK;
 
-			Substrate_Link_tab Vect_Link(env,NB_LINK);
+			SubLinksAryType Vect_Link(env,NB_LINK);
 
 			for(i=0;i<NB_LINK;i++)
 			 {
 			   file1>>link>>src>>dest;
 
-			   Vect_Link[i].SetArc_Num((IloInt)link);
-			   Vect_Link[i].SetArc_Source((IloInt)src);
-			   Vect_Link[i].SetArc_Destination((IloInt)dest);
+			   Vect_Link[i].setSlinkId((IloInt)link);
+			   Vect_Link[i].setSrcSnode((IloInt)src);
+			   Vect_Link[i].setDstSnode((IloInt)dest);
 
 			 }
 
@@ -108,7 +108,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 			 file2>>NB_LINK_CLASS;
 
-			 Link_QoS_Class_tab  Link_Class_QoS_Vect(env,NB_LINK_CLASS);
+			 LinkQosClsAryType  Link_Class_QoS_Vect(env,NB_LINK_CLASS);
 
 			 for(i=0;i<NB_LINK_CLASS;i++)
 			  {
@@ -130,7 +130,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 			  file3>>NB_NODE_CLASS;
 
-			  Node_QoS_Class_tab  Node_Class_QoS_Vect(env,NB_NODE_CLASS);
+			  NodeQosClsAryType  Node_Class_QoS_Vect(env,NB_NODE_CLASS);
 
 			  length_vect = MAX_NB_LOCATION;
 
@@ -175,7 +175,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 			   prv_file12>>NB_PREVIOUS_RESERVED;
 	   		   prv_file12>>NB_PREVIOUS_ADD;
 
-			   VNP_traffic_tab  Previous_Request_Vect(env, NB_PREVIOUS_REQUEST);
+			   VlinkReqAryType  Previous_Request_Vect(env, NB_PREVIOUS_REQUEST);
 
 			   current_period = previous_period+1;
 
@@ -239,7 +239,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 		// 				Calculation of active old requests in current period		             -
 		//----------------------------------------------------------------------------------------
 
-	     VNP_traffic_tab  Reserved_Request_Vect(env, NB_PREVIOUS_REQUEST);
+	     VlinkReqAryType  Reserved_Request_Vect(env, NB_PREVIOUS_REQUEST);
 
 	     for(i=0;i<NB_PREVIOUS_REQUEST;i++)
 	      {
@@ -253,8 +253,8 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 				 dest = (IloInt) Previous_Request_Vect[i].getDestVnode();
 				 virtual_link_id = (IloInt) Previous_Request_Vect[i].getVlinkId();
 				 class_QoS = (IloInt) Previous_Request_Vect[i].getVlinkQosCls();
-				 bid = (IloInt) Previous_Request_Vect[i].GetBid();
-	             period = (IloInt) Previous_Request_Vect[i].GetPeriod();
+				 bid = (IloInt) Previous_Request_Vect[i].getBid();
+	             period = (IloInt) Previous_Request_Vect[i].getPeriod();
 
 	             //cout<<src<<"\t"<<dest<<"\t\t"<<virtual_link_id<<"\t\t"<<class_QoS<<"\t"<<bid<<"\t"<<vnp_id<<"\t"<<period<<endl;
 
@@ -335,7 +335,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 				cout<<"NB_ADD_REQUEST:"<<NB_ADD_REQUEST<<endl;
 				cout<<"NB_VNP_NODE:"<<NB_VNP_NODE<<endl;
 
-			    VN_node_requirement_tab  VNode_Location_Vect(env,NB_VNP_NODE);
+			    VnodeReqAryType  VNode_Location_Vect(env,NB_VNP_NODE);
 
 			  //---------------------------------------------------------------------------------------------------------
 			  //                                 Random Generation of VN location                                        -
@@ -404,7 +404,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 				//------------------------------------------------------------------------------------------
 
 
-					VNP_traffic_tab  Add_Request_Vect(env,NB_ADD_REQUEST);
+					VlinkReqAryType  Add_Request_Vect(env,NB_ADD_REQUEST);
 					virtual_link_id=1;
 
 					for(j=0;j<nb_added_vnp_requests;j++)
@@ -744,7 +744,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 		 		 //------------------------------------------------------------------------------------------
 
 
-						   Substrate_Graph_tab  Vect_Substrate_Graph(env,NB_NODE);
+						   SubNodesAryType  Vect_Substrate_Graph(env,NB_NODE);
 
 						   substrate_Graph_creation(Vect_Substrate_Graph, Vect_Link, NB_LINK, NB_NODE, env);
 						   adjacency_list_creation(Vect_Substrate_Graph, NB_NODE, env);
@@ -850,7 +850,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 		 						//------------------------------------------------------------------------------------------
 
 
-								   Meta_Substrate_Path_tab       Path_Vect(env, nb_candidate_embdedding_nodes*NB_MAX_PATH);
+								   MetaSubPathAryType       Path_Vect(env, nb_candidate_embdedding_nodes*NB_MAX_PATH);
 
 								   for(j=0;j<nb_candidate_embdedding_nodes;j++)
 									  {
@@ -892,7 +892,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 										 search_cpu_requirement_src_dest_nodes(src, dest, vnp_id, VNode_Location_Vect, Node_Class_QoS_Vect, src_cls, dest_cls);
 
-										 bw = (IloInt) Link_Class_QoS_Vect[class_QoS-1].GetQoS_Class_Bandwidth();
+										 bw = (IloInt) Link_Class_QoS_Vect[class_QoS-1].getQosClsBw();
 
 										 src_cpu_cls = (IloInt) Node_Class_QoS_Vect[src_cls-1].getVnodeCpuReq();
 										 dest_cpu_cls = (IloInt) Node_Class_QoS_Vect[dest_cls-1].getVnodeCpuReq();
@@ -953,7 +953,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 								NB_REQUEST = NB_RESERVED_REQUEST + NB_ADD_REQUEST;
 
-								VNP_traffic_tab  New_Request_Vect(env, NB_REQUEST);
+								VlinkReqAryType  New_Request_Vect(env, NB_REQUEST);
 
 								int reqItr=0;
 								//cout<<"src\tdest\tvirtual_link_id\t  class_QoS\tbid\tvnp_id\tperiod"<<endl;
@@ -964,8 +964,8 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 										  class_QoS = (IloInt) Reserved_Request_Vect[i].getVlinkQosCls();
 	                                      virtual_link_id = (IloInt) Reserved_Request_Vect[i].getVlinkId();
 										  vnp_id = (IloInt) Reserved_Request_Vect[i].getVnpId();
-										  bid = (IloInt) Reserved_Request_Vect[i].GetBid();
-										  period = (IloInt) Reserved_Request_Vect[i].GetPeriod();
+										  bid = (IloInt) Reserved_Request_Vect[i].getBid();
+										  period = (IloInt) Reserved_Request_Vect[i].getPeriod();
 
 										  //cout<<src<<"\t"<<dest<<"\t\t"<<virtual_link_id<<"\t\t"<<class_QoS<<"\t"<<bid<<"\t"<<vnp_id<<"\t"<<period<<endl;
 
@@ -987,8 +987,8 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 										  vnp_id = (IloInt) Add_Request_Vect[i].getVnpId();
 										  class_QoS = (IloInt) Add_Request_Vect[i].getVlinkQosCls();
 										  virtual_link_id = (IloInt)Add_Request_Vect[i].getVlinkId();
-						                  bid = (IloInt) Add_Request_Vect[i].GetBid();
-										  period = (IloInt) Add_Request_Vect[i].GetPeriod();
+						                  bid = (IloInt) Add_Request_Vect[i].getBid();
+										  period = (IloInt) Add_Request_Vect[i].getPeriod();
 
 										  New_Request_Vect[reqItr].setSrcVnode((IloInt)src);
 										  New_Request_Vect[reqItr].setDestVnode((IloInt)dest);
@@ -1063,9 +1063,9 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 									  dest = (IloInt) New_Request_Vect[i].getDestVnode();
 									  virtual_link_id = (IloInt) New_Request_Vect[i].getVlinkId();
 									  class_QoS = (IloInt) New_Request_Vect[i].getVlinkQosCls();
-									  bid = (IloInt) New_Request_Vect[i].GetBid();
+									  bid = (IloInt) New_Request_Vect[i].getBid();
 									  vnp_id = (IloInt) New_Request_Vect[i].getVnpId();
-	                                  period = (IloInt)New_Request_Vect[i].GetPeriod();
+	                                  period = (IloInt)New_Request_Vect[i].getPeriod();
 
 									  //cout<<New_Request_Vect<<endl;
 									  cout<<"\t"<<src<<"\t"<<dest<<"\t\t"<<virtual_link_id<<"\t\t"<<class_QoS<<"\t"<<bid<<"\t"<<vnp_id<<"\t"<<period<<endl;

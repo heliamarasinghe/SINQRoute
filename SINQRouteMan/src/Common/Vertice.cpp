@@ -8,59 +8,59 @@
 
 #include "Vertice.h"
 
-Sommet::Sommet()
+Vertice::Vertice()
 {
 	int j=0;
-	Sommet_Id = 0;
+	verticeId = 0;
 	current=0;
 	predecesseur=0;
 	for(j=0;j<H_PATH;j++)
 		Fils_tab[j]=0;
 }
 
-Sommet::~Sommet()
+Vertice::~Vertice()
 {
 	// TODO Auto-generated destructor stub
 }
 
-void Sommet::SetVertice_Id(int id)
+void Vertice::setVerticeId(int id)
 {
-	Sommet_Id=id;
+	verticeId=id;
 }
 
-int Sommet::GetSommet_Id()
+int Vertice::getVerticeId()
 {
-	return Sommet_Id;
+	return verticeId;
 }
 
-void Sommet::setCurrent(int id)
+void Vertice::setCurrent(int id)
 {
 	current=id;
 }
 
-int Sommet::getCurrent()
+int Vertice::getCurrent()
 {
 	return current;
 }
 
-void Sommet::setPrevious(int pred)
+void Vertice::setPrevious(int pred)
 {
 	predecesseur = pred;
 }
 
-int Sommet::getPrevious()
+int Vertice::getPrevious()
 {
 	return predecesseur;
 }
 
-void Sommet::SetFils_tab( IloNumArray& f_Tab)
+void Vertice::setAdjNodeArray( IloNumArray& f_Tab)
 {
 	int j;
 	for(j=0;j<H_PATH;j++)
 		Fils_tab[j]= (int) f_Tab[j];
 }
 
-void Sommet::GetFils_tab(IloNumArray& f_Tab)
+void Vertice::getAdjNodeArray(IloNumArray& f_Tab)
 {
 	int i;
 	for(i=0;i<H_PATH;i++)

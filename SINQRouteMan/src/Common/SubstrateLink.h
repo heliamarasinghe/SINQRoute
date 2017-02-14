@@ -11,22 +11,22 @@
 
 #include <ilcplex/ilocplex.h>
 
-class Substrate_Link {
+class SubstrateLink {
 private:
-	IloInt Arc_Num;
-	IloInt Arc_Source;
-	IloInt Arc_Destination;
+	IloInt slinkId;
+	IloInt srcSnode;
+	IloInt dstSnode;
 
 public:
-	Substrate_Link();
-	virtual ~Substrate_Link();
+	SubstrateLink();
+	virtual ~SubstrateLink();
 
-	IloInt GetArc_Num();
-	void SetArc_Num(IloInt arc);
-	IloInt GetArc_Source();
-	void SetArc_Source(IloInt s);
-	IloInt GetArc_Destination();
-	void SetArc_Destination(IloInt d);
+	IloInt getSlinkId();
+	void setSlinkId(IloInt arc);
+	IloInt getSrcSnode();
+	void setSrcSnode(IloInt s);
+	IloInt getDstSnode();
+	void setDstSnode(IloInt d);
 
 };
 

@@ -8,43 +8,43 @@
 
 #include "SubstrateLink.h"
 
-Substrate_Link::Substrate_Link() {
-	Arc_Num=0;
-	Arc_Source=0;
-	Arc_Destination=0;
+SubstrateLink::SubstrateLink() {
+	slinkId=0;
+	srcSnode=0;
+	dstSnode=0;
 
 }
 
-Substrate_Link::~Substrate_Link() {
+SubstrateLink::~SubstrateLink() {
 	// TODO Auto-generated destructor stub
 }
 
-IloInt Substrate_Link::GetArc_Num()
+IloInt SubstrateLink::getSlinkId()
 {
-	return Arc_Num;
+	return slinkId;
 }
 
-void Substrate_Link::SetArc_Num(IloInt arc)
+void SubstrateLink::setSlinkId(IloInt arc)
 {
-	Arc_Num=arc;
+	slinkId=arc;
 }
 
-IloInt Substrate_Link::GetArc_Source()
+IloInt SubstrateLink::getSrcSnode()
 {
-	return Arc_Source;
+	return srcSnode;
 }
 
-void Substrate_Link::SetArc_Source(IloInt s)
+void SubstrateLink::setSrcSnode(IloInt s)
 {
-	Arc_Source=s;
+	srcSnode=s;
 }
 
-IloInt Substrate_Link::GetArc_Destination()
+IloInt SubstrateLink::getDstSnode()
 {
-	return Arc_Destination;
+	return dstSnode;
 }
 
-void Substrate_Link::SetArc_Destination(IloInt d)
+void SubstrateLink::setDstSnode(IloInt d)
 {
-	Arc_Destination=d;
+	dstSnode=d;
 }

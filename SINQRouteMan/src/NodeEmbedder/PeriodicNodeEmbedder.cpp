@@ -115,8 +115,8 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
         file7>>NB_RESERVED;
 		file7>>NB_ADD;
 
-		VNP_traffic_tab  Reserved_Request_Vect(env,NB_RESERVED);
-        VNP_traffic_tab  Added_Request_Vect(env,NB_ADD);
+		VlinkReqAryType  Reserved_Request_Vect(env,NB_RESERVED);
+        VlinkReqAryType  Added_Request_Vect(env,NB_ADD);
 
 		j=0;
 
@@ -164,15 +164,15 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 		file1>> NB_NODE;
 		file1>> NB_LINK;
 
-		Substrate_Link_tab Vect_Link(env,NB_LINK);
+		SubLinksAryType Vect_Link(env,NB_LINK);
 
 		for(i=0;i<NB_LINK;i++)
 		 {
 		   file1>>link>>src>>dest;
 
-		   Vect_Link[i].SetArc_Num((IloInt)link);
-		   Vect_Link[i].SetArc_Source((IloInt)src);
-		   Vect_Link[i].SetArc_Destination((IloInt)dest);
+		   Vect_Link[i].setSlinkId((IloInt)link);
+		   Vect_Link[i].setSrcSnode((IloInt)src);
+		   Vect_Link[i].setDstSnode((IloInt)dest);
 
 		 }
 
@@ -201,7 +201,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 
 		 file2>>NB_LINK_CLASS;
 
-		 Link_QoS_Class_tab  Link_Class_QoS_Vect(env,NB_LINK_CLASS);
+		 LinkQosClsAryType  Link_Class_QoS_Vect(env,NB_LINK_CLASS);
 
 		 for(i=0;i<NB_LINK_CLASS;i++)
 		  {
@@ -224,7 +224,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 
 		  file3>>NB_NODE_CLASS;
 
-		  Node_QoS_Class_tab  Node_Class_QoS_Vect(env,NB_NODE_CLASS);
+		  NodeQosClsAryType  Node_Class_QoS_Vect(env,NB_NODE_CLASS);
 
 		  length_vect = MAX_NB_LOCATION;
 
@@ -305,7 +305,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 			//file7>>NB_TOTAL_VNP_NODE;
 			file6>>NB_VNP_NODE;
 
-			VN_node_requirement_tab  VNode_Potantial_Location_Vect(env,NB_VNP_NODE);
+			VnodeReqAryType  VNode_Potantial_Location_Vect(env,NB_VNP_NODE);
 
 			length = MAX_NB_LOCATION;
 
@@ -342,7 +342,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 	 	 //------------------------------------------------------------------------------------------
 			cout<<"\n\t Network definition"<<endl;
 
-		  Substrate_Graph_tab  Vect_Substrate_Graph(env,NB_NODE);
+		  SubNodesAryType  Vect_Substrate_Graph(env,NB_NODE);
 
 	      substrate_Graph_creation(Vect_Substrate_Graph, Vect_Link, NB_LINK, NB_NODE, env);
 
@@ -498,7 +498,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 	 	//------------------------------------------------------------------------------------------
 		  cout<<"\n\t Calculating Shortest paths"<<endl;
 
-	       Meta_Substrate_Path_tab       Path_Vect(env, nb_candidate_embedding_nodes);
+	       MetaSubPathAryType       Path_Vect(env, nb_candidate_embedding_nodes);
 
 	       for(j=0;j<nb_candidate_embedding_nodes;j++)
 	          {
@@ -610,7 +610,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 
                for(i=0;i<NB_ADD;i++)
                  {
-					 bid = (IloInt) Added_Request_Vect[i].GetBid();
+					 bid = (IloInt) Added_Request_Vect[i].getBid();
 					 vnp_id = (IloInt) Added_Request_Vect[i].getVnpId();
                      virtual_link_id = (IloInt) Added_Request_Vect[i].getVlinkId();
 
@@ -628,7 +628,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 	                 substrate_network_revenue+= bid*z[vnp_id-1];
 
 	                 class_QoS = (IloInt) Added_Request_Vect[i].getVlinkQosCls();
-                     bw = (IloInt)Link_Class_QoS_Vect[class_QoS-1].GetQoS_Class_Bandwidth();
+                     bw = (IloInt)Link_Class_QoS_Vect[class_QoS-1].getQosClsBw();
 
                		 j=0;
                      no_more_emb_path=0;
@@ -821,7 +821,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 
 		nb_accepted_req=0;
 
-		VNP_traffic_tab  Updated_Request_Vect(env,NB_REQUEST);
+		VlinkReqAryType  Updated_Request_Vect(env,NB_REQUEST);
 
 		for(i=0;i<NB_ADD;i++){
           vnp_id = (IloInt) Added_Request_Vect[i].getVnpId();
@@ -833,8 +833,8 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 			  dest = (IloInt) Added_Request_Vect[i].getDestVnode();
 			  virtual_link_id = (IloInt) Added_Request_Vect[i].getVlinkId();
 			  class_QoS = (IloInt) Added_Request_Vect[i].getVlinkQosCls();
-			  bid = (IloInt) Added_Request_Vect[i].GetBid();
-              period = (IloInt) Added_Request_Vect[i].GetPeriod();
+			  bid = (IloInt) Added_Request_Vect[i].getBid();
+              period = (IloInt) Added_Request_Vect[i].getPeriod();
 
               Updated_Request_Vect[nb_accepted_req].setSrcVnode((IloInt)src);
 			  Updated_Request_Vect[nb_accepted_req].setDestVnode((IloInt)dest);
@@ -871,18 +871,18 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 					   dest = (IloInt) Reserved_Request_Vect[i].getDestVnode();
 					   virtual_link_id = (IloInt) Reserved_Request_Vect[i].getVlinkId();
 					   class_QoS = (IloInt) Reserved_Request_Vect[i].getVlinkQosCls();
-					   bid = (IloInt) Reserved_Request_Vect[i].GetBid();
+					   bid = (IloInt) Reserved_Request_Vect[i].getBid();
 					   vnp_id = (IloInt) Reserved_Request_Vect[i].getVnpId();
-					   period = (IloInt) Reserved_Request_Vect[i].GetPeriod();
+					   period = (IloInt) Reserved_Request_Vect[i].getPeriod();
 				  }
 				 else {
 					   src = (IloInt) Updated_Request_Vect[j].getSrcVnode();
 					   dest = (IloInt) Updated_Request_Vect[j].getDestVnode();
 					   virtual_link_id = (IloInt) Updated_Request_Vect[j].getVlinkId();
 					   class_QoS = (IloInt) Updated_Request_Vect[j].getVlinkQosCls();
-					   bid = (IloInt) Updated_Request_Vect[j].GetBid();
+					   bid = (IloInt) Updated_Request_Vect[j].getBid();
 					   vnp_id = (IloInt) Updated_Request_Vect[j].getVnpId();
-					   period = (IloInt) Updated_Request_Vect[j].GetPeriod();
+					   period = (IloInt) Updated_Request_Vect[j].getPeriod();
 					   j++;
 				  }
 

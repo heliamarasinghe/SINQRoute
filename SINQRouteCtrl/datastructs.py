@@ -34,7 +34,7 @@ class Path(object):
 		preSw = self.prev[curSw]
 		linkList = []
 		while preSw is not None:
-			print"\tcurSw = %s \t preSw = %s"%(dpid_to_str(curSw), dpid_to_str(preSw))
+			#print"\tcurSw = %s \t preSw = %s"%(dpid_to_str(curSw), dpid_to_str(preSw))
 			linkObj = Link(preSw, adj[preSw][curSw], curSw)
 			linkList.append(linkObj)
 			curSw = preSw

@@ -11,24 +11,24 @@
 
 #include "ConstantsCOMMON.h"
 
-class Sommet {
+class Vertice {
 private:
-	int Sommet_Id;
+	int verticeId;
 	int current;		//may be parent
 	int predecesseur;
 	int Fils_tab[H_PATH];
 public:
-	Sommet();
-	virtual ~Sommet();
+	Vertice();
+	virtual ~Vertice();
 
-	void SetVertice_Id(int id);
-	int GetSommet_Id();
+	void setVerticeId(int id);
+	int getVerticeId();
 	void setCurrent(int id);
 	int getCurrent();
 	void setPrevious(int pred);
 	int getPrevious();
-	void SetFils_tab( IloNumArray& f_Tab);
-	void GetFils_tab(IloNumArray& f_Tab);
+	void setAdjNodeArray( IloNumArray& f_Tab);
+	void getAdjNodeArray(IloNumArray& f_Tab);
 };
 
 #endif /* TRAFFICGENERATOR_SOMMET_H_ */

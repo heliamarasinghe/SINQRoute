@@ -10,7 +10,7 @@
 //                                          H-Shortest Path Algorithm                               *
 //***************************************************************************************************
 
-void  NodeEmbedder::shortest_path(Substrate_Graph_tab& Vect_Substrate_Graph,  Meta_Substrate_Path_tab& Path_Vect, IloInt& candidSrcSnode, IloInt& candidDestSnode, IloInt& request_id, IloInt& vnpId, IloInt& vLinkId ,IloInt& numOfShortestPaths, IloEnv& env){
+void  NodeEmbedder::shortest_path(SubNodesAryType& Vect_Substrate_Graph,  MetaSubPathAryType& Path_Vect, IloInt& candidSrcSnode, IloInt& candidDestSnode, IloInt& request_id, IloInt& vnpId, IloInt& vLinkId ,IloInt& numOfShortestPaths, IloEnv& env){
 	//				shortest_path(						Vect_Substrate_Graph, 				candidShortestPathsVect, candidSrcSnode, candidDestSnode, candidSnodeCombiId, vnpId, 			vLinkId, 			numOfShortestPaths, 	env);
 
 
@@ -18,7 +18,7 @@ void  NodeEmbedder::shortest_path(Substrate_Graph_tab& Vect_Substrate_Graph,  Me
 	IloInt lab=0, compteur_noeud=0, parent_node=0, last_node=0, nbr_path=0, id_node=1, find_cycle=0, test_cycle=0;
 	IloInt nb_in_out_link=0, max_paths=0;
 	IloInt adjacents_ind=0;
-	Vertices_tab    node_arb(env,GN);
+	VerticesAryType    node_arb(env,GN);
 
 	IloNumArray table_adj(env, MAX_SIZE);
 
@@ -30,12 +30,12 @@ void  NodeEmbedder::shortest_path(Substrate_Graph_tab& Vect_Substrate_Graph,  Me
 	//---------------------------
 
 	arrayZeroInitialize(table_adj, MAX_SIZE);
-	Vect_Substrate_Graph[(IloInt)(candidSrcSnode-1)].GetNode_Adjacent_Table(table_adj);
+	Vect_Substrate_Graph[(IloInt)(candidSrcSnode-1)].getAdjNodeArray(table_adj);
 
-	node_arb[compteur_noeud].SetVertice_Id((int)id_node);
+	node_arb[compteur_noeud].setVerticeId((int)id_node);
 	node_arb[compteur_noeud].setCurrent((int)candidSrcSnode);
 	node_arb[compteur_noeud].setPrevious(0);
-	node_arb[compteur_noeud].SetFils_tab(table_adj);
+	node_arb[compteur_noeud].setAdjNodeArray(table_adj);
 
 	id_node++;
 	compteur_noeud++;
@@ -101,7 +101,7 @@ void  NodeEmbedder::shortest_path(Substrate_Graph_tab& Vect_Substrate_Graph,  Me
 			nbr_path++;
 
 
-		node_arb[compteur_noeud].SetVertice_Id((int)id_node);
+		node_arb[compteur_noeud].setVerticeId((int)id_node);
 		node_arb[compteur_noeud].setCurrent((int)pere);
 		node_arb[compteur_noeud].setPrevious((int)precedent);
 
@@ -110,7 +110,7 @@ void  NodeEmbedder::shortest_path(Substrate_Graph_tab& Vect_Substrate_Graph,  Me
 		if (pere != candidDestSnode)
 		{
 
-			Vect_Substrate_Graph[(IloInt)(pere - 1)].GetNode_Adjacent_Table(table_adj);
+			Vect_Substrate_Graph[(IloInt)(pere - 1)].getAdjNodeArray(table_adj);
 			more=0 ;
 			j=0;
 
@@ -138,7 +138,7 @@ void  NodeEmbedder::shortest_path(Substrate_Graph_tab& Vect_Substrate_Graph,  Me
 
 		} // pere != destination
 
-		node_arb[compteur_noeud].SetFils_tab(table_adj);
+		node_arb[compteur_noeud].setAdjNodeArray(table_adj);
 		compteur_noeud++;
 		id_node++;
 
@@ -211,7 +211,7 @@ void  NodeEmbedder::shortest_path(Substrate_Graph_tab& Vect_Substrate_Graph,  Me
 //    Search minimum path unit cost value for a given connection							        *
 //***************************************************************************************************
 
-IloInt NodeEmbedder::search_min_path_unit_cost(Meta_Substrate_Path_tab& path_vect, IloInt& nb_paths, IloInt& req_id, IloNumArray& bw_cost_vect, IloEnv& env_0)
+IloInt NodeEmbedder::search_min_path_unit_cost(MetaSubPathAryType& path_vect, IloInt& nb_paths, IloInt& req_id, IloNumArray& bw_cost_vect, IloEnv& env_0)
 
 {
 	IloInt current_path_cost=0, min_path_cost=10000;
@@ -228,7 +228,7 @@ IloInt NodeEmbedder::search_min_path_unit_cost(Meta_Substrate_Path_tab& path_vec
 		if(found_req)
 		{
 			arrayZeroInitialize(arc_list,length);
-			path_vect[k].GetUsed_Arc_Tab(arc_list);
+			path_vect[k].getUsedSlinkAry(arc_list);
 
 			more_arc =0;
 			h=0;
@@ -260,7 +260,7 @@ IloInt NodeEmbedder::search_min_path_unit_cost(Meta_Substrate_Path_tab& path_vec
 //    Search maximum path unit cost value for a given connection									*
 //***************************************************************************************************
 
-IloInt NodeEmbedder::search_max_path_unit_cost(Meta_Substrate_Path_tab& path_vect, IloInt& nb_paths, IloInt& req_id, IloNumArray& bw_cost_vect, IloEnv& env_0)
+IloInt NodeEmbedder::search_max_path_unit_cost(MetaSubPathAryType& path_vect, IloInt& nb_paths, IloInt& req_id, IloNumArray& bw_cost_vect, IloEnv& env_0)
 
 {
 	IloInt current_path_cost=0, max_path_cost=0;
@@ -277,7 +277,7 @@ IloInt NodeEmbedder::search_max_path_unit_cost(Meta_Substrate_Path_tab& path_vec
 		if(found_req)
 		{
 			arrayZeroInitialize(arc_list,length);
-			path_vect[k].GetUsed_Arc_Tab(arc_list);
+			path_vect[k].getUsedSlinkAry(arc_list);
 
 			more_arc =0;
 			h=0;
@@ -340,7 +340,7 @@ IloInt NodeEmbedder::search_node_embedding(Virtual_Node_Embedding_tab& emb_tab, 
 //***************************************************************************************************************************
 //		                           Creation of node embdedding variables                                                    *
 //***************************************************************************************************************************
-IloInt NodeEmbedder::creation_node_embedding_var(VN_node_requirement_tab& VNode_Potantial_Location_Vect, IloInt& NB_VNP_NODE, IloNumVarArray& x, Virtual_Node_Embedding_tab& embedding_trace_x, IloEnv& env_1){
+IloInt NodeEmbedder::creation_node_embedding_var(VnodeReqAryType& VNode_Potantial_Location_Vect, IloInt& NB_VNP_NODE, IloNumVarArray& x, Virtual_Node_Embedding_tab& embedding_trace_x, IloEnv& env_1){
 	//				creation_node_embedding_var(					VNode_Potantial_Location_Vect, 				NB_VNP_NODE, 				x, 								embedding_trace_x, 			env)
 
 	IloInt k=0,h=0,vnpId=0, vnode=0, more_location=0;
@@ -409,7 +409,7 @@ IloInt NodeEmbedder::creation_node_embedding_var(VN_node_requirement_tab& VNode_
 //***************************************************************************************************************************
 //                          No partially embdedding of a VN                                                                 *
 //***************************************************************************************************************************
-void NodeEmbedder::no_partially_VN_embedding(VNP_traffic_tab& vLinkReQVect, IloInt& totNumOfvLinkReq, IloInt& numOfVnps, IloNumVarArray& x, IloNumVarArray& z,
+void NodeEmbedder::no_partially_VN_embedding(VlinkReqAryType& vLinkReQVect, IloInt& totNumOfvLinkReq, IloInt& numOfVnps, IloNumVarArray& x, IloNumVarArray& z,
 		Meta_Embedding_Nodes_tab& candidSnodeCombiVectForVlinks, 	IloInt& numOfEmbeddingNodeCombinations, 	IloModel& ILP_model, Virtual_Node_Embedding_tab& embedding_trace_x, IloInt& x_VECT_LENGTH , IloEnv& env){
 
 //no_partially_VN_embedding(vLinkReQVect, totNumOfvLinkReq, numOfVnps, x, z, candidSnodeCombiVectForVlinks, numOfEmbeddingNodeCombinations, ILP_model, embedding_trace_x, x_VECT_LENGTH, env);
@@ -497,7 +497,7 @@ void NodeEmbedder::no_partially_VN_embedding(VNP_traffic_tab& vLinkReQVect, IloI
 //                          A virtual node is be embendded only on one substrate node                                       *
 //***************************************************************************************************************************
 
-void NodeEmbedder::VNode_embedding_clash_constraint(VN_node_requirement_tab& VNode_loc_vect, IloInt& nbr_vnode,	Virtual_Node_Embedding_tab& embed_track_vect,
+void NodeEmbedder::VNode_embedding_clash_constraint(VnodeReqAryType& VNode_loc_vect, IloInt& nbr_vnode,	Virtual_Node_Embedding_tab& embed_track_vect,
 		IloNumVarArray& y, IloInt& x_length, IloNumVarArray& t, IloModel& ilp_m, IloEnv& env_1)
 
 {
@@ -560,8 +560,8 @@ void NodeEmbedder::VNode_embedding_clash_constraint(VN_node_requirement_tab& VNo
 //***************************************************************************************************************************
 
 void  NodeEmbedder::substrate_node_cpu_constraint(IloInt& nbr_node, Virtual_Node_Embedding_tab& trac_vect, IloNumVarArray& y, IloInt& y_length,
-		IloCplex& ilp_sol, VN_node_requirement_tab& location_vect, IloInt& nbr_vnode,
-		Node_QoS_Class_tab& node_qos_tab, IloNumArray& avail_cpu_tab, IloEnv& env_1)
+		IloCplex& ilp_sol, VnodeReqAryType& location_vect, IloInt& nbr_vnode,
+		NodeQosClsAryType& node_qos_tab, IloNumArray& avail_cpu_tab, IloEnv& env_1)
 {
 
 	IloInt i=0,j=0, current_substrate_node=0, num_vnp=0, cpu_vnode=0, vnode=0, node_emb=0, var_index=0, cls=0, upper_bound=0, used_node=0;
@@ -614,7 +614,7 @@ void  NodeEmbedder::substrate_node_cpu_constraint(IloInt& nbr_node, Virtual_Node
 //                       Search an Arc in a Table                                                   *
 //***************************************************************************************************
 
-IloInt NodeEmbedder::calculate_cost_potantial_emb_shortestpath(Meta_Substrate_Path_tab& emb_path_vect, IloInt& nb_path, IloInt& src, IloInt& dest,
+IloInt NodeEmbedder::calculate_cost_potantial_emb_shortestpath(MetaSubPathAryType& emb_path_vect, IloInt& nb_path, IloInt& src, IloInt& dest,
 		IloInt& vnp_num, IloInt& bandwidth, IloInt& vlink, IloNumArray& link_cost_tab,
 		IloNumArray& cpu_unit_cost_tab, IloInt& s_cpu, IloInt& d_cpu, IloNumArray& ram_unit_cost_vect, IloInt& s_mem, IloInt& d_mem, IloNumArray& storage_unit_cost_vect, IloInt& s_sto, IloInt& d_sto, IloEnv& env_0)
 {
@@ -637,7 +637,7 @@ IloInt NodeEmbedder::calculate_cost_potantial_emb_shortestpath(Meta_Substrate_Pa
 		IloBool equal_link_id = (vlink_num == vlink);
 
 		if ((equal_src)&&(equal_dest)&&(equal_vnp_id)&&(equal_link_id)){
-			emb_path_vect[k].GetUsed_Arc_Tab(used_arc_tab);
+			emb_path_vect[k].getUsedSlinkAry(used_arc_tab);
 			l=0;
 			more_arc=0;
 			while ((l<MAX_SIZE)&&(more_arc==0)){
@@ -712,7 +712,7 @@ IloInt NodeEmbedder::search_var_index(Virtual_Node_Embedding_tab& embed_trace_ve
 //                      Search for vnode QoS class										            *
 //***************************************************************************************************
 
-IloInt NodeEmbedder::search_vnode_class(IloInt& vnode_id, IloInt& vnp_id,  VN_node_requirement_tab&  vnode_vect, IloInt& nbr_vnode)
+IloInt NodeEmbedder::search_vnode_class(IloInt& vnode_id, IloInt& vnp_id,  VnodeReqAryType&  vnode_vect, IloInt& nbr_vnode)
 {
 	IloInt node_qos=0, find=0, m=0, cvnode=0, cvnp_id=0, cperiod_id=0;
 
@@ -741,7 +741,7 @@ IloInt NodeEmbedder::search_vnode_class(IloInt& vnode_id, IloInt& vnp_id,  VN_no
 //                          Search a request in rerserved demand matrix              *
 //************************************************************************************
 
-IloInt NodeEmbedder::search_reserved_vnode(VNP_traffic_tab& demand_mat, IloInt& nbr_demand, IloInt& vnode, IloInt& vnp_num, IloInt& cperiod)
+IloInt NodeEmbedder::search_reserved_vnode(VlinkReqAryType& demand_mat, IloInt& nbr_demand, IloInt& vnode, IloInt& vnp_num, IloInt& cperiod)
 
 {
 
@@ -754,7 +754,7 @@ IloInt NodeEmbedder::search_reserved_vnode(VNP_traffic_tab& demand_mat, IloInt& 
 		c_vnp =  (IloInt) demand_mat[s].getVnpId();
 		c_vlink_src = (IloInt) demand_mat[s].getSrcVnode();
 		c_vlink_dest = (IloInt) demand_mat[s].getDestVnode();
-		c_period = (IloInt) demand_mat[s].GetPeriod();
+		c_period = (IloInt) demand_mat[s].getPeriod();
 
 		IloBool equal_vlink_src = (c_vlink_src == vnode);
 		IloBool equal_vlink_dest = (c_vlink_dest == vnode);
@@ -775,7 +775,7 @@ IloInt NodeEmbedder::search_reserved_vnode(VNP_traffic_tab& demand_mat, IloInt& 
 //			                          INIT - substrate node has a CPU capacity													*
 //***************************************************************************************************************************
 
-void  NodeEmbedder::initSnodeResConstraint(IloInt& numOfSubNodes, Virtual_Node_Embedding_tab& embedding_trace_x, IloNumVarArray& x, IloInt& x_VECT_LENGTH, IloCplex& ILP_solver, VN_node_requirement_tab& VNode_Potantial_Location_Vect, IloInt& newVnodesInTslot, Node_QoS_Class_tab& Node_Class_QoS_Vect, IloEnv& env){
+void  NodeEmbedder::initSnodeResConstraint(IloInt& numOfSubNodes, Virtual_Node_Embedding_tab& embedding_trace_x, IloNumVarArray& x, IloInt& x_VECT_LENGTH, IloCplex& ILP_solver, VnodeReqAryType& VNode_Potantial_Location_Vect, IloInt& newVnodesInTslot, NodeQosClsAryType& Node_Class_QoS_Vect, IloEnv& env){
 //						substrate_node_cpu_constraint(IloInt& nbr_node, 		Virtual_Node_Embedding_tab& trac_vect, 		IloNumVarArray& y, 	IloInt& y_length, 		IloCplex& ilp_sol, 	VN_node_requirement_tab& location_vect, 				IloInt& nbr_vnode, 		Node_QoS_Class_tab& node_qos_tab, IloNumArray& avail_cpu_tab, IloEnv& env_1)
 
 

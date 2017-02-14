@@ -46,13 +46,13 @@ void TrafficGenerator::generateInitTraffic(){
 		cerr << "ERROR: could not open file"<< f1_subTopo << "for reading"<< endl;
 		file1>> NB_NODE;
 		file1>> NB_LINK;
-		Substrate_Link_tab Vect_Link(env,NB_LINK);
+		SubLinksAryType Vect_Link(env,NB_LINK);
 		for(i=0;i<NB_LINK;i++)
 		 {
 		   file1>>link>>src>>dest;
-		   Vect_Link[i].SetArc_Num((IloInt)link);
-		   Vect_Link[i].SetArc_Source((IloInt)src);
-		   Vect_Link[i].SetArc_Destination((IloInt)dest);
+		   Vect_Link[i].setSlinkId((IloInt)link);
+		   Vect_Link[i].setSrcSnode((IloInt)src);
+		   Vect_Link[i].setDstSnode((IloInt)dest);
 		 }
 	     file1.close();
 
@@ -63,7 +63,7 @@ void TrafficGenerator::generateInitTraffic(){
 		 if (!file2)
 		 cerr << "ERROR: could not open file "<< f2_linkQoS << "for reading"<< endl;
 		 file2>>NB_LINK_CLASS;
-		 Link_QoS_Class_tab  Link_Class_QoS_Vect(env,NB_LINK_CLASS);
+		 LinkQosClsAryType  Link_Class_QoS_Vect(env,NB_LINK_CLASS);
 		 for(i=0;i<NB_LINK_CLASS;i++)
 		  {
 		   file2>>class_QoS>>bw>>hops;
@@ -80,7 +80,7 @@ void TrafficGenerator::generateInitTraffic(){
 		 if (!file3)
 		  cerr << "ERROR: could not open file "<< f3_nodeQoS << "for reading"<< endl;
 		  file3>>NB_NODE_CLASS;
-		  Node_QoS_Class_tab  Node_Class_QoS_Vect(env,NB_NODE_CLASS);
+		  NodeQosClsAryType  Node_Class_QoS_Vect(env,NB_NODE_CLASS);
 		  length_vect = MAX_NB_LOCATION;
 		  IloNumArray location_vect(env,length_vect);
 		  for(i=0;i<NB_NODE_CLASS;i++)
@@ -147,7 +147,7 @@ void TrafficGenerator::generateInitTraffic(){
 			cout<<"NB_REQUEST:"<<NB_REQUEST<<endl;
 			cout<<"NB_VNP_NODE:"<<NB_VNP_NODE<<endl;
 			//cin.get();
-		   VN_node_requirement_tab  VNode_Location_Vect(env,NB_VNP_NODE);
+		   VnodeReqAryType  VNode_Location_Vect(env,NB_VNP_NODE);
 
 		  //---------------------------------------------------------------------------------------------------------
 		  //                                 Random Generation of VN location                                        -
@@ -224,7 +224,7 @@ void TrafficGenerator::generateInitTraffic(){
 			//------------------------------------------------------------------------------------------
 
 
-					VNP_traffic_tab  Request_Vect(env,NB_REQUEST);
+					VlinkReqAryType  Request_Vect(env,NB_REQUEST);
 					for(j=0;j<NB_VNP;j++)
 					 {
 						cvnp_nb_node  = (IloInt) vect_vnp_nb_nodes[j];
@@ -416,7 +416,7 @@ void TrafficGenerator::generateInitTraffic(){
 	 				 //------------------------------------------------------------------------------------------
 
 
-					   Substrate_Graph_tab  Vect_Substrate_Graph(env,NB_NODE);
+					   SubNodesAryType  Vect_Substrate_Graph(env,NB_NODE);
 
 					   substrate_Graph_creation(Vect_Substrate_Graph, Vect_Link, NB_LINK, NB_NODE, env);
 					   adjacency_list_creation(Vect_Substrate_Graph, NB_NODE, env);
@@ -523,7 +523,7 @@ void TrafficGenerator::generateInitTraffic(){
 	 						//------------------------------------------------------------------------------------------
 
 
-							   Meta_Substrate_Path_tab       Path_Vect(env, nb_candidate_embdedding_nodes*NB_MAX_PATH);
+							   MetaSubPathAryType       Path_Vect(env, nb_candidate_embdedding_nodes*NB_MAX_PATH);
 
 							   for(j=0;j<nb_candidate_embdedding_nodes;j++)
 								  {
@@ -565,7 +565,7 @@ void TrafficGenerator::generateInitTraffic(){
 
 									 search_cpu_requirement_src_dest_nodes(src, dest, vnp_id, VNode_Location_Vect, Node_Class_QoS_Vect, src_cls, dest_cls);
 
-									 bw = (IloInt) Link_Class_QoS_Vect[class_QoS-1].GetQoS_Class_Bandwidth();
+									 bw = (IloInt) Link_Class_QoS_Vect[class_QoS-1].getQosClsBw();
 
 									 src_cpu_cls = (IloInt) Node_Class_QoS_Vect[src_cls-1].getVnodeCpuReq();
 									 dest_cpu_cls = (IloInt) Node_Class_QoS_Vect[dest_cls-1].getVnodeCpuReq();
@@ -673,7 +673,7 @@ void TrafficGenerator::generateInitTraffic(){
 								  dest = (IloInt) Request_Vect[i].getDestVnode();
 								  virtual_link_id = (IloInt) Request_Vect[i].getVlinkId();
 								  class_QoS = (IloInt) Request_Vect[i].getVlinkQosCls();
-								  bid = (IloInt) Request_Vect[i].GetBid();
+								  bid = (IloInt) Request_Vect[i].getBid();
 								  vnp_id = (IloInt) Request_Vect[i].getVnpId();
 
 								  file7 <<src<<"         "<<dest<<"         "<<virtual_link_id<<"        "<<class_QoS<<"       "<<bid<<"       "<<vnp_id<<"     "<<current_period<<endl;

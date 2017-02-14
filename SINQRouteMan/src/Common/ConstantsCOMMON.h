@@ -17,6 +17,7 @@ const IloInt MAX_NB_LOCATION=3;
 const IloInt H_PATH=5;
 const IloInt GN=10000;
 const IloInt NB_MAX_PATH=5;			// Replaces MAX_PATH
+const IloInt INFINI=10000;			// Used in calculating theta matrix
 
 
 

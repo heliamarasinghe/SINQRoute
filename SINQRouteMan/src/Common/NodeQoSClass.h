@@ -11,7 +11,7 @@
 
 #include "ConstantsCOMMON.h"
 
-class Node_QoS_Class {
+class NodeQoSClass {
 private:
 
 	IloInt Node_QoS_Class_Id;
@@ -23,8 +23,8 @@ private:
 	IloInt Required_Storage;
 	IloInt Required_Blade;
 public:
-	Node_QoS_Class();
-	virtual ~Node_QoS_Class();
+	NodeQoSClass();
+	virtual ~NodeQoSClass();
 
 	IloInt Get_Node_QoS_Class_Id();
 	void SetNode_QoS_Class_Id(IloInt s);

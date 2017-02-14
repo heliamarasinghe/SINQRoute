@@ -7,7 +7,7 @@ from pox.lib.util import dpid_to_str, str_to_dpid
 from collections import defaultdict, namedtuple, OrderedDict
 from pox.lib.addresses import IPAddr,EthAddr		# EthAddr() can only convert string type MAC address to EthAddr type object
 from forwarding import NewFlow, getNumFlowRules
-from eppsteinPaths import EppsteinShortestPathAlgorithm
+from eppsteinPaths import EppsteinShortestPathAlgorithm, draw_graph # draw_graph() may result in slowing down the main thread of the controller and result in false link remove events
 from monitoring import get_monitored_linkTruputs
 from datastructs import Path, Link, FlowPath, ofp_match_withHash, PriorityQueue
 from datetime import datetime
@@ -42,15 +42,20 @@ ctrlStable = True						# Do NOT Change! True = STABLE, False = TRANSIENT. Unless
 #---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 brknUniLinkSet = set()					# keeps broken unidirectional links temporarily until opposite link event is fired to treat once
 maxEpPaths = 7							# Maximum number of alternative shortest paths that will be considered for each broken path (This number has no effect if it goes over max available paths) 
-subLinkBwCap = 20						# Substrate link bandwidth capacity
-qosToBw = {1:1, 2:2, 3:3, 4:4, 5:5}				# QoS class to bandwidth map. {class : bandwith-req}. QoS 1 is considered minimum and hardcoded in rerouteFlows(flowsToReroute, brknLink)
-bwUnderAlloc = True						# If True, when there aren't any paths with sufficient bandwidth, highest available bandwidth path will be selected
-minLatency = True						# If True, reroute will select on minimum latency path. Else minimum HOP count will be used
-slrgBkups = True
+maxBkupCalcs = 7
+subLinkBwCap = 25	#Ori = 20			# Substrate link bandwidth capacity. Percentage of network bandwidth allocation from optimization engine 100%=20, 80%=25, 66.66%=30, 50%=40
 
-bkupPathReroute = True
-shotPathReroute = False
-maxBkupCalcs = 5
+qosToBw = {1:1, 2:2, 3:3, 4:4, 5:5}				# QoS class to bandwidth map. {class : bandwith-req}. QoS 1 is considered minimum and hardcoded in rerouteFlows(flowsToReroute, brknLink)
+minLatency = True						# If True, reroute will select on minimum latency path. Else minimum HOP count will be used
+
+
+bwUnderAlloc = True						# If True, when there aren't any paths with sufficient bandwidth, highest available bandwidth path will be selected
+bkupPathReroute = False
+slrgBkups = False
+shotPathReroute = True
+
+
+
 bkupsPerFlowPath = defaultdict(lambda:defaultdict(lambda:None))	# keeps flowPathId to backup path mapping		usage: bkupsPerFlowPath[flowPathId][srcSwDpid] = pathObj
 bkupsOnLink = defaultdict(lambda:defaultdict(lambda:None))	# keeps links to backup flowPaths mapping. 		usage: bkupsOnLink[linkObj][bkupPathId] = pathObj
 
@@ -374,7 +379,7 @@ def addRemoveBkups(addedPathDict, rmvdPathDict):
 	meanRiskPcenPerVnptList = []
 	stdivRiskPcenPerVnptList = []
 	if addedPathDict is not None:
-		
+		graph = createTopologyGraph()
 		for vnpId in addedPathDict.keys():
 			riskPcntList = []
 			for pathNum in addedPathDict[vnpId].keys():
@@ -400,7 +405,6 @@ def addRemoveBkups(addedPathDict, rmvdPathDict):
 				#	print "\t\tprev[%s] = %s"%(dpid_to_str(curSwDpid), dpid_to_str(adedPrvSwDict[curSwDpid]))
 				
 				adedPathObj = Path(srcSwDpid, dstSwDpid, adedPrvSwDict, adj[srcSwDpid][secSwDpid])
-				graph = createTopologyGraph()
 				noNetPath, minSrlgPcnt = calcBiDiBkups(graph, flowPathId, adedPathObj)
 				numNoNetPath += noNetPath
 				riskPcntList.append(minSrlgPcnt)
@@ -431,45 +435,52 @@ def calcBiDiBkups(graph, flowPathId, pathObj):
 	e=EppsteinShortestPathAlgorithm(graph)
 	e._pre_process()
 	
-	bestBkupPath = None
-	minSrlgPcnt = 200
+	#bestBkupPath = None
+	#bestSrlgPcnt = 200
 	
-	if slrgBkups:
-		# For each epPath find the number of common links with allocated path.
-		numBkup=0
-		bkupPQ = PriorityQueue(maxQ=False)
-		print "\tCalculating Backup paths from  %s\t%s"%(srcSwDpidStr, dstSwDpidStr)
-		for cost, epPath in e.get_successive_shortest_paths():
+	
+	# For each epPath find the number of common links with allocated path.
+	numBkup=0
+	bkupPQ = PriorityQueue(maxQ=False)
+	print "\tCalculating Backup paths from  %s\t%s"%(srcSwDpidStr, dstSwDpidStr)
+	for cost, epPath in e.get_successive_shortest_paths():
+		
+		epLinkSet = set()
+		for pre, cur in epPath:						
+			if pre is not 's' and cur is not 't':
+				epLink = Link(str_to_dpid(pre), adj[str_to_dpid(pre)][str_to_dpid(cur)], str_to_dpid(cur))
+				epLinkSet.add(epLink)
+		
+		numShrdLinks = len(epLinkSet.intersection(adedLinkSet))		# shared links in allocated and backup paths will be minimized
+		srlgPcnt = (numShrdLinks * 100)/float(len(adedLinkSet))
+		#print "\t",srlgPcnt,"\t",epPath
+		
+		bkupPQ.push(srlgPcnt, epPath)
+		
+		if slrgBkups:
 			numBkup+=1
 			if numBkup==maxBkupCalcs:
 				break
-			epLinkSet = set()
-			for pre, cur in epPath:						
-				if pre is not 's' and cur is not 't':
-					epLink = Link(str_to_dpid(pre), adj[str_to_dpid(pre)][str_to_dpid(cur)], str_to_dpid(cur))
-					epLinkSet.add(epLink)
-			
-			numShrdLinks = len(epLinkSet.intersection(adedLinkSet))		# shared links in allocated and backup paths will be minimized
-			srlgPcnt = (numShrdLinks * 100)/float(len(adedLinkSet))
-			#print "\t",srlgPcnt,"\t",epPath
-			bkupPQ.push(srlgPcnt, epPath)
+		else:
+			break
 		
-		graph.remove_edge('s', srcSwDpidStr)
-		graph.remove_edge(dstSwDpidStr, 't')
 		
 		
 		# Get the Eppstein shortest path with minimum intersection percentage with shared risk links
-		minSrlgPcnt, bestBkupPath = bkupPQ.pop()
+	bestSrlgPcnt, bestBkupPath = bkupPQ.pop()
 	
-	else:
-		for cost, epPath in e.get_successive_shortest_paths():
-			numBkup+=1
-			if numBkup==1:
-				break
-			bestBkupPath = epPath
+	graph.remove_edge('s', srcSwDpidStr)
+	graph.remove_edge(dstSwDpidStr, 't')
+# 	else:
+# 		numBkup=0
+# 		for cost, epPath in e.get_successive_shortest_paths():
+# 			numBkup+=1
+# 			if numBkup==1:
+# 				break
+# 			bestBkupPath = epPath
 	
 	if len(bestBkupPath) != 0:
-		print "\tSelected Path %.2f  "%minSrlgPcnt, bestBkupPath
+		print "\tSelected Path %.2f  "%bestSrlgPcnt, bestBkupPath
 		fwFstSw, fwSecSw = bestBkupPath[1]
 		reFstSw, reSecSw = bestBkupPath[-2]
 		#print "\tfwFstSw = %s \t fwSecSw = %s"%(fwFstSw,fwSecSw)
@@ -510,15 +521,16 @@ def calcBiDiBkups(graph, flowPathId, pathObj):
 		print "Unable to find a path for %s from %s to %s"%(flowPathId, srcSwDpidStr, dstSwDpidStr)
 		noNetPath =1
 		
-	return noNetPath, minSrlgPcnt
+	return noNetPath, bestSrlgPcnt
 
 
 
 
 def createTopologyGraph():
 	graph = nx.DiGraph() # Directed Graph
-	graph.add_node('s', name = "source", index= 's')
-	graph.add_node('t', name = "destination",index='t')
+	#graph = nx.karate_club_graph()
+	graph.add_node('s', name = "source", index= 'srs')
+	graph.add_node('t', name = "destination",index='dst')
 	
 	for dpid in switchConns.keys():
 		strDpid = dpid_to_str(dpid)
@@ -530,6 +542,8 @@ def createTopologyGraph():
 		if minLatency: edges.append((src, dst, linkDelay[linkObj]))
 		else: edges.append((src, dst, 1))
 	graph.add_weighted_edges_from(edges)
+	
+	#draw_graph(graph)	# draw_graph() may result in slowing down the main thread of the controller and result in false link remove events
 	return graph
 
 
@@ -609,8 +623,10 @@ def delBrknBkups(brknLink):
 def rerouteFlows(flowsToReroute, brknLink, remEvnt):
 		
 	graph = createTopologyGraph()		
+	perFlowInstlTime = {}
 	# Calculating new flowPaths for deleted FlowPaths and verifying sufficient bandwidth is available
 	for flowPathId in flowsToReroute.keys():
+		t_instlStart = time.time()
 		print "\tRerouting %s"%flowPathId
 		brknFlowPath =flowsToReroute[flowPathId]
 		brknMatch = brknFlowPath.match
@@ -624,10 +640,10 @@ def rerouteFlows(flowsToReroute, brknLink, remEvnt):
 		epPrevSwDict = {}
 		#reqQos = qosToBw[brknQos]
 		reqQos = brknFlowPath.reqQos
-		print "\tKeys in epOpoPath = ",
-		for flowPath in epOpoPath.keys():
-			print flowPath,"\t",
-		print ""
+		#print "\tKeys in epOpoPath = ",
+		#for flowPath in epOpoPath.keys():
+		#	print flowPath,"\t",
+		#print ""
 		if flowPathId not in epOpoPath.keys():	# Eppstein paths has NOT been calculated previously.
 			print "\tflowPathId %s not in epOpoPath.keys()"%flowPathId
 			srcSwDpidStr = dpid_to_str(brknPath.src)
@@ -748,7 +764,7 @@ def rerouteFlows(flowsToReroute, brknLink, remEvnt):
 				if prevSwDpid is not None:
 					epPathLink = Link(prevSwDpid, adj[prevSwDpid][currSwDpid], currSwDpid)
 					flowsOnLnk[epPathLink][flowPathId] = newFlowPath
-					print "\tepPathLink: ",epPathLink
+					#print "\tepPathLink: ",epPathLink
 					global totBwUsed
 					totBwUsed = totBwUsed + reqQos
 					if linkAlocBw[epPathLink] is None:
@@ -765,6 +781,9 @@ def rerouteFlows(flowsToReroute, brknLink, remEvnt):
 			unAllocFlowsOnLink[brknLink][flowPathId] = brknFlowPath
 	
 	
+		t_instlEnd = time.time()
+		perFlowInstlTime[flowPathId] = t_instlEnd - t_instlStart
+	return perFlowInstlTime
 		
 			
 			
@@ -774,24 +793,27 @@ def rerouteFlows(flowsToReroute, brknLink, remEvnt):
 	
 
 def installBkup(flowsToInstlBkups, brknLink, remEvnt=True):
+	perFlowInstlTime = {}
 	instldBkups = {}
+	underAlocPercentList = []
 	numZeroBkupBw = numNoBkupPath = numBwUnderBkup = amtBwUnderBkup = 0
 	for flowPathId in flowsToInstlBkups.keys():
-		print "\tInstalling Backups for %s"%flowPathId
+		t_instlStart = time.time()
+		#print "\tInstalling Backups for %s"%flowPathId
 		brknFlowPath =flowsToInstlBkups[flowPathId]
 		brknMatch = brknFlowPath.match
 		brknAlocBw = brknFlowPath.alocQos
 		brknReqBw = brknFlowPath.reqQos
 		brknPath = brknFlowPath.path
 		#bkupPath = None
-		
+		underAlocPercent = 0
 		if flowPathId in bkupsPerFlowPath.keys():
-			print "\tBackup path found for %s"%flowPathId
-			for linkSrc in bkupsPerFlowPath[flowPathId]:
-				print "\t\tlinkSrc =",dpid_to_str(linkSrc),"\t",bkupsPerFlowPath[flowPathId][linkSrc]
+			print "\tBackup path found for %s. Installing"%flowPathId
+			#for linkSrc in bkupsPerFlowPath[flowPathId]:
+			#	print "\t\tlinkSrc =",dpid_to_str(linkSrc),"\t",bkupsPerFlowPath[flowPathId][linkSrc]
 			bkupPath = bkupsPerFlowPath[flowPathId][brknPath.src]
 			bkupPathLinks = bkupPath.get_linkList(adj)
-			print "bkupPathLinks = ",bkupPathLinks
+			#print "bkupPathLinks = ",bkupPathLinks
 			# Finding path bandwidth
 			newPathBw = subLinkBwCap
 			
@@ -799,7 +821,7 @@ def installBkup(flowsToInstlBkups, brknLink, remEvnt=True):
 			for linkObj in bkupPathLinks:
 				listEmpty = False
 				linkBw = subLinkBwCap - linkAlocBw[linkObj]
-				if newPathBw > linkBw:
+				if linkBw < newPathBw:
 					newPathBw = linkBw
 			alocBw = 0
 			if not listEmpty and newPathBw>0:
@@ -809,6 +831,8 @@ def installBkup(flowsToInstlBkups, brknLink, remEvnt=True):
 						del bwUnderFlowPath[flowPathId]
 			
 				else:
+					underAlocPercent = ((brknReqBw - newPathBw)*100)/float(brknReqBw)
+					print "****** bandwidth under alloc ",(brknReqBw - newPathBw)
 					alocBw = newPathBw
 					bwUnderFlowPath[flowPathId] = bwUnderTpl(req=brknReqBw, alloc=alocBw)
 					numBwUnderBkup +=1
@@ -824,7 +848,7 @@ def installBkup(flowsToInstlBkups, brknLink, remEvnt=True):
 				for bkupLink in bkupPathLinks:
 					
 					flowsOnLnk[bkupLink][flowPathId] = newFlowPath
-					print "\tbkupPathLink: ",bkupLink
+					#print "\tbkupPathLink: ",bkupLink
 					global totBwUsed
 					totBwUsed = totBwUsed + alocBw
 					if linkAlocBw[bkupLink] is None:
@@ -847,7 +871,11 @@ def installBkup(flowsToInstlBkups, brknLink, remEvnt=True):
 			unAllocFlowPaths.add(flowPathId)
 			print "\t---Adding %s to unAllocFlowsOnLink"%flowPathId
 			unAllocFlowsOnLink[brknLink][flowPathId] = brknFlowPath
-	return instldBkups, numZeroBkupBw, numNoBkupPath, numBwUnderBkup, amtBwUnderBkup
+			
+		underAlocPercentList.append(underAlocPercent)
+		t_instlEnd = time.time()
+		perFlowInstlTime[flowPathId] = t_instlEnd - t_instlStart
+	return instldBkups, numZeroBkupBw, numNoBkupPath, numBwUnderBkup, amtBwUnderBkup, underAlocPercentList, perFlowInstlTime
 				
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------ #
@@ -929,8 +957,14 @@ def saveMeasurements(resultDict):
 
 	numFlowRules = getNumFlowRules()
 
+	print"pcntBwUdrList = ",pcntBwUdrList
 	meanBwUdrPcnt = np.mean(pcntBwUdrList)
 	stDivBwUdrPcnt = np.std(pcntBwUdrList)
+	
+	underAlocPercentList = []
+	if "underAlocPercentList" in resultDict.keys():
+		underAlocPercentList = resultDict["underAlocPercentList"]
+	print "underAlocPercentList = ",underAlocPercentList
 	
 	#dataFile.write("\nreroute\t%r\n"%reroute)
 	#dataFile.write("bkup\t%r\n"%bkupPathReroute)
@@ -964,11 +998,15 @@ def saveMeasurements(resultDict):
 	#if totBwAvbl>0:
 	bwUtilzn = (totBwUsed*100)/float(totBwAvbl)
 	#dataFile.write("bwUtilzn\t%.2f\n"%bwUtilzn)								# Bandwidth utilization
-	#TODO: calculate vLBlokinRatio	
-	vLBlokinRatio = numVLsUnAloc/float(numVLsReq)
+	#TODO: calculate vLBlokinRatio
+	vLBlokinRatio = 0.0
+	if numVLsReq>0:
+		vLBlokinRatio = numVLsUnAloc/float(numVLsReq)
 	#bwUnderLinkPcnt = 0
 	#if numVLsReq>0:
-	bwUnderLinkPcnt = (numVLsUdrAloc*100)/float(numVLsAloc)
+	bwUnderLinkPcnt = 0.0
+	if numVLsAloc>0:
+		bwUnderLinkPcnt = (numVLsUdrAloc*100)/float(numVLsAloc)
 	#	dataFile.write("bwUnderLinkPcnt\t%.2f\n"%bwUnderLinkPcnt)				# Percentage of virtual links with bandwidth under allocation
 	aveUdrAlocBw = 0
 	if numVLsUdrAloc>0:
@@ -977,12 +1015,16 @@ def saveMeasurements(resultDict):
 
 
 	dataFile = open("ext/results/measurements.csv", "a")
-	dataFile.write("\n%d,%.2f,%.2f,%.2f,%.2f,%.2f,%d,%.4f,%.4f"%(numPLsAvbl,bwUtilzn,vLBlokinRatio,bwUnderLinkPcnt,meanBwUdrPcnt,stDivBwUdrPcnt,numFlowRules,pathAllocTime,pathCmputTime))
+	dataFile.write("\n%d,%.4f,%.4f,%.4f,%.4f,%.4f,%d,%.4f,%.4f"%(numPLsAvbl,bwUtilzn,vLBlokinRatio,bwUnderLinkPcnt,meanBwUdrPcnt,stDivBwUdrPcnt,numFlowRules,pathAllocTime,pathCmputTime))
 	dataFile.close()	
 		
-
-
-
+	# saving per flow installation time with broken link 
+	if "perFlowInstlTime" in resultDict.keys():
+		with open('ext/results/flowInstlTime.csv', 'a') as f:  # Just use 'w' mode in 3.x
+			w = csv.DictWriter(f, resultDict["perFlowInstlTime"].keys())
+			w.writeheader()
+			w.writerow(resultDict["perFlowInstlTime"])
+			f.close()
 
 
 class ResManIntfs(EventMixin):
@@ -994,11 +1036,11 @@ class ResManIntfs(EventMixin):
 		self.bkupsToRecalc = {}
 		
 		dataFile = open("ext/results/measurements.csv", "a")
-		dataFile.write("\nreroute\t%r\n"%reroute)
-		dataFile.write("bkup\t%r\n"%bkupPathReroute)
-		dataFile.write("slrgBkups\t%r\n"%slrgBkups)
-		dataFile.write("shortest\t%r\n"%shotPathReroute)
-		dataFile.write("bwUnderAlloc\t%r\n"%bwUnderAlloc)
+		dataFile.write("\nreroute,%r\n"%reroute)
+		dataFile.write("bkup,%r\n"%bkupPathReroute)
+		dataFile.write("slrgBkups,%r\n"%slrgBkups)
+		dataFile.write("shortest,%r\n"%shotPathReroute)
+		dataFile.write("bwUnderAlloc,%r\n"%bwUnderAlloc)
 		dataFile.write("numPLsAvbl,bwUtilzn,vLBlokinRatio,bwUnderLinkPcnt,meanBwUdrPcnt,stDivBwUdrPcnt,numFlowRules,pathAllocTime,pathCmputTime")
 		dataFile.close()
 		
@@ -1027,9 +1069,21 @@ class ResManIntfs(EventMixin):
 		#numSw +=1
 		#switchDict[str(numSw)] = swDpid
 
+	#def _handle_PortStatus (self, event):
+	#	#t_portStatus = time.time()
+	#	print "\tt_portStatus = %.4f"%t_portStatus
+	#	if event.added:
+	#		action = "added"
+	#	elif event.deleted:
+	#		action = "removed"
+	#	else:
+	#		action = "modified"
+	#	print "Port %s on Switch %s has been %s." % (event.port, event.dpid, action)
 	
 			# Combine unidirectional link events and call rerouteFlows() once
 	def _handle_LinkEvent(self, event):	
+		#t_linkEvent = time.time()
+		#print "\tt_linkEvent = %.4f"%t_linkEvent
 		global totBwAvbl, numPLsAvbl, subLinkBwCap
 		link = event.link
 		global topoChange
@@ -1066,7 +1120,8 @@ class ResManIntfs(EventMixin):
 			# Each physical link removal will fire two removed events. One for foward parth and another for reverse parth
 			print "\nResManIntfs: Link Removed from %s to %s over port %d"%(dpid_to_str(link.dpid1), dpid_to_str(link.dpid2), link.port1)
 			log.debug("ResManIntfs: Link Removed from %s to %s over port %d", dpid_to_str(link.dpid1), dpid_to_str(link.dpid2), link.port1)
-			t_linkRmv = time.time()
+			t_linkRmv = t_flwIntld = time.time()	# t_flwIntld initialized to link remove time to avoid errors at no reroute
+			
 			brknLink = Link(link.dpid1, link.port1, link.dpid2)
 			del adj[link.dpid1][link.dpid2]
 			del linkDelay[brknLink]
@@ -1076,45 +1131,58 @@ class ResManIntfs(EventMixin):
 			brknBkups = delBrknBkups(brknLink)
 			instldBkups = None
 			numZeroBkupBw = numNoBkupPath = numBwUnderBkup = amtBwUnderBkup = numBkupsReCalc = numNoNetPath = 0
+			perFlowInstlTime = {}
 			riskPcntList = []
-			if reroute and len(flowsToReroute.keys())>0: 	# If atleast one flow is deleted as a result of the link failure
-				if bkupPathReroute:
-					instldBkups, numZeroBkupBw, numNoBkupPath, numBwUnderBkup, amtBwUnderBkup = installBkup(flowsToReroute, brknLink, remEvnt=True)
-				elif shotPathReroute:
-					rerouteFlows(flowsToReroute, brknLink, remEvnt=True)
+			underAlocPercentList = []
+			if reroute:
+				if len(flowsToReroute.keys())>0: 	# If atleast one flow is deleted as a result of the link failure
+					if bkupPathReroute:
+						instldBkups, numZeroBkupBw, numNoBkupPath, numBwUnderBkup, amtBwUnderBkup, underAlocPercentList, perFlowInstlTime = installBkup(flowsToReroute, brknLink, remEvnt=True)
+					elif shotPathReroute:
+						perFlowInstlTime = rerouteFlows(flowsToReroute, brknLink, remEvnt=True)
+					else:
+						for flowPathId in flowsToReroute.keys():
+							unAllocFlowPaths.add(flowPathId)
 				else:
+					print "\tNo Flows available in the disconnected link to reroute"
+					
+			
+						
+				t_flwIntld = time.time()
+			
+			
+				# New backups are calculated for broken and allocated flows once every pair of unidirectional links 
+				if brknBkups is not None:
+					self.bkupsToRecalc.update(brknBkups)
+				if instldBkups is not None:
+					self.bkupsToRecalc.update(instldBkups)
+				#print "\tbrknUniLinkSet=",brknUniLinkSet
+				
+				if  brknLink in brknUniLinkSet:
+					print "\tKeys of bkupsToRecalc"
+					for key in self.bkupsToRecalc.keys():
+						print "\t\t",key
+					numBkupsReCalc = len(self.bkupsToRecalc)
+					brknUniLinkSet.remove(brknLink)
+					
+					graph = createTopologyGraph()
+					#graph.remove_edge(dpid_to_str(link.dpid1), dpid_to_str(link.dpid2))
+					#graph.remove_edge(dpid_to_str(link.dpid2), dpid_to_str(link.dpid1))
+					
+					if bkupPathReroute: print "\tRecalculating backups for deleted and installed backups"
+					for flowPathId in self.bkupsToRecalc.keys():
+						print "\t\t",flowPathId
+						noNetPath, minSrlgPcnt = calcBiDiBkups(graph, flowPathId, self.bkupsToRecalc[flowPathId])
+						numNoNetPath += noNetPath
+						riskPcntList.append(minSrlgPcnt)
+					self.bkupsToRecalc.clear()
+				else:
+					brknUniLinkSet.add(opoLink(brknLink))
+			else:
+				print "Reroute == False"
+				if len(flowsToReroute.keys())>0:
 					for flowPathId in flowsToReroute.keys():
 						unAllocFlowPaths.add(flowPathId)
-			else:
-				print "\tNo Flows available in the disconnected link to reroute"
-			t_flwIntld = time.time()
-			# New backups are calculated for broken and allocated flows once every pair of unidirectional links 
-			if brknBkups is not None:
-				self.bkupsToRecalc.update(brknBkups)
-			if instldBkups is not None:
-				self.bkupsToRecalc.update(instldBkups)
-			#print "\tbrknUniLinkSet=",brknUniLinkSet
-			
-			if  brknLink in brknUniLinkSet:
-				print "\tKeys of bkupsToRecalc"
-				for key in self.bkupsToRecalc.keys():
-					print "\t\t",key
-				numBkupsReCalc = len(self.bkupsToRecalc)
-				brknUniLinkSet.remove(brknLink)
-				print "Recalculating backups for deleted and installed backups"
-				graph = createTopologyGraph()
-				#graph.remove_edge(dpid_to_str(link.dpid1), dpid_to_str(link.dpid2))
-				#graph.remove_edge(dpid_to_str(link.dpid2), dpid_to_str(link.dpid1))
-				
-				print "Recalculate backup for "
-				for flowPathId in self.bkupsToRecalc.keys():
-					print "\t\t",flowPathId
-					noNetPath, minSrlgPcnt = calcBiDiBkups(graph, flowPathId, self.bkupsToRecalc[flowPathId])
-					numNoNetPath += noNetPath
-					riskPcntList.append(minSrlgPcnt)
-				self.bkupsToRecalc.clear()
-			else:
-				brknUniLinkSet.add(opoLink(brknLink))
 
 			t_pathCmputd = time.time()
 			# -------------------------Measurements-----------------------------
@@ -1141,6 +1209,8 @@ class ResManIntfs(EventMixin):
 			resultDict["riskPcntList"] = riskPcntList
 			resultDict["pathAllocTime"] = pathAllocTime
 			resultDict["pathCmputTime"] = pathCmputTime
+			resultDict["underAlocPercentList"] = underAlocPercentList
+			resultDict["perFlowInstlTime"] = perFlowInstlTime
 			#csvFile = csv.writer(open("output.csv", "w"))
 			#for key, val in resultDict.items():
 			#	csvFile.writerow([key, val])
