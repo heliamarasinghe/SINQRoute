@@ -16,7 +16,7 @@ private:
 	int verticeId;
 	int current;		//may be parent
 	int predecesseur;
-	int Fils_tab[H_PATH];
+	int adjNodeAry[H_PATH];
 public:
 	Vertice();
 	virtual ~Vertice();

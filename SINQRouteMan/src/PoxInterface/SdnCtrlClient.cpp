@@ -4,10 +4,10 @@
  *  Created on: Apr 20, 2016
  *      Author: openstack
  */
-#include <string>
 #include "SdnCtrlClient.h"
-#include <iostream>
-#include <map>
+
+
+const char* NET_CTRL_IP = "192.168.0.201";			// Network controller IP pox1-ctrl1 = 192.168.0.201, contrail-pox1 = 192.168.0.210
 /*
 //--------------------------------------------------------------------------------------------------------------------------------------------------
 //					 static maps that map dpids to switch numbers and vice versa to use in the embedder
@@ -305,6 +305,7 @@ string SdnCtrlClient::sendJsonToCtrlr(Json::Value& jsonSentToCtrlr){
 	Json::FastWriter fastWriter;
 	std::string jsonString = fastWriter.write(jsonSentToCtrlr);
 
+	cout<<"\n\t Network Controller IP = \t"<<NET_CTRL_IP<<endl;
 	cout<<"\n\tJson Sent To Ctrlr = ";
 	cout<<jsonString<<endl;
 	//Create socket
@@ -315,7 +316,8 @@ string SdnCtrlClient::sendJsonToCtrlr(Json::Value& jsonSentToCtrlr){
 	}
 	puts("Socket created");
 
-	server.sin_addr.s_addr = inet_addr("192.168.0.201");
+
+	server.sin_addr.s_addr = inet_addr(NET_CTRL_IP);
 	server.sin_family = AF_INET;
 	server.sin_port = htons( 6688 );
 

@@ -59,7 +59,7 @@ static void embedPeriodicNodes(int);
 //void traffic_matrix_printing(VNP_traffic_tab&, IloInt&);
 //void printing_meta_path(Meta_Substrate_Path_tab&, IloInt&, IloEnv&);
 
-static void shortest_path(SubNodesAryType&, MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloEnv&);
+static void shortest_path(SnodesAryType&, MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloEnv&);
 //static void search_parent_node_position(Sommet_tab&, IloInt& ,IloInt&, IloInt&);
 //IloInt search_common_arc(IloNumArray&, IloNumArray&);
 //void add_meta_path(Meta_Substrate_Path_tab&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloNumArray&, Substrate_Graph_tab&, IloInt&, IloEnv&);

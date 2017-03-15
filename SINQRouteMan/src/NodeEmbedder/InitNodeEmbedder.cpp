@@ -292,7 +292,7 @@ void NodeEmbedder::embedInitNodes(){
 		//                             Network definition                                          -
 		//------------------------------------------------------------------------------------------
 
-		SubNodesAryType  Vect_Substrate_Graph(env,numOfSubNodes);
+		SnodesAryType  Vect_Substrate_Graph(env,numOfSubNodes);
 		//cout<<"\n Creating Substrate Graph";
 		substrate_Graph_creation(Vect_Substrate_Graph, Vect_Link, numOfSubLinks, numOfSubNodes, env);
 		//cout<<"\t Done"<<endl;
@@ -419,13 +419,13 @@ void NodeEmbedder::embedInitNodes(){
 		cout<<"\n\tPrinting Shortest paths"<<endl;
 		cout<<"\t\tPathId\tvnpId\tvLinkId\tsrc\tdest\tnComb\tnumHops"<<endl;
 		for(int i = 0; i<candidShortestPathsVect.getSize(); i++){
-			IloInt candidShortestPathId = candidShortestPathsVect[i].getCandidShortestPathId();
-			IloInt srcSnodeOfPath = candidShortestPathsVect[i].getSrcSnodeOfPath();
-			IloInt destSnodeOfPath = candidShortestPathsVect[i].getDestSnodeOfPath();
-			IloInt correspVlinkId = candidShortestPathsVect[i].getCorrespVlinkId();
-			IloInt vnpId = candidShortestPathsVect[i].GetVNP_Id();
-			IloInt candidSnodeCombiId = candidShortestPathsVect[i].getCandidSnodeCombiId();
-			IloInt numHopsInShortestPath = candidShortestPathsVect[i].getNumOfHopsInShortestPath();
+			IloInt candidShortestPathId = candidShortestPathsVect[i].getMetaSpathId();
+			IloInt srcSnodeOfPath = candidShortestPathsVect[i].getSrcSnode();
+			IloInt destSnodeOfPath = candidShortestPathsVect[i].getDstSnode();
+			IloInt correspVlinkId = candidShortestPathsVect[i].getVlinkId();
+			IloInt vnpId = candidShortestPathsVect[i].getVnpId();
+			IloInt candidSnodeCombiId = candidShortestPathsVect[i].getMetaSpathReqId();
+			IloInt numHopsInShortestPath = candidShortestPathsVect[i].getNumHops();
 			cout<<"\t\t"<< candidShortestPathId <<"\t"<< vnpId <<"\t"<< correspVlinkId <<"\t"<< srcSnodeOfPath <<"\t"<< destSnodeOfPath <<"\t"<< candidSnodeCombiId <<"\t"<< numHopsInShortestPath <<endl;
 		}
 

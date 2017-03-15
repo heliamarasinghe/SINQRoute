@@ -13,9 +13,10 @@
 #include <arpa/inet.h> //inet_addr
 #include <unistd.h>    //write
 #include <iostream>
-#include <map>
+#include <string>
 #include <jsoncpp/json/json.h>		// Install jsoncpp in ubuntu '$sudo apt-get install libjsoncpp-dev'
 									// Then add to GCC C++ Linker in Eclipse by going to 'Project -> Properties -> C/C++ Build -> Settings -> GCC C++ Linker -> Libraries' and add 'jsoncpp' into Libraries(-l)
+
 #include "../Common/SDNInterDCQoS.h"
 
 using namespace std;
@@ -31,7 +32,10 @@ typedef struct {
 	vector<Path> pathsVect;
 }Vnp;
 
+
+
 class SdnCtrlClient {
+
 
 public:
 	//static void calculateLinkDelays();

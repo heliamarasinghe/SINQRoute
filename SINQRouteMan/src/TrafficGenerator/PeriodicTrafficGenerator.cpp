@@ -744,7 +744,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 		 		 //------------------------------------------------------------------------------------------
 
 
-						   SubNodesAryType  Vect_Substrate_Graph(env,NB_NODE);
+						   SnodesAryType  Vect_Substrate_Graph(env,NB_NODE);
 
 						   substrate_Graph_creation(Vect_Substrate_Graph, Vect_Link, NB_LINK, NB_NODE, env);
 						   adjacency_list_creation(Vect_Substrate_Graph, NB_NODE, env);

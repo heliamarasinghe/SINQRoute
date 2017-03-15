@@ -7,7 +7,7 @@
 
 #include "../LinkEmbedder/LinkEmbedder.h"
 
-#include <queue>
+//#include <queue>
 
 //***************************************************************************************************
 //                      Search for a node embedding                                                 *
@@ -60,7 +60,7 @@ void LinkEmbedder::search_embedding_path(MetaSubPathAryType& path_tab, IloInt& n
 	i=0;
 	find_path=0;
 	while ((i<nb_path)&&(find_path==0)){
-		current_path =  path_tab[i].getCandidShortestPathId();
+		current_path =  path_tab[i].getMetaSpathId();
 
 		IloBool equal_path = (current_path == path_id);
 
@@ -70,9 +70,9 @@ void LinkEmbedder::search_embedding_path(MetaSubPathAryType& path_tab, IloInt& n
 			arrayZeroInitialize(node_list,length);
 			arrayZeroInitialize(arc_list,length);
 
-			vlinkId =  path_tab[i].getCorrespVlinkId();
-			srcSnode =    path_tab[i].getSrcSnodeOfPath();
-			dstSnode =   path_tab[i].getDestSnodeOfPath();
+			vlinkId =  path_tab[i].getVlinkId();
+			srcSnode =    path_tab[i].getSrcSnode();
+			dstSnode =   path_tab[i].getDstSnode();
 
 			embedding_tab[current_nb_path].setVlinkId(vlinkId);
 			embedding_tab[current_nb_path].setSrcSnode(srcSnode);
@@ -158,7 +158,7 @@ void LinkEmbedder::search_embedding_path(MetaSubPathAryType& path_tab, IloInt& n
 //***************************************************************************************************
 //                      Search the Index of a Variable Associated to a Path and a Request           *
 //***************************************************************************************************
-
+// This function seems useless
 IloInt LinkEmbedder::search_var_index(VLink_Embedding_Trace_Tab& vlink_trace_x, IloInt& vlink, IloInt& path_id, IloInt& x_size)
 
 {
@@ -168,16 +168,11 @@ IloInt LinkEmbedder::search_var_index(VLink_Embedding_Trace_Tab& vlink_trace_x, 
 	IloInt current_vlink=0;
 	IloInt current_path_num=0;
 
-	while ((find_var == 0) && (s <x_size ))
-	{
-		current_vlink=  vlink_trace_x[s].GetVirtual_Link_Id();
-		current_path_num =  vlink_trace_x[s].GetNum_Path();
+	while ((find_var == 0) && (s <x_size )){
+		current_vlink=  vlink_trace_x[s].getVlinkId();
+		current_path_num =  vlink_trace_x[s].getShortestPathId();
 
-		IloBool equal_vlink = (current_vlink == vlink);
-		IloBool equal_path_num = (current_path_num == path_id);
-
-		if ((equal_vlink) && (equal_path_num))
-		{
+		if ((current_vlink == vlink) && (current_path_num == path_id)){
 			index =  vlink_trace_x[s].GetVar_Index();
 			find_var = 1;
 		}
@@ -203,10 +198,10 @@ IloInt LinkEmbedder::calculate_cost_potantial_emb_shortestpath(MetaSubPathAryTyp
 	IloNumArray used_arc_tab(env_0,length);
 	arrayZeroInitialize(used_arc_tab, length);
 	while ((k < nb_path)&&(exit==0)){
-		src_request =  emb_path_vect[k].getSrcSnodeOfPath();
-		dest_request =  emb_path_vect[k].getDestSnodeOfPath();
-		current_vnp =  emb_path_vect[k].GetVNP_Id();
-		vlink_num =  emb_path_vect[k].getCorrespVlinkId();
+		src_request =  emb_path_vect[k].getSrcSnode();
+		dest_request =  emb_path_vect[k].getDstSnode();
+		current_vnp =  emb_path_vect[k].getVnpId();
+		vlink_num =  emb_path_vect[k].getVlinkId();
 		IloBool equal_src = (src_request == src);
 		IloBool equal_dest = (dest_request == dest);
 		IloBool equal_vnp_id = (current_vnp == vnp_num);
@@ -226,7 +221,7 @@ IloInt LinkEmbedder::calculate_cost_potantial_emb_shortestpath(MetaSubPathAryTyp
 		if(Not_nul)
 			emb_cost+= bandwidth*link_cost_tab[current_substrate_link-1];
 		//else
-			//no_more_substrate_link;
+		//no_more_substrate_link;
 		h++;
 	}
 	src_cost =  node_cost_tab[src-1];
@@ -235,20 +230,20 @@ IloInt LinkEmbedder::calculate_cost_potantial_emb_shortestpath(MetaSubPathAryTyp
 	return emb_cost;
 }
 //***************************************************************************************************
-//                       Search an Arc in a Table                                                   *
+//                       			Search an Arc in a Table                                        *
 //***************************************************************************************************
-IloInt LinkEmbedder::search_arc_in_table(IloInt& sarc, IloNumArray& sarc_tab, IloInt& length){
+IloInt LinkEmbedder::search_arc_in_table(IloInt& sarc, IloNumArray& sarc_tab){
 	IloInt find_arc=0, more_arc=0, l=0, current_arc=0;
-	while ((l<length)&&(more_arc==0)){
+	while ((l<MAX_SIZE)&&(more_arc==0)){
 		current_arc = sarc_tab[l];
 		IloBool non_nul = (current_arc !=0);
 		if (non_nul){
 			if (current_arc == sarc){
-			more_arc=1;
-			find_arc=1;
-		}
-		else
-			l++;
+				more_arc=1;
+				find_arc=1;
+			}
+			else
+				l++;
 		}
 		else
 			more_arc=1;
@@ -259,36 +254,59 @@ IloInt LinkEmbedder::search_arc_in_table(IloInt& sarc, IloNumArray& sarc_tab, Il
 //***************************************************************************************************************************
 //		                           Creation of path embdedding variables                                                    *
 //***************************************************************************************************************************
-IloInt LinkEmbedder::creation_path_embedding_var(VlinkReqAryType& vLinkReqVect, IloInt& numVlinkReq, MetaSubPathAryType& pathVect, IloInt& numPaths, IloNumVarArray& x, VLink_Embedding_Trace_Tab& path_embedding_trace_x, IloEnv& env){
+IloInt LinkEmbedder::creation_path_embedding_var(VlinkReqAryType& vLinkReqVect, IloInt& numVlinkReq, MetaSubPathAryType& metaPathVect, IloInt& numPaths, IloNumVarArray& x, VLink_Embedding_Trace_Tab& path_embedding_trace_x, IloEnv& env){
 	//IloInt k=0, l=0, current_request=0, more_path=0, request_id=0, var_index=0, vlink_id=0, current_vlink=0;
 	//IloInt num_path=0,
 	IloInt x_VECT_LENGTH=0;
 	//---------------------------------------------------------------
 	// Create one variable for each request and for each used path  -
 	//---------------------------------------------------------------
-	for(IloInt vLinkReqItr=0; vLinkReqItr<numVlinkReq; vLinkReqItr++){
-		IloInt current_vlink = vLinkReqVect[vLinkReqItr].getVlinkId();
+	for(IloInt vlReqItr=0; vlReqItr<numVlinkReq; vlReqItr++){
+		IloInt vlinkId = vLinkReqVect[vlReqItr].getVlinkId();
 		for (IloInt l=0; l< numPaths; l++){
-			IloInt vLinkForShortPath = pathVect[l].getCorrespVlinkId(); //pathVect contains multiple substrate shortest paths for each virtual link
-			if ( vLinkForShortPath == current_vlink){
-				IloInt shortestPathId =  pathVect[l].getCandidShortestPathId();
+			IloInt vLinkForShortPath = metaPathVect[l].getVlinkId(); //pathVect contains multiple substrate shortest paths for each virtual link
+			if ( vLinkForShortPath == vlinkId){
+				IloInt shortestPathId =  metaPathVect[l].getMetaSpathId();
 				char path_char[10];
-				char current_vlink_char[10];
-				char var_name[50]= "pi";
 				sprintf(path_char,"%ld",shortestPathId);
-				sprintf(current_vlink_char,"%ld",current_vlink);
+				char current_vlink_char[10];
+				sprintf(current_vlink_char,"%ld",vlinkId);
+				char var_name[50]= "pi";
 				strcat(var_name,path_char);
 				strcat(var_name, " k");
 				strcat(var_name, current_vlink_char);
 				x.add(IloNumVar(env,0,1,ILOINT, var_name));
-				path_embedding_trace_x[x_VECT_LENGTH].SetVirtual_Link_Id(current_vlink);
-				path_embedding_trace_x[x_VECT_LENGTH].SetNum_Path(shortestPathId);
-				path_embedding_trace_x[x_VECT_LENGTH].SetVar_Index(x_VECT_LENGTH);
+				path_embedding_trace_x[x_VECT_LENGTH].setVlinkId(vlinkId);
+				path_embedding_trace_x[x_VECT_LENGTH].setShortestPathId(shortestPathId);
+				path_embedding_trace_x[x_VECT_LENGTH].SetXindx(x_VECT_LENGTH);
 				x_VECT_LENGTH++;
 			} // a path pi used by the current request k
 		} // for all paths
 	}// for all requests
 	return x_VECT_LENGTH;
+}
+
+IloInt LinkEmbedder::createBinaryVarForActvBkupPairs(MetaActvBkupPairAryType& actvBkupPathPairAry, IloInt& numActvBkupPairs, IloNumVarArray& xAry, VLink_Embedding_Trace_Tab& traceXary, IloEnv& env){
+	IloInt xIndx=0;
+	while (xIndx< numActvBkupPairs){
+		IloInt vlinkId = actvBkupPathPairAry[xIndx].getVlinkId();			// acbk = active/backup
+		IloInt acbkPairId =  actvBkupPathPairAry[xIndx].getActvBkupPairId();
+		//cout<<"\n\tacbkPairId = "<<acbkPairId<<" \txIndx = "<<xIndx<<endl;
+		char cAcbkPair[10];
+		sprintf(cAcbkPair,"%ld",acbkPairId);
+		char cVlink[10];
+		sprintf(cVlink,"%ld",vlinkId);
+		char var_name[50]= "pi";
+		strcat(var_name,cAcbkPair);
+		strcat(var_name, " k");
+		strcat(var_name, cVlink);
+		xAry.add(IloNumVar(env,0,1,ILOINT, var_name));
+		traceXary[xIndx].setVlinkId(vlinkId);
+		traceXary[xIndx].setShortestPathId(acbkPairId);
+		traceXary[xIndx].SetXindx(xIndx);
+		xIndx++;
+	}
+	return xIndx;
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------//
@@ -299,15 +317,15 @@ IloInt LinkEmbedder::creation_path_embedding_var(VlinkReqAryType& vLinkReqVect, 
 // 	x = [ 	0,			0,			0,			0,			0,			0,			0,			0,			0,		..	]			//
 // 		f1->pi0		f1->pi1		f1->pi2		f1->pi3		f1->pi4		f2->pi5		f3->pi6		f4->pi7		f4->pi8		..				//
 //------------------------------------------------------------------------------------------------------------------------------------//
-IloInt LinkEmbedder::creation_flow_embedding_var(flowRequest_Tab& flowReqVect, VlinkReqAryType& vLinkReqVect, IloInt& numVlinkReq, MetaSubPathAryType& pathVect, IloInt& numPaths, IloNumVarArray& x, VLink_Embedding_Trace_Tab& path_embedding_trace_x, IloEnv& env){
+/*IloInt LinkEmbedder::creation_flow_embedding_var(flowRequest_Tab& flowReqVect, VlinkReqAryType& vLinkReqVect, IloInt& numVlinkReq, MetaSubPathAryType& pathVect, IloInt& numPaths, IloNumVarArray& x, VLink_Embedding_Trace_Tab& path_embedding_trace_x, IloEnv& env){
 	IloInt x_VECT_LENGTH=0;
 	//for(IloInt vLinkReqItr=0; vLinkReqItr<numVlinkReq; vLinkReqItr++){
 	for(IloInt flowReqItr=0; flowReqItr<flowReqVect.getSize(); flowReqItr++){
 		IloInt vLinkOfFlow = flowReqVect[flowReqItr].getVlinkId();
 		for (IloInt l=0; l< numPaths; l++){
-			IloInt vLinkForShortPath = pathVect[l].getCorrespVlinkId(); //pathVect contains multiple substrate shortest paths for each virtual link
+			IloInt vLinkForShortPath = pathVect[l].getVlinkId(); //pathVect contains multiple substrate shortest paths for each virtual link
 			if ( vLinkForShortPath == vLinkOfFlow){
-				IloInt shortestPathId =  pathVect[l].getCandidShortestPathId();
+				IloInt shortestPathId =  pathVect[l].getMetaSpathId();
 				char path_char[10];
 				char current_vlink_char[10];
 				char var_name[50]= "pi";
@@ -327,12 +345,12 @@ IloInt LinkEmbedder::creation_flow_embedding_var(flowRequest_Tab& flowReqVect, V
 	return x_VECT_LENGTH;
 }
 
-
+ */
 //***************************************************************************************************************************
-//                          No partially embdedding of a VN                                                                 *
+//                          				Creating VN request embedding variable                                                            *
 //***************************************************************************************************************************
 // 					vnp_variable_creation(embedding_trace_z, 								z, 					accepted_vnp_id_tab, 	nb_accepted_vnp, 	env);
-void LinkEmbedder::vnp_variable_creation(VN_Embedding_Trace_Tab& ztrace_tab, IloNumVarArray& z, IloNumArray& accepted_vnp_vect, IloInt& nunOfAccpetedVnps, IloEnv& env){
+void LinkEmbedder::vnp_variable_creation(VN_Embedding_Trace_Tab& traceZary, IloNumVarArray& zAry, IloNumArray& accepted_vnp_vect, IloInt& nunOfAccpetedVnps, IloEnv& env){
 	//IloInt k=0, num_vnp=0;
 	for(IloInt vnpItr=0; vnpItr<nunOfAccpetedVnps; vnpItr++){
 		IloInt vnpId =  accepted_vnp_vect[vnpItr];
@@ -341,62 +359,183 @@ void LinkEmbedder::vnp_variable_creation(VN_Embedding_Trace_Tab& ztrace_tab, Ilo
 
 		sprintf(vnp_char,"%d", (int)vnpId);
 		strcat(var_name, vnp_char);
-		z.add(IloNumVar(env,0,1,ILOINT,var_name));
+		zAry.add(IloNumVar(env,0,1,ILOINT,var_name));
 
-		ztrace_tab[vnpItr].SetVar_Index(vnpItr);
-		ztrace_tab[vnpItr].SetVNP_Id(vnpId);
+		traceZary[vnpItr].SetVar_Index(vnpItr);
+		traceZary[vnpItr].SetVNP_Id(vnpId);
 	}// all for VNP
 }
 
 //***************************************************************************************************************************
-//                         At least on embedding path is selected for an accepted VN request                               *
+//                         At least one embedding path is selected for each link in accepted VN request                               *
 //***************************************************************************************************************************
+//	no_partially_VN_embedding				(				adedVlinkReqVect, adedVlinkCountInPhOne, 				actvPathAry, 				actvPathCount, 							traceXary, 									xAry, 		xLength, 					zAry, 						traceZary, 					nb_accepted_vnp, 			ILP_model, 			env);
 void LinkEmbedder::no_partially_VN_embedding(VlinkReqAryType& vLinkReqVect, IloInt& numVlinkReq, MetaSubPathAryType& shortestPathVect, IloInt& numShortestPaths, VLink_Embedding_Trace_Tab& vlink_embedding_trace_x, IloNumVarArray& x, IloInt& x_VECT_LENGTH, IloNumVarArray& z, VN_Embedding_Trace_Tab& embedding_trace_z, IloInt& nb_accepted_vnp, IloModel& ILP_model, IloEnv& env){
-	//				no_partially_VN_embedding(					vLinkReqVect, 			numVlinkReq, 						shortestPathVect, 			numShortestPaths, 							vlink_embedding_trace_x, 				x, 			x_VECT_LENGTH, 					z, 							embedding_trace_z, 		nb_accepted_vnp, 		ILP_model, 			env);
-	   IloInt path_var_index=0;
-	   for(IloInt vLinkItr=0; vLinkItr<numVlinkReq; vLinkItr++){
-		   IloInt vLinkId = vLinkReqVect[vLinkItr].getVlinkId();
-		   IloInt vnpId = vLinkReqVect[vLinkItr].getVnpId();
-		   IloInt exit_path=0, j=0, more_emb_path=0;
+	IloInt path_var_index=0;
+	for(IloInt vlItr=0; vlItr<numVlinkReq; vlItr++){
+		IloInt vLinkId = vLinkReqVect[vlItr].getVlinkId();
+		IloInt vnpId = vLinkReqVect[vlItr].getVnpId();
+		IloInt exit_path=0, j=0, more_emb_path=0;
 
-		  while ((j < numShortestPaths) &&(more_emb_path==0)){
-			  IloInt cvlink = shortestPathVect[j].getCorrespVlinkId();
-				IloBool equal_vlink_id = (cvlink == vLinkId);
+		while ((j < numShortestPaths) &&(more_emb_path==0)){
+			IloInt cvlink = shortestPathVect[j].getVlinkId();
+			if (cvlink == vLinkId){
+				IloInt path_num = shortestPathVect[j].getMetaSpathId();
+				path_var_index = search_var_index(vlink_embedding_trace_x, cvlink, path_num, x_VECT_LENGTH);
+				exit_path=1;
+				more_emb_path=1;
+			}// embdedding path for virtual link
+			j++;
+		}// end while embedding paths
+
+		if (exit_path==1){
+			char constraint_name[100]= "Embedding clash const of vlink";
+			char vlink_char[10];
+			char vnp_char[10];
+
+			sprintf(vlink_char,"%ld",vLinkId);
+			sprintf(vnp_char,"%ld",vnpId);
+
+			strcat(constraint_name, vlink_char);
+			strcat(constraint_name, "_vnp_");
+			strcat(constraint_name, vnp_char);
+			IloExpr v(env);
+			IloInt zIndexOfVnp = search_z_index(vnpId, embedding_trace_z, nb_accepted_vnp);
+			v = z[zIndexOfVnp] - x[path_var_index];
+			if(LINK_DBG){
+				cout<<"\n\tvLinkItr = "<<vlItr<<endl;
+				cout<<"\tvLinkId = "<<vLinkId<<endl;
+				cout<<"\tvnpId = "<<vnpId<<endl;
+				cout<<"\tzIndexOfVnp = "<<zIndexOfVnp<<endl;
+				cout<<"\tz[zIndexOfVnp] = "<<z[zIndexOfVnp]<<endl;
+				cout<<"\tx[path_var_index] = "<<x[path_var_index]<<endl;
+				cout<<"\tv = "<<v<<endl;
+			}
+			IloRange range_const(env,v,0,constraint_name);
+			ILP_model.add(range_const);
+		}// end if exit path
+	}// end for virtual links
+}
+
+
+//--------------------------------------------------------------------------------------------------------------------------------------------------
+// No_partial_VN_Embedding original source
+//--------------------------------------------------------------------------------------------------------------------------------------------------
+/*
+ void no_partially_VN_embedding(VNP_traffic_tab& req_tab, IloInt& nbr_req, Meta_Substrate_Path_tab& path_tab, IloInt& nbr_path,
+									  VLink_Embedding_Trace_Tab& embed_track_vect, IloNumVarArray& y, IloInt& y_length, IloNumVarArray& t,
+									  VN_Embedding_Trace_Tab& embed_zvect, IloInt& nb_accept_vnp, IloModel& ilp_m, IloEnv& env_1){
+   IloInt i=0, j=0,  num_vnp=0, path_num=0, cvlink=0, vlink_id=0, exit_path=0, more_emb_path=0, path_var_index=0, zindex=0;
+   for(i=0;i<nbr_req;i++){
+	   vlink_id = (IloInt) req_tab[i].GetVirtual_Link_Id();
+	   num_vnp = (IloInt) req_tab[i].GetVNP_Id();
+	  exit_path=0;
+	  j=0;
+      more_emb_path=0;
+	  while ((j < nbr_path) &&(more_emb_path==0)){
+				cvlink = (IloInt) path_tab[j].GetVirtual_Link_Id();
+				IloBool equal_vlink_id = (cvlink == vlink_id);
 				if (equal_vlink_id){
-					IloInt path_num = shortestPathVect[j].getCandidShortestPathId();
-					 path_var_index = search_var_index(vlink_embedding_trace_x, vLinkId, path_num, x_VECT_LENGTH);
-					 exit_path=1;
-					 more_emb_path=1;
+					 path_num = (IloInt) path_tab[j].GetMeta_substrate_path_Id();
+					 path_var_index = (IloInt) search_var_index(embed_track_vect, vlink_id, path_num, y_length);
+                     exit_path=1;
+                     more_emb_path=1;
 				 }// embdedding path for virtual link
 				 j++;
-			 }// end while embedding paths
-		   if (exit_path==1){
-			   char constraint_name[100]= "Embedding clash const of vlink";
-			   char vlink_char[10];
-			   char vnp_char[10];
+		  }// end while embedding paths
+	   if (exit_path==1) {
+		   char constraint_name[100]= "Embedding clash const of vlink";
+		   char vlink_char[4];
+		   char vnp_char[4];
 
-			   sprintf(vlink_char,"%ld",vLinkId);
-			   sprintf(vnp_char,"%ld",vnpId);
+//		   sprintf_s(vlink_char,"%d",vlink_id);
+//		   sprintf_s(vnp_char,"%d",num_vnp);
+//
+//		   strcat_s(constraint_name, vlink_char);
+//		   strcat_s(constraint_name, "_vnp_");
+//		   strcat_s(constraint_name, vnp_char);
+		   sprintf(vlink_char,"%d",vlink_id);
+		   sprintf(vnp_char,"%d",num_vnp);
 
-			   strcat(constraint_name, vlink_char);
-			   strcat(constraint_name, "_vnp_");
-			   strcat(constraint_name, vnp_char);
-			   IloExpr v(env);
-			   IloInt zIndexOfVnp = search_z_index(vnpId, embedding_trace_z, nb_accepted_vnp);
-			   v = z[zIndexOfVnp] - x[path_var_index];
-			   if(LINK_DBG){
-				   cout<<"\n\tvLinkItr = "<<vLinkItr<<endl;
-				   cout<<"\tvLinkId = "<<vLinkId<<endl;
-				   cout<<"\tvnpId = "<<vnpId<<endl;
-				   cout<<"\tzIndexOfVnp = "<<zIndexOfVnp<<endl;
-				   cout<<"\tz[zIndexOfVnp] = "<<z[zIndexOfVnp]<<endl;
-				   cout<<"\tx[path_var_index] = "<<x[path_var_index]<<endl;
-				   cout<<"\tv = "<<v<<endl;
-			   }
-			   IloRange range_const(env,v,0,constraint_name);
-			   ILP_model.add(range_const);
-		    }// end if exit path
-	    }// end for virtual links
+		   strcat(constraint_name, vlink_char);
+		   strcat(constraint_name, "_vnp_");
+		   strcat(constraint_name, vnp_char);
+
+		   IloExpr v(env_1);
+		   zindex = (IloInt) search_z_index(num_vnp, embed_zvect, nb_accept_vnp);
+
+		   v = t[zindex] - y[path_var_index];
+
+		   IloRange range_const(env_1,v,0,constraint_name);
+		   ilp_m.add(range_const);
+	    }// end if exit path
+
+    }// end for virtual links
+
+}
+
+*/
+
+
+
+//	no_partially_VN_embedding				(				adedVlinkReqVect, adedVlinkCountInPhOne, 				actvPathAry, 				actvPathCount, 							traceXary, 									xAry, 		xLength, 					zAry, 						traceZary, 					nb_accepted_vnp, 			ILP_model, 			env);
+void LinkEmbedder::allVlinksOfVnReqEmbdedOnAcbkPairs(VlinkReqAryType& vLinkReqVect, IloInt& numVlinkReq, MetaActvBkupPairAryType& actvBkupPathPairAry, IloInt& numActvBkupPairs, VLink_Embedding_Trace_Tab& traceXary, IloNumVarArray& xAry, IloInt& xAryLenght, IloNumVarArray& zAry, VN_Embedding_Trace_Tab& traceZary, IloInt& nb_accepted_vnp, IloModel& ILP_model, IloEnv& env){
+	IloInt xIndxOfAcbkPair=0;
+	bool SHOW = false;
+	for(IloInt vlItr=0; vlItr<numVlinkReq; vlItr++){
+		IloInt vLinkId = vLinkReqVect[vlItr].getVlinkId();
+		IloInt vnpId = vLinkReqVect[vlItr].getVnpId();
+
+		//if(vLinkId==7)
+			SHOW = true;
+		IloInt exit_path=0, j=0, more_emb_path=0;
+
+		IloInt acbkPairId;
+		while ((j < numActvBkupPairs) &&(more_emb_path==0)){
+			IloInt acbkVlink = actvBkupPathPairAry[j].getVlinkId();
+			if (acbkVlink == vLinkId){
+				acbkPairId = actvBkupPathPairAry[j].getActvBkupPairId();
+				if(SHOW)cout<<"\n\tsearch_xIndx of acbkPairId: "<<acbkPairId<<endl;
+				xIndxOfAcbkPair = search_var_index(traceXary, vLinkId, acbkPairId, xAryLenght);	// x array index corresponding to active/backup pair
+				if(SHOW)cout<<"\txIndxOfAcbkPair = "<<xIndxOfAcbkPair<<endl;
+				exit_path=1;
+				more_emb_path=1;
+			}// embdedding path for virtual link
+			j++;
+		}// end while embedding paths
+
+		if (exit_path==1){
+			if(SHOW)cout<<"\tFor vlink "<< vLinkId<<", acbkPair "<<acbkPairId<<" is tested"<<endl;
+			char constraint_name[100]= "Embedding constraing of vlink ";
+			char cVlink[10];
+			sprintf(cVlink,"%ld",vLinkId);
+			char cVnp[10];
+			sprintf(cVnp,"%ld",vnpId);
+
+			strcat(constraint_name, cVlink);
+			strcat(constraint_name, "_vnp_");
+			strcat(constraint_name, cVnp);		// "Embedding clash const of vlink <vLinkId> _vnp_ <vnpId>"
+			IloExpr vlEmbdConstraint(env);
+			IloInt zIndxOfVnp = search_z_index(vnpId, traceZary, nb_accepted_vnp);
+			vlEmbdConstraint = zAry[zIndxOfVnp] - xAry[xIndxOfAcbkPair];
+			if(LINK_DBG){
+				cout<<"\n\tvLinkItr = "<<vlItr<<endl;
+				cout<<"\tvLinkId = "<<vLinkId<<endl;
+				cout<<"\tvnpId = "<<vnpId<<endl;
+				cout<<"\tzIndexOfVnp = "<<zIndxOfVnp<<endl;
+				cout<<"\tz[zIndexOfVnp] = "<<zAry[zIndxOfVnp]<<endl;
+				cout<<"\tx[path_var_index] = "<<xAry[xIndxOfAcbkPair]<<endl;
+				cout<<"\tv = "<<vlEmbdConstraint<<endl;
+			}
+			IloRange range_const(env, vlEmbdConstraint, 0, constraint_name);
+			ILP_model.add(range_const);
+			//-------------- NOTES--------------
+			// If all vlinks in a VN request were embedded, zAry[zIndxOfVnp] == 1. If each vlink is embedded on acbkPair, xAry[xIndxOfAcbkPair] == 1.
+			// Thus by applying the constraint  "zAry[zIndxOfVnp] - xAry[xIndxOfAcbkPair] <= 0;  e ∈ E, n ∈ N" successful selection of acbkPair for every vlink in each VN request is guaranteed.
+			// ----------END OF NOTES-----------
+		}// end if exit path
+	}// end for virtual links
+
 }
 
 
@@ -423,15 +562,15 @@ void LinkEmbedder::substrate_link_bw_constraint(SubLinksAryType& substrate_link_
 			k=0;
 			more_emb_path=0;
 			while ((k < nbr_path) &&(more_emb_path==0)){
-				cvlink =  path_tab[k].getCorrespVlinkId();
+				cvlink =  path_tab[k].getVlinkId();
 				IloBool equal_vlink_id = (cvlink == virtual_link_id);
 				if (equal_vlink_id){
 					arrayZeroInitialize(used_arc_tab, length);
 					path_tab[k].getUsedSlinkAry(used_arc_tab);
-					find_link =  search_arc_in_table(current_substrate_link, used_arc_tab, length);
+					find_link =  search_arc_in_table(current_substrate_link, used_arc_tab);
 					IloBool link_is_used = (find_link ==1);
 					if (link_is_used){
-						path_num =  path_tab[k].getCandidShortestPathId();
+						path_num =  path_tab[k].getMetaSpathId();
 						path_var_index =  search_var_index(trac_vect, virtual_link_id, path_num, y_length);
 						v+= bw*y[path_var_index];
 						used_link=1;
@@ -456,6 +595,7 @@ void LinkEmbedder::substrate_link_bw_constraint(SubLinksAryType& substrate_link_
 //***************************************************************************************************************************
 //									  A substrate link has a bandwidth capacity                                             *
 //***************************************************************************************************************************
+//periodic_substrate_link_bw_constraint(subLinksAry, numSubLinks, adedVlinkReqVect, adedVlinkCountInPhOne, actvPathAry, actvPathCount, traceXary, linkQosClsAry, xAry, xLength, ILP_model, slinkResidualBwAry, env);
 
 void LinkEmbedder::periodic_substrate_link_bw_constraint(SubLinksAryType& substrate_link_vect, IloInt& nbr_substrate_link, VlinkReqAryType& req_vect, IloInt& nb_req,
 		MetaSubPathAryType& path_tab, IloInt& nbr_path, VLink_Embedding_Trace_Tab& trac_vect, LinkQosClsAryType&  class_vect,
@@ -477,18 +617,18 @@ void LinkEmbedder::periodic_substrate_link_bw_constraint(SubLinksAryType& substr
 			k=0;
 			more_emb_path=0;
 			while ((k < nbr_path) &&(more_emb_path==0)){
-				cvlink =  path_tab[k].getCorrespVlinkId();
+				cvlink =  path_tab[k].getVlinkId();
 				IloBool equal_vlink_id = (cvlink == virtual_link_id);
 
 				if (equal_vlink_id){
 					arrayZeroInitialize(used_arc_tab, length);
 					path_tab[k].getUsedSlinkAry(used_arc_tab);
 
-					find_link =  search_arc_in_table(current_substrate_link, used_arc_tab, length);
+					find_link =  search_arc_in_table(current_substrate_link, used_arc_tab);
 
 					IloBool link_is_used = (find_link ==1);
 					if (link_is_used){
-						path_num =  path_tab[k].getCandidShortestPathId();
+						path_num =  path_tab[k].getMetaSpathId();
 						path_var_index =  search_var_index(trac_vect, virtual_link_id, path_num, y_length);
 						v+= bw*y[path_var_index];
 						used_link=1;
@@ -509,6 +649,63 @@ void LinkEmbedder::periodic_substrate_link_bw_constraint(SubLinksAryType& substr
 		}
 	}// end of for substrate links
 }
+//---------------------------------------------------------------------------------------------------------------------------------------------
+// Active and backup path bandwidth avaialbility constraint
+//---------------------------------------------------------------------------------------------------------------------------------------------
+//periodic_substrate_link_bw_constraint(subLinksAry, numSubLinks, adedVlinkReqVect, adedVlinkCountInPhOne, actvPathAry, actvPathCount, traceXary, linkQosClsAry, xAry, xLength, ILP_model, slinkResidualBwAry, env);
+void LinkEmbedder::slinkBwCapacityconstraint(SubLinksAryType& subLinksAry, IloInt& numSubLinks, VlinkReqAryType& adedVlinkReqVect, IloInt& adedVlinkCount,
+		MetaActvBkupPairAryType& acbkPairAry, IloInt& actvPathCount, VLink_Embedding_Trace_Tab& traceXary, LinkQosClsAryType&  linkQosClsAry,
+		IloNumVarArray& xAry, IloInt& xLength, IloModel& ilpModel, IloNumArray& slinkResidualBwAry , IloEnv& env){
+
+
+	for(IloInt slItr=0; slItr<numSubLinks; slItr++){
+		IloInt slinkId =  subLinksAry[slItr].getSlinkId();
+		IloExpr vlBwReqOnSlink(env);
+		IloInt used_link=0;
+
+		for(IloInt vlItr=0;vlItr<adedVlinkCount;vlItr++){
+			IloInt vlinkId =  adedVlinkReqVect[vlItr].getVlinkId();
+			IloInt vlQosCls =  adedVlinkReqVect[vlItr].getVlinkQosCls();
+			IloInt vlBwReq =  linkQosClsAry[vlQosCls-1].getQosClsBw();
+
+			IloInt k=0;
+			IloInt more_emb_path=0;
+			while ((k < actvPathCount) &&(more_emb_path==0)){
+				IloInt acbkVlink =  acbkPairAry[k].getVlinkId();
+
+				if (acbkVlink == vlinkId){
+					IloNumArray actvSlinkAry(env, MAX_SIZE);
+					arrayZeroInitialize(actvSlinkAry, MAX_SIZE);
+					acbkPairAry[k].getActvSlinkAry(actvSlinkAry);
+
+					IloInt linkFound =  search_arc_in_table(slinkId, actvSlinkAry);
+					if (linkFound ==1){
+						IloInt acbkPairId =  acbkPairAry[k].getActvBkupPairId();
+						IloInt xIndxOfAcbkPair =  search_var_index(traceXary, vlinkId, acbkPairId, xLength);
+						vlBwReqOnSlink += vlBwReq * xAry[xIndxOfAcbkPair];
+						used_link = 1;
+						more_emb_path = 1;
+					}//substrate link is used
+				}// embdedding path for virtual link
+				k++;
+			}// end while embedding paths
+		}// end for requests
+
+		if (used_link==1){
+			char constraint_name[100]= "BW capacity of substrate link ";
+			char slink_char[4];
+			sprintf(slink_char,"%d",(int)slinkId);
+			strcat(constraint_name, slink_char);
+			IloInt slinkResidualBw =  slinkResidualBwAry[slinkId-1];
+			IloRange slBwCapConstraint(env, vlBwReqOnSlink, slinkResidualBw,constraint_name);		// range_const(env, expression, upper_bound, const_name)
+			ilpModel.add(slBwCapConstraint);
+		}
+	}// end of for substrate links
+}
+
+
+
+
 
 void LinkEmbedder::printVerticeAry(IloEnv& env, VerticesAryType& verticeAry){
 	IloInt vArySize = verticeAry.getSize();
@@ -533,10 +730,10 @@ void LinkEmbedder::printVerticeAry(IloEnv& env, VerticesAryType& verticeAry){
 //                        Original H-Shortest Path Algorithm by Abdallah                            *
 //***************************************************************************************************
 //					shortest_path(					subNetGraph, 					metaShtstPathVect, 			srcSnode, 		destSnode, 			maxHops, 		request_id, 		vnpId, 			vlinkId, 		shtstPathCount, 		env);
-void  LinkEmbedder::shortest_path(SubNodesAryType& subNetGraph,  MetaSubPathAryType& metaShtstPathVect, IloInt& srcSnode, IloInt& destSnode, IloInt& maxHops, IloInt& requestId, IloInt& vnpId, IloInt& vlinkId ,IloInt& shtstPathCount, IloEnv& env){
+void  LinkEmbedder::shortest_path(SnodesAryType& subNetGraph,  MetaSubPathAryType& metaShtstPathVect, IloInt& srcSnode, IloInt& destSnode, IloInt& maxHops, IloInt& requestId, IloInt& vnpId, IloInt& vlinkId ,IloInt& shtstPathCount, IloEnv& env){
 
 	bool SHOW = false;
-	//if(srcSnode==10 && destSnode==3) SHOW=true;
+	//if(requestId==43) SHOW=true;
 
 	if(SHOW)cout<<"\n\tShortest paths from src = "<<srcSnode<<" \t to dst = "<<destSnode<<endl;																//Original SPAl
 
@@ -550,14 +747,21 @@ void  LinkEmbedder::shortest_path(SubNodesAryType& subNetGraph,  MetaSubPathAryT
 	// get adjacency nodeId vector for source node = [9, 14, 11, 12, 0,..., 0, 0, 0,]; size of adjNodeArray = MAX_INCIDENCE
 	IloNumArray adjNodeArray(env, MAX_SIZE);
 	arrayZeroInitialize(adjNodeArray, MAX_SIZE);
-	subNetGraph[(srcSnode-1)].getAdjNodeArray(adjNodeArray);
-
-	map<IloInt, IloNum> adjNodeCostMap = subNetGraph[(srcSnode-1)].getAdjNodeCostMap();
-	if(SHOW)cout<<"\n\tPrinting map"<<endl;
-	if(SHOW) for(map<IloInt, IloNum>::iterator it = adjNodeCostMap.begin(); it != adjNodeCostMap.end(); ++it) {
+	subNetGraph[(srcSnode-1)].getAdjSnodeAry(adjNodeArray);
+	map<IloInt, IloInt> adjSnodeToSlinkMap = subNetGraph[(srcSnode-1)].getAdjSnodeToSlinkMap();
+	if(SHOW)cout<<"\n\tPrinting adjSnodeToSlinkMap"<<endl;
+	if(SHOW) for(map<IloInt, IloInt>::iterator it = adjSnodeToSlinkMap.begin(); it != adjSnodeToSlinkMap.end(); ++it) {
 		cout<<"\t" << it->first <<"\t"<<it->second<<endl;
 	}
 	if(SHOW) cout<<endl;
+
+	map<IloInt, IloNum> conSlinkCostMap = subNetGraph[(srcSnode-1)].getConSlinkCostMap();
+	if(SHOW)cout<<"\n\tPrinting adj node costs of node : "<<srcSnode<<endl;
+	if(SHOW) for(map<IloInt, IloNum>::iterator it = conSlinkCostMap.begin(); it != conSlinkCostMap.end(); ++it) {
+		cout<<"\t" <<it->first <<"\t"<<it->second<<endl;
+	}
+	if(SHOW) cout<<endl;
+
 
 	// Create an array of vertices and put src node into first index
 	VerticesAryType verticeAry(env, GN);								 // verticeAry size GN = 10 000
@@ -570,24 +774,30 @@ void  LinkEmbedder::shortest_path(SubNodesAryType& subNetGraph,  MetaSubPathAryT
 	verticeIndx++;
 
 	// For src node adjacency vector, set priority = 1 for each directly connected nodes and add to priority queue
-	IloInt more=0, j=0;
-	if(SHOW)cout<<"\tAdjacent nodes of "<<srcSnode<<"\tpriority\tprevious\tcurrent";
-	while ((j<MAX_SIZE)&&( more==0)){
+	IloInt j=0;
+	if(SHOW)cout<<"\n\tStarting Starting from srcSnode: "<<srcSnode<<endl;
+	if(SHOW)cout<<"\tAdjacent nodes of "<<srcSnode<<"\tslinkToAdj\tslinkCost\tpriority\tprevious\tcurrent";
+	while ((j<MAX_SIZE)&&( adjNodeArray[j]!=0)){
 
 		IloInt adjNode =  adjNodeArray[j];
-		if(SHOW)cout<<"\n\t\t"<<adjNode<<"  ";
-		if(adjNode !=0){
-			int priority = 1;				// for all adjNodes to src, 	priority = 1
-			int previous = nodeId - 1;		// 								previous = 1
-			int current = adjNode;			//								current = adjNode
-			if(SHOW) cout<<"\t\t"<<priority<<"\t\t"<<previous<<"\t\t"<<current;
-			prioQ.push(Trace_vertice(priority, previous, current));
-			j++;
-		}
-		else
-			more=1;
+		IloInt slinkToAdj = adjSnodeToSlinkMap[adjNode];
+		//if(SHOW)cout<<"\t\tadjNode : "<<adjNode<<"\tslink to adjNode : "<<slinkToAdj<<endl;
+		//int priority = 1;				// for all adjNodes to src, 	priority = 1
+		int priority = conSlinkCostMap[slinkToAdj];
+
+		int previous = nodeId - 1;		// 								previous = 1
+		int current = adjNode;			//								current = adjNode
+		if(SHOW) cout<<"\n\t\t"<<adjNode<<" \t\t"<<slinkToAdj<<"\t\t"<<conSlinkCostMap[slinkToAdj]<<"\t\t"<<priority<<"\t\t"<<previous<<"\t\t"<<current;
+		prioQ.push(Trace_vertice(priority, previous, current));
+		j++;
 	}
 	if(SHOW)cout<<endl;
+
+
+	adjSnodeToSlinkMap.clear();
+	conSlinkCostMap.clear();
+
+
 
 	// If src and dst are adjacent (and has only one link betweeen them) algorithm must only give 1 path between them. Otherwise 5 paths will be found
 	IloInt nb_in_out_link =  count_number_link(destSnode, subNetGraph, env);
@@ -598,26 +808,29 @@ void  LinkEmbedder::shortest_path(SubNodesAryType& subNetGraph,  MetaSubPathAryT
 	else
 		max_paths = NB_MAX_PATH;
 
-	if(SHOW) printVerticeAry(env, verticeAry);
+	//if(SHOW) printVerticeAry(env, verticeAry);
 
+	IloInt MAX_ITR = 9000;
 
 	IloInt numPathsFound=0;
 	IloInt nextNode = srcSnode;																// Start with src by setting it as nextNode
-	while (numPathsFound <max_paths && (!prioQ.empty()) ){								// While max paths not reached and priority queue is not empty
-		if(SHOW)cout<<"\n\tnextNode = "<<nextNode;
+	while (numPathsFound <max_paths && (!prioQ.empty()) &&  verticeIndx<MAX_ITR){								// While max paths not reached and priority queue is not empty
+
 		IloInt valid_node=0, prePrio=0, previous=0, current=0;
-		if(SHOW)cout<<"\n\tpriority\tprevious\tcurrent"<<endl;
+		//if(SHOW)cout<<"\n\tprePrio \tprevious\tcurrent"<<endl;
 		while ((valid_node == 0)&&(!prioQ.empty())){									// take out the fist node from the prioQ. Recall that we have initially given priority 1 to all adjanancy nodes of src
 			prePrio = prioQ.top().priority;
 			previous = prioQ.top().previous;
 			current = prioQ.top().current;
-			if(SHOW) cout<<"\t"<<prePrio<<"\t\t"<<previous<<"\t\t"<<current;
+			//if(SHOW) cout<<"\t"<<prePrio<<"\t\t"<<previous<<"\t\t"<<current;
 			if ((current != srcSnode) && (current != nextNode))
 				valid_node=1;
 			prioQ.pop();
-			if(SHOW)cout<<"\n\tvalid_node = "<<valid_node<<endl;
+			//if(SHOW)cout<<"\n\tvalid_node = "<<valid_node<<endl;
 		}
+		if(SHOW)cout<<endl;
 		nextNode = current;																// set the first node came from prioQ as the nextNode
+		if(SHOW)cout<<"\n\tnextNode = "<<nextNode<<endl;
 		//cout<<"\tcurrent = "<<current<<endl;
 		if (current == destSnode)																// If current node is the destination, new path found. Increment numOfPaths
 			numPathsFound++;
@@ -625,37 +838,52 @@ void  LinkEmbedder::shortest_path(SubNodesAryType& subNetGraph,  MetaSubPathAryT
 		verticeAry[verticeIndx].setVerticeId((int)nodeId);
 		verticeAry[verticeIndx].setCurrent((int)current);
 		verticeAry[verticeIndx].setPrevious((int)previous);
+		if(SHOW)cout<<"vertice "<<current<<" put into verticeAry["<<verticeIndx<<"]"<<endl;
 		arrayZeroInitialize(adjNodeArray, MAX_SIZE);
 		if (current != destSnode){															// If destination not reached							//Original SPAl
-			subNetGraph[(current - 1)].getAdjNodeArray(adjNodeArray);
-			more=0 ;
+			subNetGraph[(current - 1)].getAdjSnodeAry(adjNodeArray);
+			adjSnodeToSlinkMap = subNetGraph[current-1].getAdjSnodeToSlinkMap();
+			conSlinkCostMap = subNetGraph[current-1].getConSlinkCostMap();
+			//more=0 ;
 			j=0;
-			while ((j<MAX_SIZE)&&( more==0)){
-				IloInt current_node =   adjNodeArray[j];
-				IloBool non_nul = (current_node !=0);
-				if(non_nul){
-					j++;
-					int priority = prePrio + 1;
-					previous = nodeId;
+			if(SHOW)cout<<"\tAdjacent nodes of "<<current<<"\tslinkToAdj\tslinkCost\tpriority\tprevious\tcurrent";
+			while ((j<MAX_SIZE)&&( adjNodeArray[j]!=0)){
+				IloInt adjNode =   adjNodeArray[j];
+				IloInt slinkToAdj = adjSnodeToSlinkMap[adjNode];
+				//IloBool non_nul = (adjNode !=0);
+				//if(non_nul){
+				j++;
+				//int priority = prePrio + 1;
+				int priority = prePrio + conSlinkCostMap[slinkToAdj];
+				previous = nodeId;
 
-					if  (current_node != srcSnode){
-						//cout<<"\t\tpriority = "<<priority<<"\t previous = "<<previous<<"\t current = "<<current_node<<endl;
-						prioQ.push(Trace_vertice(priority, (int)previous, (int)current_node));
-					}
+				if  (adjNode != srcSnode){
+					if(SHOW) cout<<"\n\t\t"<<adjNode<<" \t\t"<<slinkToAdj<<"\t\t"<<conSlinkCostMap[slinkToAdj]<<"\t\t"<<priority<<"\t\t"<<previous<<"\t\t"<<current;
+					//if(SHOW)cout<<"\t\tpriority = "<<priority<<"\t previous = "<<previous<<"\t current = "<<current_node<<endl;
+					prioQ.push(Trace_vertice(priority, (int)previous, (int)adjNode));
 				}
-				else
-					more=1;
+				//}
+				//else
+				//more=1;
 			}// end while
 		} // pere != destination
 		verticeAry[verticeIndx].setAdjNodeArray(adjNodeArray);
 		verticeIndx++;
+		if(verticeIndx>=MAX_ITR)
+			cerr<<"XX";
+		//cerr<<"\nShortest parth search iterations maxed at "<<MAX_ITR<<". Force exit search algorithm"<<endl;
 		nodeId++;
 	} //END while((numPathsFound <max_paths && (!prioQ.empty()))
 
+	if(SHOW){
+		cout<<"\n\tverticeAry = ";
+		for(int i=0; i<verticeAry.getSize(); i++){
+			cout<<verticeAry[i].getCurrent()<<" ";
+		}
+		cout<<endl;
+	}
 
-
-
-	// cout<<"end while nbr_path <2*H_PATH"<<endl;
+	if(SHOW)cout<<"end while nbr_path <2*H_PATH"<<endl;
 	IloInt i=0, calculatedPaths =0;
 	IloInt more_H_hops=0;
 	IloNumArray node_tab(env, MAX_SIZE);
@@ -687,7 +915,7 @@ void  LinkEmbedder::shortest_path(SubNodesAryType& subNetGraph,  MetaSubPathAryT
 				more_H_hops=1;
 			else{
 				if (find_cycle == 0){
-					//cout<<"\t\tadd_meta_path for virtual link :"<<link_id<<endl;
+					//cout<<"\t\tadd_meta_path for virtual link :"<<vlinkId<<" active path: "<<requestId<<endl;
 					add_meta_path(metaShtstPathVect, srcSnode, destSnode, requestId, vnpId, vlinkId, node_tab, subNetGraph, shtstPathCount, env);			//Original SPAl
 					// cout<<"\t compteur_chemins = "<<compteur_chemins<<endl;
 					calculatedPaths++;
@@ -703,7 +931,7 @@ void  LinkEmbedder::shortest_path(SubNodesAryType& subNetGraph,  MetaSubPathAryT
 //															Shortest path algorithm with weighted edges
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //					shortest_path(				subNetGraph, 							metaShtstPathVect, 			src, 		dest, 			hops, 			request_id, 		vnp_id, 	virtual_link_id, shtstPathCount, 		env);
-void  LinkEmbedder::shtstPathWeightedEdge(SubNodesAryType& subNetGraph,  MetaSubPathAryType& metaShtstPathVect, IloInt& src, IloInt& dst, IloInt& max_hops, IloInt& request_num, IloInt& vnp, IloInt& link_id ,IloInt& shtstPathCount, IloEnv& env){
+void  LinkEmbedder::shtstPathWeightedEdge(SnodesAryType& subNetGraph,  MetaSubPathAryType& metaShtstPathVect, IloInt& src, IloInt& dst, IloInt& max_hops, IloInt& request_num, IloInt& vnp, IloInt& link_id ,IloInt& shtstPathCount, IloEnv& env){
 
 
 }
@@ -711,8 +939,9 @@ void  LinkEmbedder::shtstPathWeightedEdge(SubNodesAryType& subNetGraph,  MetaSub
 //***************************************************************************************************
 //                            Find Next Node in a List of Nodes                                     *
 //***************************************************************************************************
-void LinkEmbedder::find_next_node(IloNumArray& arc_vect ,IloInt& current_node,IloInt& node_suivant, IloInt& c_arc,
-		SubNodesAryType& vect_OG, IloEnv& env_3){
+/*
+void LinkEmbedder::find_next_nodes(IloNumArray& arc_vect ,IloInt& current_node,IloInt& node_suivant, IloInt& c_arc,
+		SnodesAryType& vect_OG, IloEnv& env_3){
 	IloInt  k=0, p=0, taille = MAX_SIZE, find_node=0, c_node=0, find_commun_arc=0;
 	IloInt find_current_node=0, c_temp_arc=0, more_arc=0, find_arc=0, length= arc_vect.getSize();
 	c_arc=0;
@@ -720,10 +949,10 @@ void LinkEmbedder::find_next_node(IloNumArray& arc_vect ,IloInt& current_node,Il
 	IloNumArray  arc_in(env_3, taille);
 
 	while (find_current_node ==0){
-		c_node =  vect_OG[k].GetNode_Id();
+		c_node =  vect_OG[k].getSnodeId();
 		if (c_node == current_node){
 			arrayZeroInitialize(arc_out, taille);
-			vect_OG[k].GetArc_List(arc_out);
+			vect_OG[k].getConSlinkAry(arc_out);
 			find_current_node=1;
 		}
 		else
@@ -753,12 +982,12 @@ void LinkEmbedder::find_next_node(IloNumArray& arc_vect ,IloInt& current_node,Il
 	find_node=0;
 	while (find_node ==0){
 		arrayZeroInitialize(arc_in, taille);
-		vect_OG[k].GetArc_List(arc_in);
+		vect_OG[k].getConSlinkAry(arc_in);
 		find_arc=0;
 
 		find_arc =  findElementInVector(c_arc, arc_in, taille);
 		if (find_arc==1){
-			node_suivant =  vect_OG[k].GetNode_Id();
+			node_suivant =  vect_OG[k].getSnodeId();
 			find_node=1;
 		}
 		else
@@ -766,7 +995,7 @@ void LinkEmbedder::find_next_node(IloNumArray& arc_vect ,IloInt& current_node,Il
 	}
 	arc_in.end();
 	arc_out.end();
-}
+}*/
 
 //***************************************************************************************************
 //    Search maximum path unit cost value for a given connection									*
@@ -776,7 +1005,7 @@ IloInt LinkEmbedder::search_max_path_unit_cost(MetaSubPathAryType& path_vect, Il
 	IloInt k=0,h=0, length = 3*MAX_SIZE, req_num=0, more_arc=0, u_arc=0;
 	IloNumArray  arc_list(env_0,length);
 	while (k < nb_paths){
-		req_num =  path_vect[k].getCorrespVlinkId();
+		req_num =  path_vect[k].getVlinkId();
 		IloBool found_req = (req_num == req_id) ;
 		if(found_req){
 			arrayZeroInitialize(arc_list,length);
@@ -810,7 +1039,7 @@ IloInt LinkEmbedder::search_min_path_unit_cost(MetaSubPathAryType& path_vect, Il
 	IloInt k=0,h=0, length = 3*MAX_SIZE, req_num=0, more_arc=0, u_arc=0;
 	IloNumArray  arc_list(env_0,length);
 	while (k < nb_paths){
-		req_num = (int) path_vect[k].getCorrespVlinkId();
+		req_num = (int) path_vect[k].getVlinkId();
 		IloBool found_req = (req_num == req_id) ;
 		if(found_req){
 			arrayZeroInitialize(arc_list,length);
@@ -877,7 +1106,7 @@ IloInt LinkEmbedder::getCandidSnodeForVnode(Virtual_Node_Embedding_tab& Node_Emb
 //								Search a request									 *
 //************************************************************************************
 void LinkEmbedder::search_request(VlinkReqAryType& req_tab, IloInt& nb_req, IloInt& vlink, IloInt& cls, IloInt& req_bid, IloInt& vnp_num,
-	IloInt& s_cls, IloInt& d_cls, Virtual_Node_Embedding_tab& node_emb_Vect, IloInt& nb_vnode){
+		IloInt& s_cls, IloInt& d_cls, Virtual_Node_Embedding_tab& node_emb_Vect, IloInt& nb_vnode){
 	IloInt h=0, find=0, current_vlink=0, vlink_src=0, vlink_dest=0;
 	while ((h < nb_req)&&(find==0)){
 		current_vlink =  req_tab[h].getVlinkId();
@@ -942,7 +1171,7 @@ IloInt LinkEmbedder::search_request_index(IloInt& vlink, VlinkReqAryType& req_ta
 //                          Search a request in rerserved demand matrix              *
 //************************************************************************************
 IloInt LinkEmbedder::searchRtndReqFrmPrv(VlinkReqAryType& requestVect, IloInt& nbr_demand, IloInt& vlink, IloInt& vnp_num, IloInt& cperiod){
-//found = (IloInt) search_reserved_request(			Reserved_Request_Vect, 		NB_RESERVED, 		virtual_link_id, 	vnp_id,			period);
+	//found = (IloInt) search_reserved_request(			Reserved_Request_Vect, 		NB_RESERVED, 		virtual_link_id, 	vnp_id,			period);
 	IloInt find_req=0, s=0;
 	IloInt c_vnp=0, c_vlink=0, c_period=0;
 	while ((s < nbr_demand ) && (find_req ==0)){

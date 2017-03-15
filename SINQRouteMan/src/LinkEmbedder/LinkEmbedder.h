@@ -63,8 +63,8 @@ public:
 	//void traffic_matrix_printing(VNP_traffic_tab&, IloInt&);
 	//void printing_meta_path(Meta_Substrate_Path_tab&, IloInt&, IloEnv&);
 
-	static void shortest_path(SubNodesAryType&, MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloEnv&);
-	static void shtstPathWeightedEdge(SubNodesAryType&, MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloEnv&);
+	static void shortest_path(SnodesAryType&, MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloEnv&);
+	static void shtstPathWeightedEdge(SnodesAryType&, MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloEnv&);
 	//void search_parent_node_position(Sommet_tab&, IloInt& ,IloInt&, IloInt&);
 	//IloInt search_common_arc(IloNumArray&, IloNumArray&);
 	//void add_meta_path(Meta_Substrate_Path_tab&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloNumArray&, Substrate_Graph_tab&, IloInt&, IloEnv&);
@@ -85,8 +85,8 @@ public:
 	static IloInt search_node_embedding(Virtual_Node_Embedding_tab&, IloInt&, IloInt&, IloInt&);
 
 	static void search_request(VlinkReqAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, Virtual_Node_Embedding_tab&, IloInt&);
-	static void find_next_node(IloNumArray& ,IloInt& ,IloInt& , IloInt& , SubNodesAryType& , IloEnv&);
-	static IloInt search_arc_in_table(IloInt&, IloNumArray&, IloInt&);
+	//static void find_next_nodes(IloNumArray& ,IloInt& ,IloInt& , IloInt& , SnodesAryType& , IloEnv&);
+	static IloInt search_arc_in_table(IloInt&, IloNumArray&);
 
 	static IloInt search_reserved_vnode(VlinkReqAryType&, IloInt&, IloInt&, IloInt&, IloInt&);
 	static IloInt searchRtndReqFrmPrv(VlinkReqAryType&, IloInt&, IloInt&, IloInt&, IloInt&);
@@ -101,6 +101,7 @@ public:
 	//------------------------------------------------------------------------------------------------------------------
 
 	static IloInt creation_path_embedding_var(VlinkReqAryType&, IloInt&, MetaSubPathAryType&, IloInt&, IloNumVarArray&, VLink_Embedding_Trace_Tab&, IloEnv&);
+	static IloInt createBinaryVarForActvBkupPairs(MetaActvBkupPairAryType&, IloInt&, IloNumVarArray&, VLink_Embedding_Trace_Tab&, IloEnv&);
 	static IloInt creation_flow_embedding_var(flowRequest_Tab&, VlinkReqAryType&, IloInt&, MetaSubPathAryType&, IloInt&, IloNumVarArray&, VLink_Embedding_Trace_Tab&, IloEnv&);
 
 	static void vnp_variable_creation(VN_Embedding_Trace_Tab&, IloNumVarArray&, IloNumArray&, IloInt&, IloEnv&);
@@ -108,12 +109,16 @@ public:
 
 	static void no_partially_VN_embedding(VlinkReqAryType&, IloInt&, MetaSubPathAryType&, IloInt&, VLink_Embedding_Trace_Tab&, IloNumVarArray&, IloInt&, IloNumVarArray&,
 										VN_Embedding_Trace_Tab&, IloInt&,  IloModel&, IloEnv&);
+	static void allVlinksOfVnReqEmbdedOnAcbkPairs(VlinkReqAryType&, IloInt&, MetaActvBkupPairAryType&, IloInt&, VLink_Embedding_Trace_Tab&, IloNumVarArray&, IloInt&, IloNumVarArray&,
+			VN_Embedding_Trace_Tab&, IloInt&,  IloModel&, IloEnv&);
 
 	static void substrate_link_bw_constraint(SubLinksAryType&, IloInt&, VlinkReqAryType&, IloInt&, MetaSubPathAryType&, IloInt&, VLink_Embedding_Trace_Tab&,
 									  LinkQosClsAryType&, IloNumVarArray&, IloInt&, IloModel&,IloEnv&);
 
 	static void periodic_substrate_link_bw_constraint(SubLinksAryType&, IloInt&, VlinkReqAryType&, IloInt&, MetaSubPathAryType&, IloInt&, VLink_Embedding_Trace_Tab&,
 									  LinkQosClsAryType&, IloNumVarArray&, IloInt&, IloModel&, IloNumArray&, IloEnv&);
+	static void slinkBwCapacityconstraint(SubLinksAryType&, IloInt&, VlinkReqAryType&, IloInt&, MetaActvBkupPairAryType&, IloInt&, VLink_Embedding_Trace_Tab&,
+			  LinkQosClsAryType&, IloNumVarArray&, IloInt&, IloModel&, IloNumArray&, IloEnv&);
 
 	static IloInt calculate_cost_potantial_emb_shortestpath(MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloNumArray&, IloNumArray&, IloEnv&);
 

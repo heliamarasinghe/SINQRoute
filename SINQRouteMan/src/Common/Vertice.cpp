@@ -15,7 +15,7 @@ Vertice::Vertice()
 	current=0;
 	predecesseur=0;
 	for(j=0;j<H_PATH;j++)
-		Fils_tab[j]=0;
+		adjNodeAry[j]=0;
 }
 
 Vertice::~Vertice()
@@ -57,12 +57,12 @@ void Vertice::setAdjNodeArray( IloNumArray& f_Tab)
 {
 	int j;
 	for(j=0;j<H_PATH;j++)
-		Fils_tab[j]= (int) f_Tab[j];
+		adjNodeAry[j]= (int) f_Tab[j];
 }
 
 void Vertice::getAdjNodeArray(IloNumArray& f_Tab)
 {
 	int i;
 	for(i=0;i<H_PATH;i++)
-		f_Tab[i]= Fils_tab[i];
+		f_Tab[i]= adjNodeAry[i];
 }

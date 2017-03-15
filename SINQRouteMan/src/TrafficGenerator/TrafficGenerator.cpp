@@ -13,7 +13,7 @@
   //                                          H-Shortest Path Algorithm                               *
   //***************************************************************************************************
 
-   void  TrafficGenerator::H_paths(SubNodesAryType& tab_OG,  MetaSubPathAryType& chemins_tab, IloInt& source,
+   void  TrafficGenerator::H_paths(SnodesAryType& tab_OG,  MetaSubPathAryType& chemins_tab, IloInt& source,
                          IloInt& destination, IloInt& max_hops, IloInt& request_num, IloInt& vnp, IloInt& link_id ,IloInt& comp_path, IloEnv& env1)
     {
 
@@ -38,7 +38,7 @@
       //---------------------------
 
   	arrayZeroInitialize(table_adj, length);
-      tab_OG[(IloInt)(source-1)].getAdjNodeArray(table_adj);
+      tab_OG[(IloInt)(source-1)].getAdjSnodeAry(table_adj);
 
       node_arb[compteur_noeud].setVerticeId((int)id_node);
       node_arb[compteur_noeud].setCurrent((int)source);
@@ -118,7 +118,7 @@
   				if (pere != destination)
   				 {
 
-  					 tab_OG[(IloInt)(pere - 1)].getAdjNodeArray(table_adj);
+  					 tab_OG[(IloInt)(pere - 1)].getAdjSnodeAry(table_adj);
   					 more=0 ;
   					 j=0;
 
@@ -238,8 +238,8 @@
 
       while (k < nb_paths)
          {
-     		    req_num = (IloInt) path_vect[k].getCorrespVlinkId();
-     			c_vnp =  (IloInt) path_vect[k].GetVNP_Id();
+     		    req_num = (IloInt) path_vect[k].getVlinkId();
+     			c_vnp =  (IloInt) path_vect[k].getVnpId();
 
      			IloBool found_req = (req_num == req_id);
                  IloBool found_vnp = (c_vnp == num_vnp);
@@ -249,8 +249,8 @@
      				 arrayZeroInitialize(arc_list,length);
      	 			 path_vect[k].getUsedSlinkAry(arc_list);
 
-     				 src_path = (IloInt)  path_vect[k].getSrcSnodeOfPath();
-     			     dest_path = (IloInt)  path_vect[k].getDestSnodeOfPath();
+     				 src_path = (IloInt)  path_vect[k].getSrcSnode();
+     			     dest_path = (IloInt)  path_vect[k].getDstSnode();
 
      				 src_cost = (IloInt) node_cost_vect[src_path -1];
      				 dest_cost = (IloInt) node_cost_vect[dest_path -1];
@@ -309,8 +309,8 @@
 
       while (k < nb_paths)
         {
-     		    req_num = (IloInt) path_vect[k].getCorrespVlinkId();
-                 c_vnp =  (IloInt) path_vect[k].GetVNP_Id();
+     		    req_num = (IloInt) path_vect[k].getVlinkId();
+                 c_vnp =  (IloInt) path_vect[k].getVnpId();
 
      			IloBool found_req = (req_num == req_id);
                  IloBool found_vnp = (c_vnp == num_vnp);
@@ -320,8 +320,8 @@
      				 arrayZeroInitialize(arc_list,length);
      	 			 path_vect[k].getUsedSlinkAry(arc_list);
 
-     				 src_path = (IloInt)  path_vect[k].getSrcSnodeOfPath();
-     			     dest_path = (IloInt)  path_vect[k].getDestSnodeOfPath();
+     				 src_path = (IloInt)  path_vect[k].getSrcSnode();
+     			     dest_path = (IloInt)  path_vect[k].getDstSnode();
 
      				 src_cost = (IloInt) node_cost_vect[src_path -1];
      				 dest_cost = (IloInt) node_cost_vect[dest_path -1];

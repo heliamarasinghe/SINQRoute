@@ -21,7 +21,7 @@ private:
 	IloInt Bid;
 	IloInt Period;
 	int Candidate_Location_Tab[MAX_NB_LOCATION];
-	//IloNum deltaMat[MAX_SIZE][MAX_SIZE];
+	//IloNum thetaMat[][];
 
 
 public:

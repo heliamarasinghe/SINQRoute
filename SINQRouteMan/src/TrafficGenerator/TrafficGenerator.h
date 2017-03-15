@@ -58,7 +58,7 @@ public:
 	//static void traffic_matrix_printing(VNP_traffic_tab&, IloInt&);
 	//static void printing_meta_path(Meta_Substrate_Path_tab&, IloInt&, IloEnv&);
 
-	static void  H_paths(SubNodesAryType&, MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloEnv&);
+	static void  H_paths(SnodesAryType&, MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloEnv&);
 	//static void search_parent_node_position(Sommet_tab&, IloInt& ,IloInt&, IloInt&);
 	//static IloInt search_common_arc(IloNumArray&, IloNumArray&);
 	//static void add_meta_path(Meta_Substrate_Path_tab&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloNumArray&, Substrate_Graph_tab&, IloInt&, IloEnv&);
@@ -80,7 +80,7 @@ public:
 	//static IloInt  Check_nb_hops_in_shortest_path(Substrate_Graph_tab&, IloInt&, IloInt&, IloEnv&);
 	static void search_cpu_requirement_src_dest_nodes(IloInt&, IloInt&, IloInt&, VnodeReqAryType&, NodeQosClsAryType&, IloInt&, IloInt&);
 	static void search_parent_node_position(VerticesAryType&, IloInt&, IloInt&, IloInt& );
-	static void find_next_node(IloNumArray& arc_vect ,IloInt& current_node,IloInt& node_suivant, IloInt& c_arc,SubNodesAryType& vect_OG, IloEnv& env_3);
+	static void find_next_node(IloNumArray& arc_vect ,IloInt& current_node,IloInt& node_suivant, IloInt& c_arc,SnodesAryType& vect_OG, IloEnv& env_3);
 
 
 	//unique unctions for PeriodicTrafficGenerator

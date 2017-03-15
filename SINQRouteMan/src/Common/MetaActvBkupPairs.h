@@ -28,6 +28,7 @@ private:
 	int actvSlinkAry[MAX_SIZE];
 	int bkupSnodeAry[MAX_SIZE];
 	int bkupSlinkAry[MAX_SIZE];
+	//
 
 public:
 	MetaActvBkupPairs();

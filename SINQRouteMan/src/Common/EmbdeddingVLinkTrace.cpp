@@ -14,25 +14,25 @@ Var_Index=0;
 
 }
 
-void Embdedding_VLink_Trace::SetNum_Path(IloInt id)
+void Embdedding_VLink_Trace::setShortestPathId(IloInt id)
 {
 	Num_Path=id;
 }
-IloInt Embdedding_VLink_Trace::GetNum_Path()
+IloInt Embdedding_VLink_Trace::getShortestPathId()
 {
 	return Num_Path;
 }
 
-void Embdedding_VLink_Trace::SetVirtual_Link_Id(IloInt l)
+void Embdedding_VLink_Trace::setVlinkId(IloInt l)
 {
 	Virtual_Link_Id=l;
 }
-IloInt Embdedding_VLink_Trace::GetVirtual_Link_Id()
+IloInt Embdedding_VLink_Trace::getVlinkId()
 {
 	return Virtual_Link_Id;
 }
 
-void Embdedding_VLink_Trace::SetVar_Index(IloInt v)
+void Embdedding_VLink_Trace::SetXindx(IloInt v)
 {
 	Var_Index=v;
 }

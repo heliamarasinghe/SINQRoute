@@ -14,18 +14,18 @@
 
 MetaSubPath::MetaSubPath() {
 	IloInt k;
-	Meta_substrate_path_Id = 0;
-	Src_path=0;
-	Dest_path=0;
-	Virtual_Link_Id=0;
-	VNP_Id=0;
-	Candidate_Embdding_Nodes_Id=0;
-	NB_Hops = 0;
+	metaSpathId = 0;
+	srcSnode=0;
+	dstSnode=0;
+	vlinkId=0;
+	vnpId=0;
+	pathReqId=0;
+	numHops = 0;
 
 	for(k=0;k<MAX_SIZE;k++)
 	{
-		Used_Node_Tab[k]=0;
-		Used_Arc_Tab[k]=0;
+		usedSnodeAry[k]=0;
+		usedSlinkAry[k]=0;
 	}
 
 }
@@ -34,102 +34,108 @@ MetaSubPath::~MetaSubPath() {
 	// TODO Auto-generated destructor stub
 }
 
-void MetaSubPath::setMetaSubPathId(IloInt n)
+void MetaSubPath::setMetaSpathId(IloInt n)
 {
-	Meta_substrate_path_Id=n;
+	metaSpathId=n;
 }
-IloInt MetaSubPath::getCandidShortestPathId()
+IloInt MetaSubPath::getMetaSpathId()
 {
-	return Meta_substrate_path_Id;
-}
-
-void MetaSubPath::setMetaSubPathSrc(IloInt s)
-{
-	Src_path = s;
+	return metaSpathId;
 }
 
-IloInt MetaSubPath::getSrcSnodeOfPath()
+void MetaSubPath::setSrcSnode(IloInt s)
 {
-	return Src_path;
+	srcSnode = s;
 }
 
-void MetaSubPath::setMetaSubPathDst(IloInt d)
+IloInt MetaSubPath::getSrcSnode()
 {
-	Dest_path = d;
+	return srcSnode;
 }
 
-IloInt MetaSubPath::getDestSnodeOfPath()
+void MetaSubPath::setDstSnode(IloInt d)
 {
-	return Dest_path;
+	dstSnode = d;
+}
+
+IloInt MetaSubPath::getDstSnode()
+{
+	return dstSnode;
 }
 
 
-void MetaSubPath::setMetaSubPathVlinkId(IloInt id)
+void MetaSubPath::setVlinkId(IloInt id)
 {
-	Virtual_Link_Id=id;
+	vlinkId=id;
 }
 
-IloInt MetaSubPath::getCorrespVlinkId()
+IloInt MetaSubPath::getVlinkId()
 {
-	return Virtual_Link_Id;
+	return vlinkId;
 }
 
-void MetaSubPath::setMetaSubPathVnpId(IloInt id)
+void MetaSubPath::setVnpId(IloInt id)
 {
-	VNP_Id=id;
+	vnpId=id;
 }
 
-IloInt MetaSubPath::GetVNP_Id()
+IloInt MetaSubPath::getVnpId()
 {
-	return VNP_Id;
+	return vnpId;
 }
 
-void MetaSubPath::setMetaSubPathReqId(IloInt id)
+void MetaSubPath::setMetaSpathReqId(IloInt id)
 {
-	Candidate_Embdding_Nodes_Id=id;
+	pathReqId=id;
 }
 
-IloInt MetaSubPath::getCandidSnodeCombiId()
+IloInt MetaSubPath::getMetaSpathReqId()
 {
-	return Candidate_Embdding_Nodes_Id;
+	return pathReqId;
 }
 
-void MetaSubPath::SetNB_Hops(IloInt h)
+void MetaSubPath::setNumHops(IloInt h)
 {
-	NB_Hops=h;
+	numHops=h;
 }
 
-IloInt MetaSubPath::getNumOfHopsInShortestPath()
+IloInt MetaSubPath::getNumHops()
 {
-	return NB_Hops;
+	return numHops;
 }
 
-void MetaSubPath::SetUsed_Node_Tab(IloNumArray& node_tab)
+void MetaSubPath::setPathCost(IloNum cost)
 {
-	IloInt i;
-	for(i=0;i<MAX_SIZE;i++)
-		Used_Node_Tab[i]=(int)node_tab[i];
+	pathCost=cost;
+}
+
+IloNum MetaSubPath::getPathCost()
+{
+	return pathCost;
+}
+
+void MetaSubPath::SetUsedSnodeAry(IloNumArray& node_tab)
+{
+	for(IloInt i=0;i<node_tab.getSize();i++)
+		usedSnodeAry[i]=node_tab[i];
 }
 
 void MetaSubPath::getUsedSnodeAry(IloNumArray& node_used_tab)
 {
-	IloInt i;
-	for(i=0;i<MAX_SIZE;i++)
-		node_used_tab[i]= Used_Node_Tab[i];
+	for(IloInt i=0;i<MAX_SIZE;i++)
+		node_used_tab[i]= usedSnodeAry[i];
 }
 
-void MetaSubPath::SetUsed_Arc_Tab(IloNumArray& arc_tab)
+void MetaSubPath::setUsedSlinkAry(IloNumArray& arc_tab)
 {
-	IloInt i;
-	for(i=0;i<MAX_SIZE;i++)
-		Used_Arc_Tab[i]=(int)arc_tab[i];
+	for(IloInt i=0;i<MAX_SIZE;i++)
+		usedSlinkAry[i]=(int)arc_tab[i];
 }
 
 void MetaSubPath::getUsedSlinkAry(IloNumArray& arc_used_tab)
 {
-	IloInt i;
-	for(i=0;i<MAX_SIZE;i++)
-		arc_used_tab[i]= Used_Arc_Tab[i];
+	for(IloInt i=0;i<MAX_SIZE;i++)
+		arc_used_tab[i]= usedSlinkAry[i];
 }
 
 

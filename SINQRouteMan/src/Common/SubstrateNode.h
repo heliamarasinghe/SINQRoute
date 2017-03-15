@@ -10,26 +10,33 @@
 #define TRAFFICGENERATOR_SUBSTRATENODE_H_
 
 #include "ConstantsCOMMON.h"
-#include <map>
+
 
 class SubstrateNode {
 private:
-	IloInt Node_Id;
-	int Arc_List[MAX_SIZE];             // list of incomming/outgoing links in original graph
-	int Node_Adjacent_Table[MAX_SIZE];     // list of adjacents nodes in original graph
-	std::map<IloInt, IloNum> adjNodeCostMap;
+	IloInt snodeId;
+	int adjSlinkAry[MAX_SIZE];             // list of incomming/outgoing links in original graph
+	int adjSnodeAry[MAX_SIZE];     // list of adjacents nodes in original graph
+	std::map<IloInt, IloInt> adjSnodeToSlinkMap;
+	std::map<IloInt, IloNum> conSlinkCostMap;
 public:
 	SubstrateNode();
 	virtual ~SubstrateNode();
 
-	void setNodeId(IloInt n);
-	IloInt GetNode_Id();
-	void setLinkAry(IloNumArray& Arc_tab);
-	void  GetArc_List(IloNumArray& Arc_tab);
-	void SetNode_Adjacent_Table( IloNumArray& SAdj_Tab);
-	void getAdjNodeArray(IloNumArray& GAdj_Tab);
-	void setAdjNodeCostMap(std::map<IloInt, IloNum> adjNodeCostMap);
-	std::map<IloInt, IloNum> getAdjNodeCostMap();
+	void setSnodeId(IloInt n);
+	IloInt getSnodeId();
+	void setConSlinkAry(IloNumArray& slinkAry);		//Connected substrate links to this node
+	void getConSlinkAry(IloNumArray& slinkAry);
+	void setAdjSnodeAry( IloNumArray& snodeAry);	//Adjacent substrate nodes to this node
+	void getAdjSnodeAry(IloNumArray& snodeAry);
+
+	//To conveniently map adjacent Snodes with Slinks goes to them
+	void setAdjSnodeToSlinkMap(std::map<IloInt, IloInt> adjNodeCostMap);
+	std::map<IloInt, IloInt> getAdjSnodeToSlinkMap();
+
+	// For backup link costs (beta values)
+	void setConSlinkCostMap(std::map<IloInt, IloNum> adjNodeCostMap);
+	std::map<IloInt, IloNum> getConSlinkCostMap();
 };
 
 #endif /* TRAFFICGENERATOR_SUBSTRATENODE_H_ */

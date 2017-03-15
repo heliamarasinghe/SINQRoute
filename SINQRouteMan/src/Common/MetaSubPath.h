@@ -13,46 +13,50 @@
 
 class MetaSubPath {
 private:
-	IloInt Meta_substrate_path_Id;
-	IloInt Src_path;
-	IloInt Dest_path;
-	IloInt Virtual_Link_Id;
-	IloInt VNP_Id;
-	IloInt Candidate_Embdding_Nodes_Id;
-	IloInt NB_Hops;
+	IloInt metaSpathId;
+	IloInt srcSnode;
+	IloInt dstSnode;
+	IloInt vlinkId;
+	IloInt vnpId;
+	IloInt pathReqId;
+	IloInt numHops;
+	IloNum pathCost;
 
-	int Used_Node_Tab[MAX_SIZE];
-	int Used_Arc_Tab[MAX_SIZE];
+	int usedSnodeAry[MAX_SIZE];
+	int usedSlinkAry[MAX_SIZE];
 
 public:
 	MetaSubPath();
 	virtual ~MetaSubPath();
 
-	void setMetaSubPathId(IloInt n);
-	IloInt getCandidShortestPathId();
+	void setMetaSpathId(IloInt n);
+	IloInt getMetaSpathId();
 
-	void setMetaSubPathSrc(IloInt s);
-	IloInt getSrcSnodeOfPath();
+	void setSrcSnode(IloInt s);
+	IloInt getSrcSnode();
 
-	void setMetaSubPathDst(IloInt d);
-	IloInt getDestSnodeOfPath();
+	void setDstSnode(IloInt d);
+	IloInt getDstSnode();
 
 
-	void setMetaSubPathVlinkId(IloInt id);
-	IloInt getCorrespVlinkId();
+	void setVlinkId(IloInt id);
+	IloInt getVlinkId();
 
-	void setMetaSubPathVnpId(IloInt id);
-	IloInt GetVNP_Id();
+	void setVnpId(IloInt id);
+	IloInt getVnpId();
 
-	void setMetaSubPathReqId(IloInt id);
-	IloInt getCandidSnodeCombiId();
+	void setMetaSpathReqId(IloInt id);
+	IloInt getMetaSpathReqId();
 
-	 void SetNB_Hops(IloInt h);
-	 IloInt getNumOfHopsInShortestPath();
+	 void setNumHops(IloInt h);
+	 IloInt getNumHops();
 
-	void SetUsed_Node_Tab(IloNumArray& node_tab);
+	 void setPathCost(IloNum cost);
+	 IloNum getPathCost();
+
+	void SetUsedSnodeAry(IloNumArray& node_tab);
 	void getUsedSnodeAry(IloNumArray& node_used_tab);
-	void SetUsed_Arc_Tab(IloNumArray& arc_tab);
+	void setUsedSlinkAry(IloNumArray& arc_tab);
 	void getUsedSlinkAry(IloNumArray& arc_used_tab);
 };
 

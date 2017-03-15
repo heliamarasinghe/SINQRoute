@@ -342,7 +342,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 	 	 //------------------------------------------------------------------------------------------
 			cout<<"\n\t Network definition"<<endl;
 
-		  SubNodesAryType  Vect_Substrate_Graph(env,NB_NODE);
+		  SnodesAryType  Vect_Substrate_Graph(env,NB_NODE);
 
 	      substrate_Graph_creation(Vect_Substrate_Graph, Vect_Link, NB_LINK, NB_NODE, env);
 

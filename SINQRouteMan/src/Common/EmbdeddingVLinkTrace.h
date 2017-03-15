@@ -19,13 +19,13 @@ IloInt Var_Index;
 public:
 Embdedding_VLink_Trace();
 
-void SetNum_Path(IloInt id);
-IloInt GetNum_Path();
+void setShortestPathId(IloInt id);
+IloInt getShortestPathId();
 
-void SetVirtual_Link_Id(IloInt l);
-IloInt GetVirtual_Link_Id();
+void setVlinkId(IloInt l);
+IloInt getVlinkId();
 
-void SetVar_Index(IloInt v);
+void SetXindx(IloInt v);
 IloInt GetVar_Index();
 };
 

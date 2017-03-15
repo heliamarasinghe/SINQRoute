@@ -223,7 +223,7 @@ char* LinkEmbedder::embedInitLinks(){
 		//                             Network definition
 		//********************************************************************************************************
 		cout<<"\n\t Network definition"<<endl;
-		SubNodesAryType  Vect_Substrate_Graph(env,NB_NODE);
+		SnodesAryType  Vect_Substrate_Graph(env,NB_NODE);
 		substrate_Graph_creation(Vect_Substrate_Graph, Vect_Link, NB_LINK, NB_NODE, env);
 		adjacency_list_creation(Vect_Substrate_Graph, NB_NODE, env);
 		//substrate_graph_printing(Vect_Substrate_Graph, env, NB_NODE);
@@ -365,16 +365,16 @@ char* LinkEmbedder::embedInitLinks(){
 			IloInt j=0, no_more_emb_path=0;
 
 			while ((j < numShortestPaths)&& (no_more_emb_path == 0)){
-				IloInt current_virtual_link_id = shortestPathVect[j].getCorrespVlinkId();
-				IloInt current_vnp_id = shortestPathVect[j].GetVNP_Id();
+				IloInt current_virtual_link_id = shortestPathVect[j].getVlinkId();
+				IloInt current_vnp_id = shortestPathVect[j].getVnpId();
 
 				IloBool equal_current_vlink =(current_virtual_link_id == vLinkId);
 				IloBool equal_current_vnp_id =( current_vnp_id == vnpId);
 
 				if((equal_current_vnp_id)&&(equal_current_vlink)){
-					IloInt num_path = shortestPathVect[j].getCandidShortestPathId();
-					IloInt src_emb = shortestPathVect[j].getSrcSnodeOfPath();
-					IloInt dest_emb =   shortestPathVect[j].getDestSnodeOfPath();
+					IloInt num_path = shortestPathVect[j].getMetaSpathId();
+					IloInt src_emb = shortestPathVect[j].getSrcSnode();
+					IloInt dest_emb =   shortestPathVect[j].getDstSnode();
 					arrayZeroInitialize(arc_vect,vect_length);
 					shortestPathVect[j].getUsedSlinkAry(arc_vect);
 
@@ -513,8 +513,8 @@ char* LinkEmbedder::embedInitLinks(){
 						IloInt vnp_id = 0;
 						IloInt vlink_src_cls = 0;
 						IloInt vlink_dest_cls = 0;
-						IloInt current_vlink = vlink_embedding_trace_x[j].GetVirtual_Link_Id();
-						IloInt num_path = vlink_embedding_trace_x[j].GetNum_Path();
+						IloInt current_vlink = vlink_embedding_trace_x[j].getVlinkId();
+						IloInt num_path = vlink_embedding_trace_x[j].getShortestPathId();
 
 
 						//cout<<"Virtual link: "<<current_vlink<<"  was assigned to substrate path: "<<num_path<<endl;

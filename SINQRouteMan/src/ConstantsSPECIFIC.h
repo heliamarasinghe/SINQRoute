@@ -11,8 +11,8 @@
 #ifndef CONSTANTSSPECIFIC_H_
 #define CONSTANTSSPECIFIC_H_
 
-const IloInt NB_SUBSTRATE_NODES=20;
-const IloInt NB_SUBSTRATE_LINKS=30;
+//const IloInt NB_SUBSTRATE_NODES=20;
+//const IloInt NB_SUBSTRATE_LINKS=30;
 const IloInt NB_MAX_VNODES=4;
 
 const IloInt NB_VNP =20;

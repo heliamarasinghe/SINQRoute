@@ -10,7 +10,7 @@
 //                                          H-Shortest Path Algorithm                               *
 //***************************************************************************************************
 
-void  NodeEmbedder::shortest_path(SubNodesAryType& Vect_Substrate_Graph,  MetaSubPathAryType& Path_Vect, IloInt& candidSrcSnode, IloInt& candidDestSnode, IloInt& request_id, IloInt& vnpId, IloInt& vLinkId ,IloInt& numOfShortestPaths, IloEnv& env){
+void  NodeEmbedder::shortest_path(SnodesAryType& Vect_Substrate_Graph,  MetaSubPathAryType& Path_Vect, IloInt& candidSrcSnode, IloInt& candidDestSnode, IloInt& request_id, IloInt& vnpId, IloInt& vLinkId ,IloInt& numOfShortestPaths, IloEnv& env){
 	//				shortest_path(						Vect_Substrate_Graph, 				candidShortestPathsVect, candidSrcSnode, candidDestSnode, candidSnodeCombiId, vnpId, 			vLinkId, 			numOfShortestPaths, 	env);
 
 
@@ -30,7 +30,7 @@ void  NodeEmbedder::shortest_path(SubNodesAryType& Vect_Substrate_Graph,  MetaSu
 	//---------------------------
 
 	arrayZeroInitialize(table_adj, MAX_SIZE);
-	Vect_Substrate_Graph[(IloInt)(candidSrcSnode-1)].getAdjNodeArray(table_adj);
+	Vect_Substrate_Graph[(IloInt)(candidSrcSnode-1)].getAdjSnodeAry(table_adj);
 
 	node_arb[compteur_noeud].setVerticeId((int)id_node);
 	node_arb[compteur_noeud].setCurrent((int)candidSrcSnode);
@@ -110,7 +110,7 @@ void  NodeEmbedder::shortest_path(SubNodesAryType& Vect_Substrate_Graph,  MetaSu
 		if (pere != candidDestSnode)
 		{
 
-			Vect_Substrate_Graph[(IloInt)(pere - 1)].getAdjNodeArray(table_adj);
+			Vect_Substrate_Graph[(IloInt)(pere - 1)].getAdjSnodeAry(table_adj);
 			more=0 ;
 			j=0;
 
@@ -222,7 +222,7 @@ IloInt NodeEmbedder::search_min_path_unit_cost(MetaSubPathAryType& path_vect, Il
 
 	while (k < nb_paths)
 	{
-		req_num = (int) path_vect[k].getCorrespVlinkId();
+		req_num = (int) path_vect[k].getVlinkId();
 		IloBool found_req = (req_num == req_id) ;
 
 		if(found_req)
@@ -271,7 +271,7 @@ IloInt NodeEmbedder::search_max_path_unit_cost(MetaSubPathAryType& path_vect, Il
 
 	while (k < nb_paths)
 	{
-		req_num = (IloInt) path_vect[k].getCorrespVlinkId();
+		req_num = (IloInt) path_vect[k].getVlinkId();
 		IloBool found_req = (req_num == req_id) ;
 
 		if(found_req)
@@ -626,10 +626,10 @@ IloInt NodeEmbedder::calculate_cost_potantial_emb_shortestpath(MetaSubPathAryTyp
 	arrayZeroInitialize(used_arc_tab, MAX_SIZE);
 
 	while ((k < nb_path)&&(exit==0)){
-		src_request = (IloInt) emb_path_vect[k].getSrcSnodeOfPath();
-		dest_request = (IloInt) emb_path_vect[k].getDestSnodeOfPath();
-		current_vnp = (IloInt) emb_path_vect[k].GetVNP_Id();
-		vlink_num = (IloInt) emb_path_vect[k].getCorrespVlinkId();
+		src_request = (IloInt) emb_path_vect[k].getSrcSnode();
+		dest_request = (IloInt) emb_path_vect[k].getDstSnode();
+		current_vnp = (IloInt) emb_path_vect[k].getVnpId();
+		vlink_num = (IloInt) emb_path_vect[k].getVlinkId();
 
 		IloBool equal_src = (src_request == src);
 		IloBool equal_dest = (dest_request == dest);
@@ -649,7 +649,7 @@ IloInt NodeEmbedder::calculate_cost_potantial_emb_shortestpath(MetaSubPathAryTyp
 					more_arc=1;
 				l++;
 			}
-			nb_hops = (IloInt) emb_path_vect[k].getNumOfHopsInShortestPath();
+			nb_hops = (IloInt) emb_path_vect[k].getNumHops();
 			exit=1;
 		}
 		else

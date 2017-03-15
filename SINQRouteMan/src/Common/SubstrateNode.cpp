@@ -10,12 +10,12 @@
 
 SubstrateNode::SubstrateNode() {
 	IloInt j;
-	Node_Id = 0;
+	snodeId = 0;
 
 	for(j=0;j<MAX_SIZE;j++)
 	{
-		Arc_List[j]=0;
-		Node_Adjacent_Table[j]=0;
+		adjSlinkAry[j]=0;
+		adjSnodeAry[j]=0;
 	}//
 
 }
@@ -25,45 +25,55 @@ SubstrateNode::~SubstrateNode() {
 }
 
 
-void SubstrateNode::setNodeId(IloInt n)
+void SubstrateNode::setSnodeId(IloInt n)
 {
-	Node_Id = n;
+	snodeId = n;
 }
-IloInt SubstrateNode::GetNode_Id()
+IloInt SubstrateNode::getSnodeId()
 {
-	return Node_Id;
+	return snodeId;
 }
 
-void SubstrateNode::setLinkAry(IloNumArray& Arc_tab)
+void SubstrateNode::setConSlinkAry(IloNumArray& Arc_tab)
 {
 	IloInt i;
 	for(i=0;i<MAX_SIZE;i++)
-		Arc_List[i]=(int) Arc_tab[i];
+		adjSlinkAry[i]=(int) Arc_tab[i];
 
 }
-void  SubstrateNode::GetArc_List(IloNumArray& Arc_tab)
+void  SubstrateNode::getConSlinkAry(IloNumArray& Arc_tab)
 {
 	IloInt i;
 	for(i=0;i<MAX_SIZE;i++)
-		Arc_tab[i]= Arc_List[i];
+		Arc_tab[i]= adjSlinkAry[i];
 }
 
-void SubstrateNode::SetNode_Adjacent_Table( IloNumArray& SAdj_Tab)
+void SubstrateNode::setAdjSnodeAry( IloNumArray& SAdj_Tab)
 {
 	IloInt j;
 	for(j=0;j<MAX_SIZE;j++)
-		Node_Adjacent_Table[j]= (int) SAdj_Tab[j];
+		adjSnodeAry[j]= (int) SAdj_Tab[j];
 
 }
-void SubstrateNode::getAdjNodeArray(IloNumArray& GAdj_Tab)
+void SubstrateNode::getAdjSnodeAry(IloNumArray& GAdj_Tab)
 {
 	IloInt i;
 	for(i=0;i<MAX_SIZE;i++)
-		GAdj_Tab[i]= Node_Adjacent_Table[i];
+		GAdj_Tab[i]= adjSnodeAry[i];
 }
-void SubstrateNode::setAdjNodeCostMap(std::map<IloInt, IloNum> adjNodeCostMap){
-	this->adjNodeCostMap = adjNodeCostMap;
+
+//adjSnodeToSlinkMap
+void SubstrateNode::setAdjSnodeToSlinkMap(std::map<IloInt, IloInt> adjSnodeToSlinkMap){
+	this->adjSnodeToSlinkMap = adjSnodeToSlinkMap;
 }
-std::map<IloInt, IloNum> SubstrateNode::getAdjNodeCostMap(){
-	return this->adjNodeCostMap;
+std::map<IloInt, IloInt> SubstrateNode::getAdjSnodeToSlinkMap(){
+	return this->adjSnodeToSlinkMap;
+}
+
+//ConSlinkCostMap
+void SubstrateNode::setConSlinkCostMap(std::map<IloInt, IloNum> conSlinkCostMap){
+	this->conSlinkCostMap = conSlinkCostMap;
+}
+std::map<IloInt, IloNum> SubstrateNode::getConSlinkCostMap(){
+	return this->conSlinkCostMap;
 }
