@@ -19,7 +19,7 @@ public:
 	Embdedding_VN_Trace();
 
 	void SetVNP_Id(IloInt id);
-	IloInt GetVNP_Id();
+	IloInt getVnpId();
 
 	void SetVar_Index(IloInt v);
 	IloInt GetVar_Index();

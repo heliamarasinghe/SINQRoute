@@ -56,12 +56,13 @@ public:
 	static void traffic_matrix_printing(VlinkReqAryType&, IloInt&);
 	static void printing_meta_path(MetaSubPathAryType&, IloInt&, IloEnv&);
 
-	static void search_parent_node_position(VerticesAryType&, IloInt&, IloInt&, IloInt&);
+	static void searchParentVertIndx(VerticesAryType&, IloInt&, IloInt&, IloInt&);
 	static IloInt search_common_arc(IloNumArray&, IloNumArray&);
-	static void add_meta_path(MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloNumArray&, SnodesAryType&, IloInt&, IloEnv&);
+	static void add_meta_path(MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloNumArray&, SnodesAryType&, IloInt&, IloInt&, IloNumArray&, IloEnv&);
 	static IloInt search_vnp_request(VlinkReqAryType&,IloInt&, IloInt&, IloInt&, IloInt&);
 	IloInt couple_unicity(VlinkReqAryType&, IloInt&, IloInt&, IloInt&);
 	static IloInt findElementInVector(IloInt&, IloNumArray&, IloInt&);
+	static bool valExistInArray(IloInt&, IloNumArray&, IloInt&);
 	static IloInt check_node_connected(VlinkReqAryType&, IloInt&, IloInt&, IloInt&, IloInt&);
 	static void  search_candidate_location(IloInt&, VnodeReqAryType&, IloInt&, IloNumArray&, IloInt&);
 	static IloInt check_src_dest_adjanticity(IloInt&, IloInt&, SnodesAryType&, IloEnv&);

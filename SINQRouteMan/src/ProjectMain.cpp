@@ -36,7 +36,14 @@ int main (int  argc, char** argv){
 	/*8*/
 	bool deployOnNet = false;
 
-	int MAXTSLOT = 1, currTslot = 0;
+	// ---------------- vlink Embedding with Backup --------------------
+	int bkup = 2;		//		0 - No backup
+						//		1 - with SLRG aware backup
+						//		2 - with shared backup
+	// -----------------------------------------------------------------
+
+
+	int MAXTSLOT = 4, currTslot = 3;
 	/* 1. Discover switches and links and generate substrate topology */
 	if(initGenTopo){
 		//if(getSwitches)
@@ -91,11 +98,14 @@ int main (int  argc, char** argv){
 				//NodeEmbedder::embedInitNodes();
 			}
 			else{
-				//TrafficGenerator::generatePeriodicTraffic(currTslot);
-				//NodeEmbedder::embedPeriodicNodes(currTslot);
+				TrafficGenerator::generatePeriodicTraffic(currTslot);
+				NodeEmbedder::embedPeriodicNodes(currTslot, bkup);
 			}
-			//f14_ph2RemovedAddedPaths = LinkEmbedder::embedPeriodicLinks(currTslot);	//Works for both init and periodic
-			f14_ph2RemovedAddedPaths = LinkEmbedder::embedLinksWithBkup(currTslot);		//Works for both init and periodic
+			// Link embedding Works with both init and periodic
+			if(bkup==0)f14_ph2RemovedAddedPaths = LinkEmbedder::embedPeriodicLinks(currTslot);		// Embedding without backup paths
+			//else if(bkup==1)f14_ph2RemovedAddedPaths = LinkEmbedder::embedLinksWithSlrgBkup(currTslot);	// Embeding with SLRG aware backups
+			else if(bkup==2)f14_ph2RemovedAddedPaths = LinkEmbedder::embedLinksWithBkup(currTslot);	// Embedding with shared backups
+
 			if(deployOnNet)SdnCtrlClient::addRemovePaths(f14_ph2RemovedAddedPaths);
 		}
 

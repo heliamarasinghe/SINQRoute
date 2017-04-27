@@ -32,8 +32,8 @@ void  NodeEmbedder::shortest_path(SnodesAryType& Vect_Substrate_Graph,  MetaSubP
 	arrayZeroInitialize(table_adj, MAX_SIZE);
 	Vect_Substrate_Graph[(IloInt)(candidSrcSnode-1)].getAdjSnodeAry(table_adj);
 
-	node_arb[compteur_noeud].setVerticeId((int)id_node);
-	node_arb[compteur_noeud].setCurrent((int)candidSrcSnode);
+	node_arb[compteur_noeud].setVerticeId(id_node);
+	node_arb[compteur_noeud].setCurrent(candidSrcSnode);
 	node_arb[compteur_noeud].setPrevious(0);
 	node_arb[compteur_noeud].setAdjNodeArray(table_adj);
 
@@ -75,7 +75,7 @@ void  NodeEmbedder::shortest_path(SnodesAryType& Vect_Substrate_Graph,  MetaSubP
 	if ((src_dest_are_adjacents) && (nb_in_out_link == 1))
 		max_paths = 1;
 	else
-		max_paths = NB_MAX_PATH;
+		max_paths = ACTV_PER_VL;
 
 	//-----------------------------------
 	//   H shortest paths iteration     -
@@ -101,9 +101,9 @@ void  NodeEmbedder::shortest_path(SnodesAryType& Vect_Substrate_Graph,  MetaSubP
 			nbr_path++;
 
 
-		node_arb[compteur_noeud].setVerticeId((int)id_node);
-		node_arb[compteur_noeud].setCurrent((int)pere);
-		node_arb[compteur_noeud].setPrevious((int)precedent);
+		node_arb[compteur_noeud].setVerticeId(id_node);
+		node_arb[compteur_noeud].setCurrent(pere);
+		node_arb[compteur_noeud].setPrevious(precedent);
 
 		arrayZeroInitialize(table_adj, MAX_SIZE);
 
@@ -160,6 +160,8 @@ void  NodeEmbedder::shortest_path(SnodesAryType& Vect_Substrate_Graph,  MetaSubP
 			l=i;
 			IloNumArray node_tab(env, MAX_SIZE);
 			arrayZeroInitialize(node_tab, MAX_SIZE);
+			IloNumArray bkupSlinkBwReqAry(env, MAX_SIZE);
+			arrayZeroInitialize(bkupSlinkBwReqAry, MAX_SIZE);
 			IloInt nbre_node=0;
 			node_tab[nbre_node] = (IloNum)candidDestSnode;
 			nbre_node++;
@@ -168,7 +170,7 @@ void  NodeEmbedder::shortest_path(SnodesAryType& Vect_Substrate_Graph,  MetaSubP
 			while ((find_src==0)&&(find_cycle==0))
 			{
 				precedent = (IloInt) node_arb[l].getPrevious();
-				search_parent_node_position(node_arb,compteur_noeud ,precedent, l);
+				searchParentVertIndx(node_arb,compteur_noeud ,precedent, l);
 				parent_node = (IloInt) node_arb[l].getCurrent();
 
 				if (parent_node == candidSrcSnode)
@@ -190,7 +192,8 @@ void  NodeEmbedder::shortest_path(SnodesAryType& Vect_Substrate_Graph,  MetaSubP
 
 			if (find_cycle == 0)
 			{
-				add_meta_path(Path_Vect, candidSrcSnode, candidDestSnode, request_id, vnpId, vLinkId, node_tab, Vect_Substrate_Graph, numOfShortestPaths, env);
+				IloInt sumSlinkCost = nbre_node-1; //sumSlinkCost = nbre_node-1. This is because when linkCost==1, pathCost == number of links
+				add_meta_path(Path_Vect, candidSrcSnode, candidDestSnode, request_id, vnpId, vLinkId, node_tab, Vect_Substrate_Graph, numOfShortestPaths, sumSlinkCost, bkupSlinkBwReqAry,  env);
 				compteur_chemins++;
 			}
 

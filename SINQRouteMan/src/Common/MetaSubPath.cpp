@@ -21,11 +21,13 @@ MetaSubPath::MetaSubPath() {
 	vnpId=0;
 	pathReqId=0;
 	numHops = 0;
+	pathEpstinCost = 0.0;
 
 	for(k=0;k<MAX_SIZE;k++)
 	{
 		usedSnodeAry[k]=0;
 		usedSlinkAry[k]=0;
+		bkSlBwUnitsReqAry[k] = 0.0;
 	}
 
 }
@@ -104,14 +106,13 @@ IloInt MetaSubPath::getNumHops()
 	return numHops;
 }
 
-void MetaSubPath::setPathCost(IloNum cost)
-{
-	pathCost=cost;
+void MetaSubPath::setEpstinPathCost(IloNum cost){
+	pathEpstinCost=cost;// This will return sum of slink cost considered in Eppstein shortest path algorithm
+	// Value is meaningful only for backup paths. For active paths, cost of each link is one
 }
-
-IloNum MetaSubPath::getPathCost()
-{
-	return pathCost;
+IloNum MetaSubPath::getEpstinPathCost(){
+	return pathEpstinCost;// This will return sum of slink cost considered in Eppstein shortest path algorithm
+	// Value is meaningful only for backup paths. For active paths, cost of each link is one
 }
 
 void MetaSubPath::SetUsedSnodeAry(IloNumArray& node_tab)
@@ -132,10 +133,19 @@ void MetaSubPath::setUsedSlinkAry(IloNumArray& arc_tab)
 		usedSlinkAry[i]=(int)arc_tab[i];
 }
 
-void MetaSubPath::getUsedSlinkAry(IloNumArray& arc_used_tab)
-{
+void MetaSubPath::getUsedSlinkAry(IloNumArray& arc_used_tab){
 	for(IloInt i=0;i<MAX_SIZE;i++)
 		arc_used_tab[i]= usedSlinkAry[i];
+}
+
+void MetaSubPath::setBkSlBwUnitsReqAry(IloNumArray& bwUniReqAry){
+	for(IloInt i=0;i<MAX_SIZE;i++)
+		bkSlBwUnitsReqAry[i]=bwUniReqAry[i];
+}
+
+void MetaSubPath::getBkSlBwUnitsReqAry(IloNumArray& bwUniReqAry){
+	for(IloInt i=0;i<MAX_SIZE;i++)
+		bwUniReqAry[i]= bkSlBwUnitsReqAry[i];
 }
 
 

@@ -162,9 +162,9 @@ void NodeEmbedder::embedInitNodes(){
 			file4>>vnp_id>>nb_vnodes>>nb_vlinks>>period;
 			//	 1~20	 3~4		3~6			0
 
-			VN_Request_Topology_Vect[itr].SetVLink_Number(nb_vlinks);
-			VN_Request_Topology_Vect[itr].SetVNode_Number(nb_vnodes);
-			VN_Request_Topology_Vect[itr].SetVNP_Id(vnp_id);
+			VN_Request_Topology_Vect[itr].setVlinkCount(nb_vlinks);
+			VN_Request_Topology_Vect[itr].setVnodeCount(nb_vnodes);
+			VN_Request_Topology_Vect[itr].setVnpId(vnp_id);
 
 			//cout<<"\tvnp_id: "<<vnp_id<<"\tnb_vnodes: "<<nb_vnodes<<"\tnb_vlinks: "<<nb_vlinks<<endl;
 

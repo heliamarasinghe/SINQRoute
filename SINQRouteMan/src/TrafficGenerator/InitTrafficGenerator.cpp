@@ -523,7 +523,7 @@ void TrafficGenerator::generateInitTraffic(){
 	 						//------------------------------------------------------------------------------------------
 
 
-							   MetaSubPathAryType       Path_Vect(env, nb_candidate_embdedding_nodes*NB_MAX_PATH);
+							   MetaSubPathAryType       Path_Vect(env, nb_candidate_embdedding_nodes*ACTV_PER_VL);
 
 							   for(j=0;j<nb_candidate_embdedding_nodes;j++)
 								  {

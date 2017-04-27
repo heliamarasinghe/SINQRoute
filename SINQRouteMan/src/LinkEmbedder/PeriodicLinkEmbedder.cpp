@@ -7,6 +7,7 @@
 
 #include "../LinkEmbedder/LinkEmbedder.h"
 
+
 char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 	cout<<"\n\t*** Executing Periodic Link Embedder ***"<<endl;
 
@@ -135,9 +136,9 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		for(IloInt i=0;i<NB_VNP;i++){
 			IloInt vnp_id=0, nb_vnodes=0, nb_vlinks=0, period=0;
 			f4>>vnp_id>>nb_vnodes>>nb_vlinks>>period;
-			VN_Request_Topology_Vect[i].SetVLink_Number(nb_vlinks);
-			VN_Request_Topology_Vect[i].SetVNode_Number(nb_vnodes);
-			VN_Request_Topology_Vect[i].SetVNP_Id(vnp_id);
+			VN_Request_Topology_Vect[i].setVlinkCount(nb_vlinks);
+			VN_Request_Topology_Vect[i].setVnodeCount(nb_vnodes);
+			VN_Request_Topology_Vect[i].setVnpId(vnp_id);
 		}
 		f4.close();
 
@@ -170,7 +171,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		IloNumArray accepted_vnp_id_tab(env,NB_VNP );
 		arrayZeroInitialize(accepted_vnp_id_tab, NB_VNP);
 		IloInt nb_accepted_vnp=0;
-		if(LINK_DBG){
+		if(LINK_DBG0){
 			cout<<"\n\t nb_vnode = "<<nb_vnode<<endl;
 			cout<<"\n\tPrinting Preliminary_Node_Embedding_Vect: \t\tsize = "<<Preliminary_Node_Embedding_Vect.getSize()<<endl;
 			cout<<"\t\tvnode\tvnp_id\tsnode\tcls\tperiod"<<endl;
@@ -178,7 +179,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		for(IloInt i=0;i<nb_vnode;i++){
 			IloInt vnode=0, vnp_id=0, snode=0, cls=0, period=0;
 			f8>>vnode>>vnp_id>>snode>>cls>>period;
-			if(LINK_DBG)cout<<"\t\t"<<vnode<<"\t"<<vnp_id<<"\t"<<snode<<"\t"<<cls<<"\t"<<period<<endl;
+			if(LINK_DBG0)cout<<"\t\t"<<vnode<<"\t"<<vnp_id<<"\t"<<snode<<"\t"<<cls<<"\t"<<period<<endl;
 			Preliminary_Node_Embedding_Vect[i].SetVirtual_Node_Id(vnode);
 			Preliminary_Node_Embedding_Vect[i].SetVNP_Id(vnp_id);
 			Preliminary_Node_Embedding_Vect[i].setCandidSnodeId(snode);
@@ -207,7 +208,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		f9>>acptdVlinkInCur;
 		VlinkReqAryType  retainedVlinkReqVect(env,rtndVlinkCountFrmPrv);
 		VlinkReqAryType  addedVlinkReqVect(env,acptdVlinkInCur);
-		if(LINK_DBG){
+		if(LINK_DBG0){
 			cout<<"\n\t Number of virtual link requests (NB_REQUEST) = "<<totVlinkEmbedPh1<<endl;
 			cout<<"\n\tPrinting vLinkReqVect: \t\tsize = "<<addedVlinkReqVect.getSize()<<endl;
 			cout<<"\t\titr\t vSrc\tvDest\tvLink\tclass\tbid\tvnp_id\tperiod"<<endl;
@@ -215,7 +216,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		for(IloInt j=0, i=0;i<totVlinkEmbedPh1;i++){
 			IloInt vLinkId=0, src=0, dest=0, clsQoS=0, bid=0, vnp_id=0, period=0;
 			f9>>src>>dest>>vLinkId>>clsQoS>>bid>>vnp_id>>period;
-			if(LINK_DBG)cout<<"\t\t"<<i<<"\t"<<src<<"\t"<<dest<<"\t"<<vLinkId<<"\t"<<clsQoS<<"\t"<<bid<<"\t"<<vnp_id<<"\t"<<period<<endl;
+			if(LINK_DBG0)cout<<"\t\t"<<i<<"\t"<<src<<"\t"<<dest<<"\t"<<vLinkId<<"\t"<<clsQoS<<"\t"<<bid<<"\t"<<vnp_id<<"\t"<<period<<endl;
 			if (i < rtndVlinkCountFrmPrv){
 				retainedVlinkReqVect[i].setSrcVnode(src);
 				retainedVlinkReqVect[i].setDestVnode(dest);
@@ -300,7 +301,8 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		IloNumArray  arc_list(env, vect_length);
 
 		for(IloInt i=0;i<embdVlinksInPrv;i++){
-			IloInt src=0, dest=0, cls=0, vnp_id=0, virtual_link_id=0, virtual_link_profit=0, cost=0, period=0;
+			IloInt src=0, dest=0, cls=0, vnp_id=0, virtual_link_id=0, period=0;
+			IloNum virtual_link_profit=0.0, cost=0.0;
 			prv_f11>>src>>dest>>cls>>vnp_id>>virtual_link_id>>virtual_link_profit>>cost>>period;
 			/*
 				10
@@ -352,11 +354,11 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setQosCls(cls);
 				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setVnpId(vnp_id);
 				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setVlinkId(virtual_link_id);
-				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setLinkProfit(virtual_link_profit);
-				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setCost(cost);
+				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setVlEmbdProfit(virtual_link_profit);
+				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setVlEmbdngCost(cost);
 				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setPeriod(period);
 				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setActvSlinkAry(arc_list);
-				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setUsedSnodeAry(node_list_prv);
+				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setActvSnodeAry(node_list_prv);
 				numRtndVlinkEmbdFound++;
 			}
 
@@ -366,11 +368,11 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setQosCls(cls);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setVnpId(vnp_id);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setVlinkId(virtual_link_id);
-				rmvdVlinkEmbedingVect[rmvdVlinkCount].setLinkProfit(virtual_link_profit);
-				rmvdVlinkEmbedingVect[rmvdVlinkCount].setCost(cost);
+				rmvdVlinkEmbedingVect[rmvdVlinkCount].setVlEmbdProfit(virtual_link_profit);
+				rmvdVlinkEmbedingVect[rmvdVlinkCount].setVlEmbdngCost(cost);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setPeriod(period);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setActvSlinkAry(arc_list);
-				rmvdVlinkEmbedingVect[rmvdVlinkCount].setUsedSnodeAry(node_list_prv);
+				rmvdVlinkEmbedingVect[rmvdVlinkCount].setActvSnodeAry(node_list_prv);
 				rmvdVlinkCount++;
 			}
 		}// end for routing paths
@@ -391,11 +393,15 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		adjacency_list_creation(Vect_Substrate_Graph, NB_NODE, env);
 		//substrate_graph_printing(Vect_Substrate_Graph, env, NB_NODE);
 
+		// bkupBwUnitsReqAry is only used in LinkEmbedderWithBkup
+		IloNumArray bkupBwUnitsReqAry(env, NB_LINK);
+		arrayZeroInitialize(bkupBwUnitsReqAry, NB_LINK);
+
 		//------------------------------------------------------------------------------------------
 		//                               Calculation of the Shortest path                          -
 		//------------------------------------------------------------------------------------------
 		cout<<"\n\t Calculating Shortest paths"<<endl;
-		IloInt nb_candidate_embedding_nodes = acptdVlinkInCur*NB_MAX_PATH;
+		IloInt nb_candidate_embedding_nodes = acptdVlinkInCur*ACTV_PER_VL;
 		MetaSubPathAryType       Path_Vect(env, nb_candidate_embedding_nodes);
 		IloInt numShortestPaths = 0;
 		for(IloInt j=0;j<acptdVlinkInCur;j++){
@@ -412,7 +418,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 			IloInt class_QoS = (IloInt) addedVlinkReqVect[j].getVlinkQosCls();
 			IloInt hops = (IloInt) Link_Class_QoS_Vect[class_QoS-1].GetQoS_Class_Max_Hops();
 			//cout<<"\t "<<j<<"\t "<<src_vlink<<"\t\t "<<dest_vlink<<"\t\t "<<virtual_link_id<<"\t\t "<<vnp_id<<"\t "<<src<<"\t\t "<<dest<<"\t\t "<<class_QoS<<"\t\t "<<hops<<endl;
-			shortest_path(Vect_Substrate_Graph, Path_Vect, src, dest, hops, request_id, vnp_id, virtual_link_id, numShortestPaths, env);
+			shortest_path(false, Vect_Substrate_Graph, Path_Vect, src, dest, hops, request_id, vnp_id, virtual_link_id, numShortestPaths, bkupBwUnitsReqAry, env);
 			//cout<<"\t Next"<<endl;
 		}
 
@@ -434,7 +440,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		IloNumVarArray x(env);   // used to decide on the embedding of VN on substrate nodes
 		IloNumVarArray z(env);     // used to decide on the acceptance of VNP request
 
-		VLink_Embedding_Trace_Tab  vlink_embedding_trace_x(env, acptdVlinkInCur*NB_MAX_PATH);
+		VLink_Embedding_Trace_Tab  vlink_embedding_trace_x(env, acptdVlinkInCur*ACTV_PER_VL);
 		VN_Embedding_Trace_Tab    embedding_trace_z(env,nb_accepted_vnp);
 
 		//******************************************************************************************************
@@ -585,9 +591,9 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 		for(IloInt i=0;i<nb_accepted_vnp;i++) {
 			IloNum current_value = (IloNum) zvals[i];
 			if (current_value > EPSELON_1){
-				IloInt vnp_id = (IloInt) embedding_trace_z[i].GetVNP_Id();
+				IloInt vnp_id = (IloInt) embedding_trace_z[i].getVnpId();
 
-				IloInt nb_vlinks = (IloInt) VN_Request_Topology_Vect[vnp_id-1].GetVLink_Number();
+				IloInt nb_vlinks = (IloInt) VN_Request_Topology_Vect[vnp_id-1].getVlinkCount();
 				nb_accepted_requests+=nb_vlinks;
 			}
 		}
@@ -751,11 +757,11 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 
 			IloInt vnp_id = (IloInt) rtndVlinkEmbeddingVect[i].getVnpId();
 			IloInt virtual_link_id = (IloInt) rtndVlinkEmbeddingVect[i].getVlinkId();
-			IloInt virtual_link_profit = (IloInt) rtndVlinkEmbeddingVect[i].getVlinkProfit();
-			IloInt cost = (IloInt) rtndVlinkEmbeddingVect[i].getCost();
+			IloInt virtual_link_profit = (IloInt) rtndVlinkEmbeddingVect[i].getVlEmbdProfit();
+			IloInt cost = (IloInt) rtndVlinkEmbeddingVect[i].getVlEmbdngCost();
 			IloInt period = (IloInt) rtndVlinkEmbeddingVect[i].getPeriod();
 			rtndVlinkEmbeddingVect[i].getActvSlinkAry(arc_list);
-			rtndVlinkEmbeddingVect[i].getUsedSnodeAry(node_list_prv);
+			rtndVlinkEmbeddingVect[i].getActvSnodeAry(node_list_prv);
 
 			Reserved_PIP_profit+=virtual_link_profit;
 			Reserved_PIP_cost+=cost;
@@ -846,10 +852,10 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 
 			IloInt vnp_id = (IloInt) path_embedding_tab[i].getVnpId();
 			IloInt virtual_link_id = (IloInt) path_embedding_tab[i].getVlinkId();
-			IloInt virtual_link_profit = (IloInt) path_embedding_tab[i].getVlinkProfit();
-			cost = (IloInt) path_embedding_tab[i].getCost();
+			IloInt virtual_link_profit = (IloInt) path_embedding_tab[i].getVlEmbdProfit();
+			cost = (IloInt) path_embedding_tab[i].getVlEmbdngCost();
 			path_embedding_tab[i].getActvSlinkAry(arc_list);
-			path_embedding_tab[i].getUsedSnodeAry(node_list_prv);
+			path_embedding_tab[i].getActvSnodeAry(node_list_prv);
 
 			PIP_profit+=virtual_link_profit;
 			PIP_cost+=cost;
@@ -1019,7 +1025,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 			f14<<rmvdVlinkEmbedingVect[i].getPeriod()<<"\t"<<rmvdVlinkEmbedingVect[i].getVnpId()<<"\t"<<rmvdVlinkEmbedingVect[i].getQosCls()<<"\t";
 			IloNumArray  node_list(env,vect_length);
 			arrayZeroInitialize(node_list,vect_length);
-			rmvdVlinkEmbedingVect[i].getUsedSnodeAry(node_list);
+			rmvdVlinkEmbedingVect[i].getActvSnodeAry(node_list);
 
 			IloInt k=0;
 			IloBool more_nodes = true;
@@ -1041,7 +1047,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 			f14<<current_period<<"\t"<<path_embedding_tab[i].getVnpId()<<"\t"<<path_embedding_tab[i].getQosCls()<<"\t";
 			IloNumArray  node_list(env,vect_length);
 			arrayZeroInitialize(node_list,vect_length);
-			path_embedding_tab[i].getUsedSnodeAry(node_list);
+			path_embedding_tab[i].getActvSnodeAry(node_list);
 
 			IloInt k=0;
 			IloBool more_nodes = true;

@@ -13,20 +13,27 @@
 
 class Vertice {
 private:
-	int verticeId;
-	int current;		//may be parent
-	int predecesseur;
-	int adjNodeAry[H_PATH];
+	IloInt verticeId;
+	IloInt current;		//may be parent
+	IloInt predecesseur;
+	IloInt preToCurCost;
+	IloInt adjNodeAry[H_PATH];
 public:
 	Vertice();
 	virtual ~Vertice();
 
-	void setVerticeId(int id);
-	int getVerticeId();
-	void setCurrent(int id);
-	int getCurrent();
-	void setPrevious(int pred);
-	int getPrevious();
+	void setVerticeId(IloInt id);
+	IloInt getVerticeId();
+
+	void setCurrent(IloInt id);
+	IloInt getCurrent();
+
+	void setPrevious(IloInt pred);
+	IloInt getPrevious();
+
+	void setPreToCurCost(IloInt slCost);
+	IloInt getPreToCurCost();
+
 	void setAdjNodeArray( IloNumArray& f_Tab);
 	void getAdjNodeArray(IloNumArray& f_Tab);
 };

@@ -20,7 +20,8 @@ private:
 	IloInt VNP_Id;
 	IloInt Bid;
 	IloInt Period;
-	int Candidate_Location_Tab[MAX_NB_LOCATION];
+	IloInt numAcbkPairs;
+	int acbkPairYindxAry[(ACTV_PER_VL*BKUP_PER_ACTV)];	// yIndxAry of active/backup pairs calculated for this vlink
 	//IloNum thetaMat[][];
 
 
@@ -49,8 +50,12 @@ public:
 	void SetPeriod(IloInt p);
 	IloInt getPeriod();
 
-	void SetCandidate_Location_Tab(IloNumArray& node_tab);
-	void GetCandidate_Location_Tab(IloNumArray& node_tab);
+	void setNumAcbkPairs(IloInt numPairs);
+	IloInt getNumAcbkPairs();
+
+	// yIndxAry of active/backup pairs calculated for this vlink
+	void setAcbkPairYindxAry(IloNumArray& yIndxAry);
+	void getAcbkPairYindxAry(IloNumArray& yIndxAry);
 
 	//void setDeltaMat(IloNum deltaMat[MAX_SIZE][MAX_SIZE]);
 	//void getDeltaMat(IloNum deltaMat[MAX_SIZE][MAX_SIZE]);

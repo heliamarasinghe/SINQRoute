@@ -77,3 +77,11 @@ void SubstrateNode::setConSlinkCostMap(std::map<IloInt, IloNum> conSlinkCostMap)
 std::map<IloInt, IloNum> SubstrateNode::getConSlinkCostMap(){
 	return this->conSlinkCostMap;
 }
+
+// For required backup bandwidth units from each slink
+/*void SubstrateNode::setBkupBwUnitsReqMap(std::map<IloInt, IloNum> bwUnitsReqMap){
+	this->bkupBwUnitsReqMap = bwUnitsReqMap;
+}
+std::map<IloInt, IloNum> SubstrateNode::getBkupBwUnitsReqMap(){
+	return this->bkupBwUnitsReqMap;
+}*/

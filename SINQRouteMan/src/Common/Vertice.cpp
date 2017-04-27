@@ -14,55 +14,48 @@ Vertice::Vertice()
 	verticeId = 0;
 	current=0;
 	predecesseur=0;
+	preToCurCost=0;
 	for(j=0;j<H_PATH;j++)
 		adjNodeAry[j]=0;
 }
 
-Vertice::~Vertice()
-{
+Vertice::~Vertice(){
 	// TODO Auto-generated destructor stub
 }
 
-void Vertice::setVerticeId(int id)
-{
+void Vertice::setVerticeId(IloInt id){
 	verticeId=id;
 }
-
-int Vertice::getVerticeId()
-{
+IloInt Vertice::getVerticeId(){
 	return verticeId;
 }
 
-void Vertice::setCurrent(int id)
-{
+void Vertice::setCurrent(IloInt id){
 	current=id;
 }
-
-int Vertice::getCurrent()
-{
+IloInt Vertice::getCurrent(){
 	return current;
 }
 
-void Vertice::setPrevious(int pred)
-{
+void Vertice::setPrevious(IloInt pred){
 	predecesseur = pred;
 }
-
-int Vertice::getPrevious()
-{
+IloInt Vertice::getPrevious(){
 	return predecesseur;
 }
 
-void Vertice::setAdjNodeArray( IloNumArray& f_Tab)
-{
-	int j;
-	for(j=0;j<H_PATH;j++)
-		adjNodeAry[j]= (int) f_Tab[j];
+void Vertice::setPreToCurCost(IloInt slCost){
+	preToCurCost = slCost;
+}
+IloInt Vertice::getPreToCurCost(){
+	return preToCurCost;
 }
 
-void Vertice::getAdjNodeArray(IloNumArray& f_Tab)
-{
-	int i;
-	for(i=0;i<H_PATH;i++)
+void Vertice::setAdjNodeArray(IloNumArray& f_Tab){
+	for(int j=0;j<H_PATH;j++)
+		adjNodeAry[j]= f_Tab[j];
+}
+void Vertice::getAdjNodeArray(IloNumArray& f_Tab){
+	for(int i=0;i<H_PATH;i++)
 		f_Tab[i]= adjNodeAry[i];
 }

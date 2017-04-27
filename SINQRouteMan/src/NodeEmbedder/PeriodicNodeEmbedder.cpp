@@ -7,7 +7,7 @@
 
 #include "../NodeEmbedder/NodeEmbedder.h"
 
-void NodeEmbedder::embedPeriodicNodes(int currTslot){
+void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 
 	cout<<"\n\t *** Periodic Node Embedder ***"<<endl;
 	int prevTslot = currTslot-1;
@@ -23,8 +23,13 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 	char f6_vnReqNode[50];
 	snprintf(f6_vnReqNode, sizeof(char) * 50, "DataFiles/t%i/f6_vnReqNode.txt", currTslot);					// currTslot/f6_vnReqNode.txt
 	//const char*  f11_ph2EmbeddedVnodes="DataFiles/t0/f11_ph2EmbeddedVnodes.txt";		
+
 	char prv_f11_ph2EmbeddedVnodes[50];
-	snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_ph2EmbeddedVnodes.txt", prevTslot); // prevTslot/f11_ph2EmbeddedVnodes.txt
+	if(bkup==0) snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_ph2EmbeddedVnodes.txt", prevTslot); // prevTslot/f11_ph2EmbeddedVnodes.txt
+	else if(bkup==1) snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_ph2EmbeddedVnodes.txt", prevTslot); // prevTslot/f11_ph2EmbeddedVnodes.txt
+	else if (bkup==2) snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/fbk11_ph2EmbeddedVnodes.txt", prevTslot); // prevTslot/fbk11_ph2EmbeddedVnodes.txt
+
+
 	char f7_vnReqLink[50];
 	snprintf(f7_vnReqLink, sizeof(char) * 50, "DataFiles/t%i/f7_vnReqLink.txt", currTslot);					// currTslot/f7_vnReqLink.txt
 
@@ -92,9 +97,9 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 		  {
               file4>>vnp_id>>nb_vnodes>>nb_vlinks>>period;
 
-			  VN_Request_Topology_Vect[i].SetVLink_Number((IloInt)nb_vlinks);
-			  VN_Request_Topology_Vect[i].SetVNode_Number((IloInt)nb_vnodes);
-			  VN_Request_Topology_Vect[i].SetVNP_Id((IloInt)vnp_id);
+			  VN_Request_Topology_Vect[i].setVlinkCount((IloInt)nb_vlinks);
+			  VN_Request_Topology_Vect[i].setVnodeCount((IloInt)nb_vnodes);
+			  VN_Request_Topology_Vect[i].setVnpId((IloInt)vnp_id);
 
 	       }
 
@@ -371,13 +376,11 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot){
 		 cout<<"\t nb_previous_vnode = "<<nb_previous_vnode<<endl;
 		 cout<<"\t vNode\t vnpId\t snode\t cls\t period"<<endl;
 
-		 for(i=0;i<nb_previous_vnode;i++)
-		  {
+		 for(i=0;i<nb_previous_vnode;i++){
 			prv_file11>>vnode>>vnp_id>>snode>>cls>>period;
 			cout<<"\t "<<vnode<<"\t "<<vnp_id<<"\t "<<snode<<"\t "<<cls<<"\t "<<period<<endl;
 
 			found = (IloInt) search_reserved_vnode(Reserved_Request_Vect, NB_RESERVED, vnode, vnp_id, period);
-
 			cout<<"found:"<<found<<endl;
 
 			if (found == 1)

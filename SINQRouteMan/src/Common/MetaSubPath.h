@@ -20,10 +20,11 @@ private:
 	IloInt vnpId;
 	IloInt pathReqId;
 	IloInt numHops;
-	IloNum pathCost;
+	IloNum pathEpstinCost;
 
 	int usedSnodeAry[MAX_SIZE];
 	int usedSlinkAry[MAX_SIZE];
+	IloNum bkSlBwUnitsReqAry[MAX_SIZE];
 
 public:
 	MetaSubPath();
@@ -51,13 +52,15 @@ public:
 	 void setNumHops(IloInt h);
 	 IloInt getNumHops();
 
-	 void setPathCost(IloNum cost);
-	 IloNum getPathCost();
+	 void setEpstinPathCost(IloNum epCost);// This will return sum of slink cost considered in Eppstein shortest path algorithm
+	 IloNum getEpstinPathCost();// Value is meaningful only for backup paths. For active paths, cost of each link is one
 
 	void SetUsedSnodeAry(IloNumArray& node_tab);
 	void getUsedSnodeAry(IloNumArray& node_used_tab);
 	void setUsedSlinkAry(IloNumArray& arc_tab);
 	void getUsedSlinkAry(IloNumArray& arc_used_tab);
+	void setBkSlBwUnitsReqAry(IloNumArray& bwUniReqAry);
+	void getBkSlBwUnitsReqAry(IloNumArray& bwUniReqAry);
 };
 
 #endif /* TRAFFICGENERATOR_METASUBSTRATEPATH_H_ */

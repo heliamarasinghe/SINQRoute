@@ -19,6 +19,7 @@ private:
 	int adjSnodeAry[MAX_SIZE];     // list of adjacents nodes in original graph
 	std::map<IloInt, IloInt> adjSnodeToSlinkMap;
 	std::map<IloInt, IloNum> conSlinkCostMap;
+	//std::map<IloInt, IloNum> bkupBwUnitsReqMap;
 public:
 	SubstrateNode();
 	virtual ~SubstrateNode();
@@ -37,6 +38,10 @@ public:
 	// For backup link costs (beta values)
 	void setConSlinkCostMap(std::map<IloInt, IloNum> adjNodeCostMap);
 	std::map<IloInt, IloNum> getConSlinkCostMap();
+
+	// For required backup bandwidth units from each slink
+	//void setBkupBwUnitsReqMap(std::map<IloInt, IloNum> bwUnitsReqMap);
+	//std::map<IloInt, IloNum> getBkupBwUnitsReqMap();
 };
 
 #endif /* TRAFFICGENERATOR_SUBSTRATENODE_H_ */

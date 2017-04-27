@@ -10,56 +10,84 @@
 #include "ConstantsCOMMON.h"
 
 class  SubstratePath
- {
-  private:
-    IloInt srcSnode;
+{
+private:
+	IloInt srcSnode;
 	IloInt dstSnode;
 	IloInt qosCls;
 	IloInt vnpId;
 	IloInt vlinkId;
-	IloInt linkProfit;
-	IloInt cost;
+	IloNum vlEmbdProfit;
+	IloNum vlEmbdngCost;
 	IloInt period;
 
-    int usedSnodeAry[3*MAX_SIZE];
-    int actvSlinkAry[3*MAX_SIZE];
-    int bkupSlinkAry[3*MAX_SIZE];
+	IloInt acbkPairId;
+	IloInt numActvHops;
+	IloInt numBkupHops;
+	//IloInt actvPthCost;
+	//IloInt bkupPthCost;
 
-    public:
-     SubstratePath();
+	int actvSnodeAry[MAX_SIZE];		// previously 3*MAX_SIZE]
+	int bkupSnodeAry[MAX_SIZE];
+	int actvSlinkAry[MAX_SIZE];		// previously 3*MAX_SIZE]
+	int bkupSlinkAry[MAX_SIZE];		// previously 3*MAX_SIZE]
 
-     void setSrcSnode(IloInt s);
-     IloInt getSrcSnode();
+public:
+	SubstratePath();
 
-	 void setDstSnode(IloInt d);
-     IloInt getDstSnode();
+	void setSrcSnode(IloInt s);
+	IloInt getSrcSnode();
 
-	 void setQosCls(IloInt q);
-     IloInt getQosCls();
+	void setDstSnode(IloInt d);
+	IloInt getDstSnode();
 
-	 void setVnpId(IloInt v);
-     IloInt getVnpId();
+	void setQosCls(IloInt q);
+	IloInt getQosCls();
 
-	 void setVlinkId(IloInt b);
-     IloInt getVlinkId();
+	void setVnpId(IloInt v);
+	IloInt getVnpId();
 
-	 void setLinkProfit(IloInt p);
-     IloInt getVlinkProfit();
+	void setVlinkId(IloInt b);
+	IloInt getVlinkId();
 
-	void setCost(IloInt c);
-    IloInt getCost();
+	void setVlEmbdProfit(IloNum p);
+	IloNum getVlEmbdProfit();
+
+	void setVlEmbdngCost(IloNum cost);
+	IloNum getVlEmbdngCost();
 
 	void setPeriod(IloInt p);
-    IloInt getPeriod();
+	IloInt getPeriod();
 
-     void setUsedSnodeAry(IloNumArray& snodeAry);
-     void getUsedSnodeAry(IloNumArray& snodeAry);
+	// ------------------ Actve/backup additions---------------
 
-     void setActvSlinkAry(IloNumArray& slinkAry);
-     void getActvSlinkAry(IloNumArray& slinkAry);
+	void setAcbkPairId(IloInt acbkId);
+	IloInt getAcbkPairId();
 
-     void setBkupSlinkAry(IloNumArray& slinkAry);
-     void getBkupSlinkAry(IloNumArray& slinkAry);
- };
+	void setNumActvHops(IloInt acHops);
+	IloInt getNumActvHops();
+
+	void setNumBkupHops(IloInt bkHops);
+	IloInt getNumBkupHops();
+
+	//void setActvPthCost(IloInt c);
+	//IloInt getActvPthCost();
+
+	//void setBkupPthCost(IloInt bkCost);
+	//IloInt getBkupPthCost();
+
+
+	void setActvSnodeAry(IloNumArray& snodeAry);
+	void getActvSnodeAry(IloNumArray& snodeAry);
+
+	void setBkupSnodeAry(IloNumArray& snodeAry);
+	void getBkupSnodeAry(IloNumArray& snodeAry);
+
+	void setActvSlinkAry(IloNumArray& slinkAry);
+	void getActvSlinkAry(IloNumArray& slinkAry);
+
+	void setBkupSlinkAry(IloNumArray& slinkAry);
+	void getBkupSlinkAry(IloNumArray& slinkAry);
+};
 
 #endif /* COMMON_SUBSTRATEPATH_H_ */

@@ -10,24 +10,24 @@
 
 #include "ConstantsCOMMON.h"
 
-class VN_Request_Topology
+class VNRequestTopology
 {
  private:
- IloInt VLink_Number;
- IloInt VNode_Number;
- IloInt VNP_Id;
+ IloInt vlinkCount;
+ IloInt vnodeCount;
+ IloInt vnpId;
  public:
 
- VN_Request_Topology();
+ VNRequestTopology();
 
- IloInt GetVLink_Number();
- void SetVLink_Number(IloInt arc);
+ IloInt getVlinkCount();
+ void setVlinkCount(IloInt vlCount);
 
- IloInt GetVNode_Number();
- void SetVNode_Number(IloInt s);
+ IloInt getVNodeCount();
+ void setVnodeCount(IloInt nodeCount);
 
- IloInt GetVNP_Id();
- void SetVNP_Id(IloInt d);
+ IloInt getVnpId();
+ void setVnpId(IloInt id);
 };
 
 #endif /* COMPUTENODEEMBEDDER_VNREQUESTTOPOLOGY_H_ */

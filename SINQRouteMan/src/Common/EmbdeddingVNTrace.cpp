@@ -17,7 +17,7 @@ void Embdedding_VN_Trace::SetVNP_Id(IloInt id)
 {
 	VNP_Id=id;
 }
-IloInt Embdedding_VN_Trace::GetVNP_Id()
+IloInt Embdedding_VN_Trace::getVnpId()
 {
 	return VNP_Id;
 }

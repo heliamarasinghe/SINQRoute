@@ -9,23 +9,26 @@
 
 
 	MetaActvBkupPairs::MetaActvBkupPairs() {
-	IloInt k;
 	actvBkupPairId = 0;
 	srcVnode = 0;
 	dstVnode = 0;
+	srcSnode = 0;
+	dstSnode = 0;
 	vlinkId = 0;
 	vnpId = 0;
 	Candidate_Embdding_Nodes_Id=0;
 	actvPathId = 0;
 	bkupPathId = 0;
+	bkupEpstinCost = 0;
 	numActvHops = 0;
 	numBkupHops = 0;
 
-	for(k=0;k<MAX_SIZE;k++){
+	for(IloInt k=0;k<MAX_SIZE;k++){
 		actvSnodeAry[k]=0;
 		actvSlinkAry[k]=0;
 		bkupSnodeAry[k]=0;
 		bkupSlinkAry[k]=0;
+		bkSlBwUnitsReqAry[k] = 0.0;
 	}
 }
 
@@ -41,21 +44,35 @@ IloInt MetaActvBkupPairs::getActvBkupPairId(){
 }
 
 
-void MetaActvBkupPairs::setSrcVnode(IloInt src){
-	srcVnode = src;
+void MetaActvBkupPairs::setSrcVnode(IloInt vnode){
+	srcVnode = vnode;
 }
 IloInt MetaActvBkupPairs::getSrcVnode(){
 	return srcVnode;
 }
 
 
-void MetaActvBkupPairs::setDstVnode(IloInt dst){
-	dstVnode = dst;
+void MetaActvBkupPairs::setDstVnode(IloInt vnode){
+	dstVnode = vnode;
 }
 IloInt MetaActvBkupPairs::getDstVnode(){
 	return dstVnode;
 }
 
+void MetaActvBkupPairs::setSrcSnode(IloInt snode){
+	srcSnode = snode;
+}
+IloInt MetaActvBkupPairs::getSrcSnode(){
+	return srcSnode;
+}
+
+
+void MetaActvBkupPairs::setDstSnode(IloInt snode){
+	dstSnode = snode;
+}
+IloInt MetaActvBkupPairs::getDstSnode(){
+	return dstSnode;
+}
 
 void MetaActvBkupPairs::setVlinkId(IloInt vlink){
 	vlinkId=vlink;
@@ -96,6 +113,13 @@ IloInt MetaActvBkupPairs::getBkupPathId(){
 	return bkupPathId;
 }
 
+void MetaActvBkupPairs::setBkupEpstinCost(IloNum pathCost){
+	bkupEpstinCost = pathCost;
+}
+IloNum MetaActvBkupPairs::getBkupEpstinCost(){
+	return bkupEpstinCost;
+}
+
 
 void MetaActvBkupPairs::setNumActvHops(IloInt hops){
 	numActvHops=hops;
@@ -114,52 +138,51 @@ IloInt MetaActvBkupPairs::getNumBkupHops(){
 
 
 void MetaActvBkupPairs::setActvSnodeAry(IloNumArray& snodeAry){
-	IloInt i;
-	for(i=0;i<MAX_SIZE;i++)
+	for(IloInt i=0;i<MAX_SIZE;i++)
 		actvSnodeAry[i]=(int)snodeAry[i];
 }
 void MetaActvBkupPairs::getActvSnodeAry(IloNumArray& snodeAry){
-	IloInt i;
-	for(i=0;i<MAX_SIZE;i++)
-		actvSnodeAry[i]= snodeAry[i];
+	for(IloInt i=0;i<MAX_SIZE;i++)
+		snodeAry[i] = actvSnodeAry[i];
 }
 
 
 void MetaActvBkupPairs::setBkupSnodeAry(IloNumArray& snodeAry){
-	IloInt i;
-	for(i=0;i<MAX_SIZE;i++)
+	for(IloInt i=0;i<MAX_SIZE;i++)
 		bkupSnodeAry[i]=(int)snodeAry[i];
 }
 void MetaActvBkupPairs::getBkupSnodeAry(IloNumArray& snodeAry){
-	IloInt i;
-	for(i=0;i<MAX_SIZE;i++)
-		bkupSnodeAry[i]= snodeAry[i];
+	for(IloInt i=0;i<MAX_SIZE;i++)
+		snodeAry[i] = bkupSnodeAry[i];
 }
 
 
 void MetaActvBkupPairs::setActvSlinkAry(IloNumArray& slinkAry){
-	IloInt i;
-	for(i=0;i<MAX_SIZE;i++)
+	for(IloInt i=0;i<MAX_SIZE;i++)
 		actvSlinkAry[i]=(int)slinkAry[i];
 }
 void MetaActvBkupPairs::getActvSlinkAry(IloNumArray& slinkAry){
-	IloInt i;
-	for(i=0;i<MAX_SIZE;i++)
-		actvSlinkAry[i]= slinkAry[i];
+	for(IloInt i=0;i<MAX_SIZE;i++)
+		slinkAry[i] = actvSlinkAry[i];
 }
 
 
 void MetaActvBkupPairs::setBkupSlinkAry(IloNumArray& slinkAry){
-	IloInt i;
-	for(i=0;i<MAX_SIZE;i++)
+	for(IloInt i=0;i<MAX_SIZE;i++)
 		bkupSlinkAry[i]=(int)slinkAry[i];
 }
 void MetaActvBkupPairs::getBkupSlinkAry(IloNumArray& slinkAry){
-	IloInt i;
-	for(i=0;i<MAX_SIZE;i++)
-		bkupSlinkAry[i]= slinkAry[i];
+	for(IloInt i=0;i<MAX_SIZE;i++)
+		slinkAry[i] = bkupSlinkAry[i];
 }
 
 
-
+void MetaActvBkupPairs::setBkSlBwUnitsReqAry(IloNumArray& bwUniReqAry){
+	for(IloInt i=0;i<MAX_SIZE;i++)
+		bkSlBwUnitsReqAry[i]=bwUniReqAry[i];
+}
+void MetaActvBkupPairs::getBkSlBwUnitsReqAry(IloNumArray& bwUniReqAry){
+	for(IloInt i=0;i<MAX_SIZE;i++)
+		bwUniReqAry[i] = bkSlBwUnitsReqAry[i];
+}
 

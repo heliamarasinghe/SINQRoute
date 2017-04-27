@@ -79,7 +79,8 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
 	    IloInt src_emb=0, dest_emb=0, emb_path_cost=0, src_emb_index=0, dest_emb_index=0, next_virtual_link_id=0;
 	    IloInt vn_node=0, cpu_node_requirement=0, link=0, virtual_link_id=0, nb_hops=0, num_candidate_embedding_nodes=0;
 
-		IloInt current_virtual_link_id=0, current_vnp_id=0, vlink_src=0, vlink_dest=0, length=0, next_virtual_link=0, virtual_link_profit=0;
+		IloInt current_virtual_link_id=0, current_vnp_id=0, vlink_src=0, vlink_dest=0, length=0, next_virtual_link=0;
+		IloNum cost=0.0, virtual_link_profit=0.0;
 
 		IloInt period=0, NB_RESERVED=0, NB_ADD=0, PIP_profit=0, PIP_cost=0, nb_used_node=0, nb_used_arc=0, nb_embedding_path=0, vect_length=MAX_SIZE;
 
@@ -87,7 +88,7 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
 		IloInt nb_vnode=0, reserved_cpu=0, current_arc=0, src_vlink=0, dest_vlink=0, current_vlink=0, link_cost=0, nb_accepted_vnp=0;
 	    IloInt nb_accepted_req=0, cpu=0, loc=0, src_cpu=0, dest_cpu=0, memory=0, storage=0, blade=0, length_vect=0, vlink_src_cls=0, vlink_dest_cls=0;
 
-		IloInt  nb_cand_vnp_vlink=0, nb_cand_vnp_vnode=0, served_vnp_id=0, nb_previous_vnode=0, nb_new_requests=0, cost=0;
+		IloInt  nb_cand_vnp_vlink=0, nb_cand_vnp_vnode=0, served_vnp_id=0, nb_previous_vnode=0, nb_new_requests=0;
 		IloInt   Reserved_PIP_profit=0, Reserved_PIP_cost=0, reserved_bw =0, nb_reserved_total_path_hops=0, Nb_reserved_vnode=0, nb_previous_requests=0;
 
 
@@ -111,9 +112,9 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
     		  {
                   file4>>vnp_id>>nb_vnodes>>nb_vlinks>>period;
 
-    			  VN_Request_Topology_Vect[i].SetVLink_Number((IloInt)nb_vlinks);
-    			  VN_Request_Topology_Vect[i].SetVNode_Number((IloInt)nb_vnodes);
-    			  VN_Request_Topology_Vect[i].SetVNP_Id((IloInt)vnp_id);
+    			  VN_Request_Topology_Vect[i].setVlinkCount((IloInt)nb_vlinks);
+    			  VN_Request_Topology_Vect[i].setVnodeCount((IloInt)nb_vnodes);
+    			  VN_Request_Topology_Vect[i].setVnpId((IloInt)vnp_id);
 
     	       }
 
@@ -468,12 +469,12 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
     					Reserved_embedding_Vect[NB_Reserved_Requests].setQosCls(cls);
     					Reserved_embedding_Vect[NB_Reserved_Requests].setVnpId(vnp_id);
     					Reserved_embedding_Vect[NB_Reserved_Requests].setVlinkId(virtual_link_id);
-    					Reserved_embedding_Vect[NB_Reserved_Requests].setLinkProfit(virtual_link_profit);
-    					Reserved_embedding_Vect[NB_Reserved_Requests].setCost(cost);
+    					Reserved_embedding_Vect[NB_Reserved_Requests].setVlEmbdProfit(virtual_link_profit);
+    					Reserved_embedding_Vect[NB_Reserved_Requests].setVlEmbdngCost(cost);
     					Reserved_embedding_Vect[NB_Reserved_Requests].setPeriod(period);
 
     					Reserved_embedding_Vect[NB_Reserved_Requests].setActvSlinkAry(arc_list);
-    					Reserved_embedding_Vect[NB_Reserved_Requests].setUsedSnodeAry(node_list_prv);
+    					Reserved_embedding_Vect[NB_Reserved_Requests].setActvSnodeAry(node_list_prv);
 
     					NB_Reserved_Requests++;
 
@@ -485,11 +486,11 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
     				   Removed_request_Vect[remPathCount].setQosCls(cls);
     				   Removed_request_Vect[remPathCount].setVnpId(vnp_id);
     				   Removed_request_Vect[remPathCount].setVlinkId(virtual_link_id);
-    				   Removed_request_Vect[remPathCount].setLinkProfit(virtual_link_profit);
-    				   Removed_request_Vect[remPathCount].setCost(cost);
+    				   Removed_request_Vect[remPathCount].setVlEmbdProfit(virtual_link_profit);
+    				   Removed_request_Vect[remPathCount].setVlEmbdngCost(cost);
     				   Removed_request_Vect[remPathCount].setPeriod(period);
     				   Removed_request_Vect[remPathCount].setActvSlinkAry(arc_list);
-    				   Removed_request_Vect[remPathCount].setUsedSnodeAry(node_list_prv);
+    				   Removed_request_Vect[remPathCount].setActvSnodeAry(node_list_prv);
     				   remPathCount++;
     			   }
 
@@ -507,12 +508,16 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
 
              cout<<"\tnb_previous_requests:"<<NB_Reserved_Requests<<endl;
 
+             // bkupBwUnitsReqAry is only used in LinkEmbedderWithBkup
+             IloNumArray bkupBwUnitsReqAry(env, NB_LINK);
+             arrayZeroInitialize(bkupBwUnitsReqAry, NB_LINK);
+
      	    //------------------------------------------------------------------------------------------
     	 	//                               Calculation of the Shortest path                          -
     	 	//------------------------------------------------------------------------------------------
 
              cout<<"\n\t Calculating Shortest paths"<<endl;
-    	       nb_candidate_embedding_nodes = NB_ADD*NB_MAX_PATH;
+    	       nb_candidate_embedding_nodes = NB_ADD*ACTV_PER_VL;
     	       MetaSubPathAryType       Path_Vect(env, nb_candidate_embedding_nodes);
 
     	       //cout<<"\t Path_Vect.size = "<<Path_Vect.getSize()<<endl;
@@ -521,8 +526,7 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
     	       //cout<<"\t Added_Request_Vect.size = "<<Added_Request_Vect.getSize()<<endl;
     	       //cout<<"\t Preliminary_Node_Embedding_Vect.size = "<<Preliminary_Node_Embedding_Vect.getSize()<<endl;
     	       //cout<<"\t itr\t vLinkSrc\t vLinkDest\t vLinkId\t vnp_id\t srcSubNode\t destSubNode\t class_QoS\t hops"<<endl;
-    	       for(j=0;j<NB_ADD;j++)
-    	          {
+    	       for(j=0;j<NB_ADD;j++){
 
     				 src_vlink = (IloInt)  Added_Request_Vect[j].getSrcVnode();
     	        	 dest_vlink = (IloInt) Added_Request_Vect[j].getDestVnode();
@@ -540,7 +544,7 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
 
 
 
-    	        	 shortest_path(Vect_Substrate_Graph, Path_Vect, src, dest, hops, request_id, vnp_id, virtual_link_id, COUNT_PATH, env);
+    	        	 shortest_path(false, Vect_Substrate_Graph, Path_Vect, src, dest, hops, request_id, vnp_id, virtual_link_id, COUNT_PATH, bkupBwUnitsReqAry, env);
     	        	 //cout<<"\t Next"<<endl;
     	          }
 
@@ -567,7 +571,7 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
     	   IloNumVarArray x(env);   // used to decide on the embedding of VN on substrate nodes
     	   IloNumVarArray z(env);     // used to decide on the acceptance of VNP request
 
-    	   VLink_Embedding_Trace_Tab  vlink_embedding_trace_x(env, NB_ADD*NB_MAX_PATH);
+    	   VLink_Embedding_Trace_Tab  vlink_embedding_trace_x(env, NB_ADD*ACTV_PER_VL);
             VN_Embedding_Trace_Tab    embedding_trace_z(env,nb_accepted_vnp);
 
          //******************************************************************************************************
@@ -788,9 +792,9 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
     		for(i=0;i<nb_accepted_vnp;i++) {
     			 IloNum current_value = (IloNum) zvals[i];
     			if (current_value > EPSELON_1){
-    				 vnp_id = (IloInt) embedding_trace_z[i].GetVNP_Id();
+    				 vnp_id = (IloInt) embedding_trace_z[i].getVnpId();
 
-                    nb_vlinks = (IloInt) VN_Request_Topology_Vect[vnp_id-1].GetVLink_Number();
+                    nb_vlinks = (IloInt) VN_Request_Topology_Vect[vnp_id-1].getVlinkCount();
     				nb_accepted_requests+=nb_vlinks;
     			 }
     		 }
@@ -950,11 +954,11 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
 
     			  vnp_id = (IloInt) Reserved_embedding_Vect[i].getVnpId();
                   virtual_link_id = (IloInt) Reserved_embedding_Vect[i].getVlinkId();
-                  virtual_link_profit = (IloInt) Reserved_embedding_Vect[i].getVlinkProfit();
-    			  cost = (IloInt) Reserved_embedding_Vect[i].getCost();
+                  virtual_link_profit = (IloInt) Reserved_embedding_Vect[i].getVlEmbdProfit();
+    			  cost = (IloInt) Reserved_embedding_Vect[i].getVlEmbdngCost();
     			  period = (IloInt) Reserved_embedding_Vect[i].getPeriod();
     			  Reserved_embedding_Vect[i].getActvSlinkAry(arc_list);
-    			  Reserved_embedding_Vect[i].getUsedSnodeAry(node_list_prv);
+    			  Reserved_embedding_Vect[i].getActvSnodeAry(node_list_prv);
 
     			  Reserved_PIP_profit+=virtual_link_profit;
     			  Reserved_PIP_cost+=cost;
@@ -1044,10 +1048,10 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
 
     			  vnp_id = (IloInt) path_embedding_tab[i].getVnpId();
                   virtual_link_id = (IloInt) path_embedding_tab[i].getVlinkId();
-                  virtual_link_profit = (IloInt) path_embedding_tab[i].getVlinkProfit();
-    			  cost = (IloInt) path_embedding_tab[i].getCost();
+                  virtual_link_profit = (IloInt) path_embedding_tab[i].getVlEmbdProfit();
+    			  cost = (IloInt) path_embedding_tab[i].getVlEmbdngCost();
     			  path_embedding_tab[i].getActvSlinkAry(arc_list);
-    			  path_embedding_tab[i].getUsedSnodeAry(node_list_prv);
+    			  path_embedding_tab[i].getActvSnodeAry(node_list_prv);
 
     			  PIP_profit+=virtual_link_profit;
     			  PIP_cost+=cost;
@@ -1217,7 +1221,7 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
 						file14<<Removed_request_Vect[i].getPeriod()<<"\t"<<Removed_request_Vect[i].getVnpId()<<"\t"<<Removed_request_Vect[i].getQosCls()<<"\t";
 						IloNumArray  node_list(env,vect_length);
 						arrayZeroInitialize(node_list,vect_length);
-						Removed_request_Vect[i].getUsedSnodeAry(node_list);
+						Removed_request_Vect[i].getActvSnodeAry(node_list);
 
 						IloInt k=0;
 						IloBool more_nodes = true;
@@ -1239,7 +1243,7 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
     					file14<<current_period<<"\t"<<path_embedding_tab[i].getVnpId()<<"\t"<<path_embedding_tab[i].getQosCls()<<"\t";
     					IloNumArray  node_list(env,vect_length);
     					arrayZeroInitialize(node_list,vect_length);
-    					path_embedding_tab[i].getUsedSnodeAry(node_list);
+    					path_embedding_tab[i].getActvSnodeAry(node_list);
 
     					IloInt k=0;
     					IloBool more_nodes = true;

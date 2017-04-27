@@ -16,11 +16,14 @@ private:
 	IloInt actvBkupPairId;
 	IloInt srcVnode;
 	IloInt dstVnode;
+	IloInt srcSnode;
+	IloInt dstSnode;
 	IloInt vlinkId;
 	IloInt vnpId;
 	IloInt Candidate_Embdding_Nodes_Id;
 	IloInt actvPathId;
 	IloInt bkupPathId;
+	IloNum bkupEpstinCost;
 	IloInt numActvHops;
 	IloInt numBkupHops;
 
@@ -28,6 +31,7 @@ private:
 	int actvSlinkAry[MAX_SIZE];
 	int bkupSnodeAry[MAX_SIZE];
 	int bkupSlinkAry[MAX_SIZE];
+	IloNum bkSlBwUnitsReqAry[MAX_SIZE];
 	//
 
 public:
@@ -37,11 +41,17 @@ public:
 	void setActvBkupPairId(IloInt pairId);
 	IloInt getActvBkupPairId();
 
-	void setSrcVnode(IloInt src);
+	void setSrcVnode(IloInt vnode);
 	IloInt getSrcVnode();
 
-	void setDstVnode(IloInt dst);
+	void setDstVnode(IloInt vnode);
 	IloInt getDstVnode();
+
+	void setSrcSnode(IloInt snode);
+	IloInt getSrcSnode();
+
+	void setDstSnode(IloInt snode);
+	IloInt getDstSnode();
 
 	void setVlinkId(IloInt vlinkId);
 	IloInt getVlinkId();
@@ -57,6 +67,9 @@ public:
 
 	void setBkupPathId(IloInt pathId);
 	IloInt getBkupPathId();
+
+	void setBkupEpstinCost(IloNum pathCost);
+	IloNum getBkupEpstinCost();
 
 	void setNumActvHops(IloInt hops);
 	IloInt getNumActvHops();
@@ -75,6 +88,9 @@ public:
 
 	void setBkupSlinkAry(IloNumArray& slinkAry);
 	void getBkupSlinkAry(IloNumArray& slinkAry);
+
+	void setBkSlBwUnitsReqAry(IloNumArray& bwUniReqAry);
+	void getBkSlBwUnitsReqAry(IloNumArray& bwUniReqAry);
 };
 
 #endif /* COMMON_METAACTVBKUPPAIRS_H_ */

@@ -16,9 +16,9 @@ VlinkRequest::VlinkRequest() {
 	VNP_Id=0;
 	Bid=0;
 	Period=0;
-	IloInt i=0;
-	for(i=0;i<MAX_NB_LOCATION;i++)
-		Candidate_Location_Tab[i]=0;
+	numAcbkPairs = 0;
+	for(IloInt i=0;i<(ACTV_PER_VL*BKUP_PER_ACTV);i++)
+		acbkPairYindxAry[i]=0;
 
 }
 
@@ -89,16 +89,21 @@ IloInt VlinkRequest::getPeriod()
 	return Period;
 }
 
-void VlinkRequest::SetCandidate_Location_Tab(IloNumArray& node_tab)
-{
-	IloInt i;
-	for(i=0;i<MAX_NB_LOCATION;i++)
-		Candidate_Location_Tab[i]=(int)node_tab[i];
+void VlinkRequest::setNumAcbkPairs(IloInt numPairs){
+	numAcbkPairs= numPairs;
+}
+IloInt VlinkRequest::getNumAcbkPairs(){
+	return numAcbkPairs;
 }
 
-void VlinkRequest::GetCandidate_Location_Tab(IloNumArray& node_tab)
+void VlinkRequest::setAcbkPairYindxAry(IloNumArray& yIndxAry)
 {
-	IloInt i;
-	for(i=0;i<MAX_NB_LOCATION;i++)
-		node_tab[i]= Candidate_Location_Tab[i];
+	for(IloInt i=0;i<(ACTV_PER_VL*BKUP_PER_ACTV);i++)
+		acbkPairYindxAry[i]=yIndxAry[i];
+}
+
+void VlinkRequest::getAcbkPairYindxAry(IloNumArray& yIndxAry)
+{
+	for(IloInt i=0;i<(ACTV_PER_VL*BKUP_PER_ACTV);i++)
+		yIndxAry[i]= acbkPairYindxAry[i];
 }

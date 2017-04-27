@@ -38,7 +38,7 @@ public:
 
 typedef IloArray<Embdedding_Virtual_Node_Trace> Virtual_Node_Embedding_tab; 	//  table to save trace of candidate substrate routing paths for VNP requests
 typedef IloArray<SubstratePath> Routing_Path_Tab; 						//  table to save selected substrate embedding path attributs
-typedef IloArray<VN_Request_Topology> VN_Request_Topology_Tab; 					//  table to save vn topology attributs
+typedef IloArray<VNRequestTopology> VN_Request_Topology_Tab; 					//  table to save vn topology attributs
 
 
 //------------------------------------------------------------------------------------------------------------------
@@ -49,7 +49,7 @@ typedef IloArray<VN_Request_Topology> VN_Request_Topology_Tab; 					//  table to
 //------------------------------------------------------------------------------------------------------------------
 
 static void embedInitNodes();
-static void embedPeriodicNodes(int);
+static void embedPeriodicNodes(int, int);
 //void table_initialization(IloNumArray&, IloInt&);
 
 //void substrate_Graph_creation(Substrate_Graph_tab&, Substrate_Link_tab&, IloInt&, IloInt&, IloEnv&);

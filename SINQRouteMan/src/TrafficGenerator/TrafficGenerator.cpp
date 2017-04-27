@@ -40,8 +40,8 @@
   	arrayZeroInitialize(table_adj, length);
       tab_OG[(IloInt)(source-1)].getAdjSnodeAry(table_adj);
 
-      node_arb[compteur_noeud].setVerticeId((int)id_node);
-      node_arb[compteur_noeud].setCurrent((int)source);
+      node_arb[compteur_noeud].setVerticeId(id_node);
+      node_arb[compteur_noeud].setCurrent(source);
       node_arb[compteur_noeud].setPrevious(0);
       node_arb[compteur_noeud].setAdjNodeArray(table_adj);
 
@@ -83,7 +83,7 @@
   	 if ((src_dest_are_adjacents) && (nb_in_out_link == 1))
   	     max_paths = 1;
   	 else
-  		 max_paths = NB_MAX_PATH;
+  		 max_paths = ACTV_PER_VL;
 
       //-----------------------------------
       //   H shortest paths iteration     -
@@ -109,9 +109,9 @@
   				 nbr_path++;
 
 
-  				node_arb[compteur_noeud].setVerticeId((int)id_node);
-  				node_arb[compteur_noeud].setCurrent((int)pere);
-  				node_arb[compteur_noeud].setPrevious((int)precedent);
+  				node_arb[compteur_noeud].setVerticeId(id_node);
+  				node_arb[compteur_noeud].setCurrent(pere);
+  				node_arb[compteur_noeud].setPrevious(precedent);
 
   				arrayZeroInitialize(table_adj, length);
 
@@ -167,6 +167,8 @@
   		       find_src= 0;
   		       l=i;
   		       arrayZeroInitialize(node_tab, length);
+  		     IloNumArray bkupSlinkBwReqAry(env1, MAX_SIZE);
+  		     arrayZeroInitialize(bkupSlinkBwReqAry, MAX_SIZE);
   		       nbre_node=0;
   		       node_tab[nbre_node] = (IloNum)destination;
   		       nbre_node++;
@@ -200,7 +202,8 @@
   	    	   {
   	              if (find_cycle == 0)
   	                {
-  	    	           add_meta_path(chemins_tab, source, destination, request_num, vnp, link_id, node_tab, tab_OG, comp_path, env1);
+  	            	  	 IloInt sumSlinkCost = nbre_node-1; //sumSlinkCost = nbre_node-1. This is because when linkCost==1, pathCost == number of links
+  	    	           add_meta_path(chemins_tab, source, destination, request_num, vnp, link_id, node_tab, tab_OG, comp_path, sumSlinkCost, bkupSlinkBwReqAry, env1);
   	    	           compteur_chemins++;
       	           }
       	       }

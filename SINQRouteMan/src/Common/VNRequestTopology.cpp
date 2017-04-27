@@ -6,39 +6,32 @@
  */
 #include "VNRequestTopology.h"
 
-VN_Request_Topology::VN_Request_Topology()
- {
-  VLink_Number=0;
-  VNode_Number=0;
-  VNP_Id=0;
+VNRequestTopology::VNRequestTopology(){
+  vlinkCount=0;
+  vnodeCount=0;
+  vnpId=0;
  }
 
- IloInt VN_Request_Topology::GetVLink_Number()
- {
-	 return VLink_Number;
+ IloInt VNRequestTopology::getVlinkCount(){
+	 return vlinkCount;
  }
 
- void VN_Request_Topology::SetVLink_Number(IloInt arc)
- {
-	 VLink_Number=arc;
+ void VNRequestTopology::setVlinkCount(IloInt vlCount){
+	 vlinkCount=vlCount;
  }
 
- IloInt VN_Request_Topology::GetVNode_Number()
- {
-	 return VNode_Number;
+ IloInt VNRequestTopology::getVNodeCount(){
+	 return vnodeCount;
  }
 
- void VN_Request_Topology::SetVNode_Number(IloInt s)
- {
-	 VNode_Number=s;
+ void VNRequestTopology::setVnodeCount(IloInt nodeCount){
+	 vnodeCount=nodeCount;
  }
 
- IloInt VN_Request_Topology::GetVNP_Id()
- {
-	 return VNP_Id;
+ IloInt VNRequestTopology::getVnpId(){
+	 return vnpId;
  }
 
- void VN_Request_Topology::SetVNP_Id(IloInt d)
- {
-	 VNP_Id=d;
+ void VNRequestTopology::setVnpId(IloInt id){
+	 vnpId = id;
  }
