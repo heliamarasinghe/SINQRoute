@@ -34,7 +34,7 @@ const IloNum beta=0.1;
 const IloNum GAP = 0.0e-2;
 const IloNum EPSELON_1= 0.0001;
 const int MAX_ARC_NODE = 100;
-const IloInt SUBSTRATE_LINK_BW = 20;		// 20	= 20 Mbps		// periodic parameter for eu link
+const IloInt SUBSTRATE_LINK_BW = 40;		// 20	= 20 Mbps		// periodic parameter for eu link
 const IloInt SUBSTRATE_NODE_CPU = 8;		// 8	= 8 Cores		// periodic parameter for eu node
 const IloInt SUBSTRATE_NODE_MEM = 8;		// 8	= 8 Gb
 const IloInt SUBSTRATE_NODE_STO = 8;		// 8	= 80 Gb

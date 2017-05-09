@@ -14,7 +14,7 @@
 
 //----------------------------------------------------DEBUG Switches-----------------------------------------------------//
 const bool LINK_DBG0 = false;	// Reading Files
-const bool LINK_DBG1 = false;	// Active path calculation
+const bool LINK_DBG1 = true;	// Active path calculation
 const bool LINK_DBG2 = false;	// Active/backup pair calculation
 const bool LINK_DBG3 = false;	// Constraints
 const bool LINK_DBG4 = false;	// Objective Function
@@ -58,10 +58,11 @@ public:
 	//                                                                                                                 -
 	//------------------------------------------------------------------------------------------------------------------
 
-	static char* embedInitLinks();
+	//static char* embedInitLinks();
 	static char* embedPeriodicLinks(int);
 	static char* reEmbedBrokenLinks(int);
-	static char* embedLinksWithBkup(int);
+	static char* embedLinks_SharedBkup(int);
+	static char* embedLinks_SlrgBkup(int);
 
 	//void table_initialization(IloNumArray&, IloInt&);
 

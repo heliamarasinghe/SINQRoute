@@ -8,15 +8,23 @@
 #ifndef NODEEMBEDDER_NODEEMBEDDER_H_
 #define NODEEMBEDDER_NODEEMBEDDER_H_
 
-#include <cstdlib>
-#include <stdio.h>
-#include <math.h>
+//#include <cstdlib>
+//#include <stdio.h>
+//#include <math.h>
 #include <queue>
 #include <stdlib.h>
 #include <time.h>
 #include <ctime>
 #include "../Common/SDNInterDCQoS.h"
 #include "../ConstantsSPECIFIC.h"
+
+//----------------------------------------------------DEBUG Switches-----------------------------------------------------//
+const bool NODE_DBG0 = false;	// Reading Files
+const bool NODE_DBG1 = false;	// shortest path calculation
+const bool NODE_DBG2 = false;	// Embedding variables and Constraints
+const bool NODE_DBG3 = false;	// Objective Function
+const bool NODE_DBG4 = false;	// Embedding Result
+const bool NODE_DBG5 = false;	// Performance Evaluation
 
 class NodeEmbedder: public SDNInterDCQoS{
 public:

@@ -43,7 +43,7 @@
       node_arb[compteur_noeud].setVerticeId(id_node);
       node_arb[compteur_noeud].setCurrent(source);
       node_arb[compteur_noeud].setPrevious(0);
-      node_arb[compteur_noeud].setAdjNodeArray(table_adj);
+      node_arb[compteur_noeud].setAdjVertArray(table_adj);
 
       id_node++;
       compteur_noeud++;
@@ -95,8 +95,8 @@
   				while ((valid_node == 0)&&(!q.empty()))
   				 {
   					label = q.top().priority;
-  					precedent = q.top().previous;
-  					pere = q.top().current;
+  					precedent = q.top().predNodeRef;
+  					pere = q.top().currNodeId;
 
   					if ((pere != source) && (pere != last_node))
   					  valid_node=1;
@@ -146,7 +146,7 @@
 
   				   } // pere != destination
 
-  				   node_arb[compteur_noeud].setAdjNodeArray(table_adj);
+  				   node_arb[compteur_noeud].setAdjVertArray(table_adj);
   				   compteur_noeud++;
   				   id_node++;
 

@@ -15,15 +15,15 @@ Trace_vertice::~Trace_vertice() {
 Trace_vertice::Trace_vertice()
 {
 	priority = 0;
-	previous = 0;
-	current = 0;
+	predNodeRef = 0;
+	currNodeId = 0;
 }
 
 Trace_vertice::Trace_vertice(int pri, int pre, int per)
 {
 	priority = pri;
-	previous = pre;
-	current = per;
+	predNodeRef = pre;
+	currNodeId = per;
 }
 //Trace_sommet::Trace_sommet(): priority(0), precedent(0), pere(0){}
 //Trace_sommet::Trace_sommet(int pri, int pre, int per): priority(pri), precedent(pre), pere(per){}

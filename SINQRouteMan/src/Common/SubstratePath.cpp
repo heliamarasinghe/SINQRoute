@@ -148,8 +148,12 @@ void SubstratePath::getBkupSnodeAry(IloNumArray& snodeAry){
 		snodeAry[i]= bkupSnodeAry[i];
 }
 
+
+
 void SubstratePath::setActvSlinkAry(IloNumArray& slinkAry){
-	for(IloInt i=0; i<MAX_SIZE; i++)
+	if(numActvHops==0)
+			std::cerr<<"\tSubstratePath:: numActvHops must be set before actvSlinkAry"<<std::endl;
+	for(IloInt i=0; i<numActvHops; i++)
 		actvSlinkAry[i]=(int)slinkAry[i];
 }
 void SubstratePath::getActvSlinkAry(IloNumArray& slinkAry){
@@ -158,8 +162,10 @@ void SubstratePath::getActvSlinkAry(IloNumArray& slinkAry){
 }
 
 void SubstratePath::setBkupSlinkAry(IloNumArray& slinkAry){
-	for(IloInt i=0; i<MAX_SIZE; i++)
-		bkupSlinkAry[i]=(int)slinkAry[i];
+	if(numBkupHops==0)
+		std::cerr<<"\tSubstratePath:: numBkupHops must be set before bkupSlinkAry"<<std::endl;
+	for(IloInt i=0; i<numBkupHops; i++)
+		bkupSlinkAry[i]=slinkAry[i];
 }
 void SubstratePath::getBkupSlinkAry(IloNumArray& slinkAry){
 	for(IloInt i=0; i<MAX_SIZE; i++)

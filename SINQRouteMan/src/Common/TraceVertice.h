@@ -13,9 +13,9 @@
 
 class Trace_vertice {
 public:
-	int priority;
-	int previous;
-	int current;
+	int priority;		// Priority value
+	int predNodeRef;	// Predecessor Node Reference
+	int currNodeId;		// Current node ID
 
 	Trace_vertice();
 	virtual ~Trace_vertice();

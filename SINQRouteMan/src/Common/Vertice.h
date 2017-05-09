@@ -34,7 +34,7 @@ public:
 	void setPreToCurCost(IloInt slCost);
 	IloInt getPreToCurCost();
 
-	void setAdjNodeArray( IloNumArray& f_Tab);
+	void setAdjVertArray( IloNumArray& f_Tab);
 	void getAdjNodeArray(IloNumArray& f_Tab);
 };
 

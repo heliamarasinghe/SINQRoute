@@ -56,7 +56,7 @@ public:
 	static void traffic_matrix_printing(VlinkReqAryType&, IloInt&);
 	static void printing_meta_path(MetaSubPathAryType&, IloInt&, IloEnv&);
 
-	static void searchParentVertIndx(VerticesAryType&, IloInt&, IloInt&, IloInt&);
+	static void searchPredecessorVertIndx(VerticesAryType&, IloInt&, IloInt&, IloInt&);
 	static IloInt search_common_arc(IloNumArray&, IloNumArray&);
 	static void add_meta_path(MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloNumArray&, SnodesAryType&, IloInt&, IloInt&, IloNumArray&, IloEnv&);
 	static IloInt search_vnp_request(VlinkReqAryType&,IloInt&, IloInt&, IloInt&, IloInt&);

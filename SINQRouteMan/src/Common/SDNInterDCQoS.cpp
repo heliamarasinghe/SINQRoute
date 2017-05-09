@@ -332,7 +332,7 @@ void SDNInterDCQoS::printing_meta_path(MetaSubPathAryType& metaShtstPathVect, Il
 //                                     7 Search Parent Node Position                                 *
 //***************************************************************************************************
 
-void SDNInterDCQoS::searchParentVertIndx(VerticesAryType& verticeAry, IloInt& vertCount ,IloInt& search_node, IloInt& nodePosition)
+void SDNInterDCQoS::searchPredecessorVertIndx(VerticesAryType& verticeAry, IloInt& vertCount ,IloInt& search_node, IloInt& nodePosition)
 
 {
 	IloInt find_node=0, h=0 , node_id=0;
@@ -730,7 +730,7 @@ IloInt  SDNInterDCQoS::Check_nb_hops_in_shortest_path(SnodesAryType& tab_OG,  Il
 	node_arb[compteur_noeud].setVerticeId((int)id_node);
 	node_arb[compteur_noeud].setCurrent((int)source);
 	node_arb[compteur_noeud].setPrevious(0);
-	node_arb[compteur_noeud].setAdjNodeArray(table_adj);
+	node_arb[compteur_noeud].setAdjVertArray(table_adj);
 
 	id_node++;
 	compteur_noeud++;
@@ -784,8 +784,8 @@ IloInt  SDNInterDCQoS::Check_nb_hops_in_shortest_path(SnodesAryType& tab_OG,  Il
 		while ((valid_node == 0)&&(!q.empty()))
 		{
 			label = q.top().priority;
-			precedent = q.top().previous;
-			pere = q.top().current;
+			precedent = q.top().predNodeRef;
+			pere = q.top().currNodeId;
 
 			if ((pere != source) && (pere != last_node))
 				valid_node=1;
@@ -835,7 +835,7 @@ IloInt  SDNInterDCQoS::Check_nb_hops_in_shortest_path(SnodesAryType& tab_OG,  Il
 
 		} // pere != destination
 
-		node_arb[compteur_noeud].setAdjNodeArray(table_adj);
+		node_arb[compteur_noeud].setAdjVertArray(table_adj);
 		compteur_noeud++;
 		id_node++;
 
@@ -862,7 +862,7 @@ IloInt  SDNInterDCQoS::Check_nb_hops_in_shortest_path(SnodesAryType& tab_OG,  Il
 			while ((find_src==0)&&(find_cycle==0))
 			{
 				precedent = (IloInt) node_arb[l].getPrevious();
-				searchParentVertIndx(node_arb,compteur_noeud ,precedent, l);
+				searchPredecessorVertIndx(node_arb,compteur_noeud ,precedent, l);
 				parent_node = (IloInt) node_arb[l].getCurrent();
 
 				if (parent_node == source)

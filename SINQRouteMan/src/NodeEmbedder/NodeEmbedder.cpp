@@ -35,7 +35,7 @@ void  NodeEmbedder::shortest_path(SnodesAryType& Vect_Substrate_Graph,  MetaSubP
 	node_arb[compteur_noeud].setVerticeId(id_node);
 	node_arb[compteur_noeud].setCurrent(candidSrcSnode);
 	node_arb[compteur_noeud].setPrevious(0);
-	node_arb[compteur_noeud].setAdjNodeArray(table_adj);
+	node_arb[compteur_noeud].setAdjVertArray(table_adj);
 
 	id_node++;
 	compteur_noeud++;
@@ -87,8 +87,8 @@ void  NodeEmbedder::shortest_path(SnodesAryType& Vect_Substrate_Graph,  MetaSubP
 		while ((valid_node == 0)&&(!q.empty()))
 		{
 			label = q.top().priority;
-			precedent = q.top().previous;
-			pere = q.top().current;
+			precedent = q.top().predNodeRef;
+			pere = q.top().currNodeId;
 
 			if ((pere != candidSrcSnode) && (pere != last_node))
 				valid_node=1;
@@ -138,7 +138,7 @@ void  NodeEmbedder::shortest_path(SnodesAryType& Vect_Substrate_Graph,  MetaSubP
 
 		} // pere != destination
 
-		node_arb[compteur_noeud].setAdjNodeArray(table_adj);
+		node_arb[compteur_noeud].setAdjVertArray(table_adj);
 		compteur_noeud++;
 		id_node++;
 
@@ -170,7 +170,7 @@ void  NodeEmbedder::shortest_path(SnodesAryType& Vect_Substrate_Graph,  MetaSubP
 			while ((find_src==0)&&(find_cycle==0))
 			{
 				precedent = (IloInt) node_arb[l].getPrevious();
-				searchParentVertIndx(node_arb,compteur_noeud ,precedent, l);
+				searchPredecessorVertIndx(node_arb,compteur_noeud ,precedent, l);
 				parent_node = (IloInt) node_arb[l].getCurrent();
 
 				if (parent_node == candidSrcSnode)
@@ -416,12 +416,13 @@ void NodeEmbedder::no_partially_VN_embedding(VlinkReqAryType& vLinkReQVect, IloI
 		Meta_Embedding_Nodes_tab& candidSnodeCombiVectForVlinks, 	IloInt& numOfEmbeddingNodeCombinations, 	IloModel& ILP_model, Virtual_Node_Embedding_tab& embedding_trace_x, IloInt& x_VECT_LENGTH , IloEnv& env){
 
 //no_partially_VN_embedding(vLinkReQVect, totNumOfvLinkReq, numOfVnps, x, z, candidSnodeCombiVectForVlinks, numOfEmbeddingNodeCombinations, ILP_model, embedding_trace_x, x_VECT_LENGTH, env);
-	cout<<"\n\t\tFrom func: no_partially_VN_embedding"<<endl;
-	cout<<"\t\tnbr_vnp:"<<numOfVnps<<endl;
-	cout<<"\t\tnumber of link requests (NB_REQUEST):"<<totNumOfvLinkReq<<endl;
-	cout<<"\t\tnbr_cand_emb_nodes:"<<numOfEmbeddingNodeCombinations<<endl;
-
-	cout<<"\tx = "; for(int i = 0; i<x.getSize();i++) cout<<" "<<x[i]; cout<<endl;	// Print x vector
+	if(NODE_DBG2){
+		cout<<"\n\t\tFrom func: no_partially_VN_embedding"<<endl;
+		cout<<"\t\tnbr_vnp:"<<numOfVnps<<endl;
+		cout<<"\t\tnumber of link requests (NB_REQUEST):"<<totNumOfvLinkReq<<endl;
+		cout<<"\t\tnbr_cand_emb_nodes:"<<numOfEmbeddingNodeCombinations<<endl;
+		cout<<"\tx = "; for(int i = 0; i<x.getSize();i++) cout<<" "<<x[i]; cout<<endl;	// Print x vector
+	}
 
 	for(IloInt k=0;k<numOfVnps;k++){		//nbr_vnp (number of VNPs) = 20
 		IloInt vnpItr= k+1;
@@ -493,7 +494,10 @@ void NodeEmbedder::no_partially_VN_embedding(VlinkReqAryType& vLinkReQVect, IloI
 
 	}// all for VNP
 
-	cout<<"\tz = "; for(int i = 0; i<z.getSize();i++) cout<<" "<<z[i]; cout<<endl;	// Print x vector
+	if(NODE_DBG2){
+		cout<<"\tz = ";
+		for(int i = 0; i<z.getSize();i++) cout<<" "<<z[i]; cout<<endl;	// Print x vector
+	}
 }
 
 //***************************************************************************************************************************

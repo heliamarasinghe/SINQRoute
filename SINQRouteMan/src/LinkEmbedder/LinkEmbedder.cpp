@@ -1019,7 +1019,7 @@ void LinkEmbedder::slinkBwCapacityconstraint(SubLinksAryType& subLinksAry, IloIn
 
 
 void LinkEmbedder::printVerticeAry(IloEnv& env, VerticesAryType& verticeAry){
-	IloInt vArySize = verticeAry.getSize();
+	//IloInt vArySize = verticeAry.getSize();
 	cout<<"\tprinting verticeAry"<<endl;
 	cout<<"\tid\tcurrent\tprevious"<<endl;
 	for(int i=0; i<10;i++){
@@ -1046,11 +1046,15 @@ void  LinkEmbedder::shortest_path(bool bkupPath, SnodesAryType& subNetGraph,  Me
 	bool SHOW = false;
 	bool SHOW_MORE = false;
 	//if(!bkupPath && requestId==0) SHOW=true;
-	if(!bkupPath && requestId==11) {
-		//SHOW = true;
+	if(bkupPath && requestId==0) {
+		SHOW = true;
 		//SHOW_MORE = true;
 	}
-	if(SHOW)cout<<"\n\tShortest paths for vlink: "<<vlinkId<<" from src = "<<srcSnode<<" \t to dst = "<<destSnode<<endl;																//Original SPAl
+
+	bool SL_COST_FOR_EDGE = false;	// IF true:  slink costs are set as priority values
+									// IF false: priority values are set as 1. After calculating min-hop shortest paths, cost of paths will be calculated by summing up link costs
+
+	if(SHOW)cout<<"\n\tShortest paths for vlink:"<<vlinkId<<" from src:"<<srcSnode<<" to dst:"<<destSnode<<" with maxHops:"<<maxHops<<endl;																//Original SPAl
 
 
 
@@ -1060,15 +1064,15 @@ void  LinkEmbedder::shortest_path(bool bkupPath, SnodesAryType& subNetGraph,  Me
 	// class Compare     bool operator< is overloaded with   lhs.priority > rhs.priority
 
 	// get adjacency nodeId vector for source node = [9, 14, 11, 12, 0,..., 0, 0, 0,]; size of adjNodeArray = MAX_INCIDENCE
-	IloNumArray adjNodeArray(env, MAX_SIZE);
-	arrayZeroInitialize(adjNodeArray, MAX_SIZE);
-	subNetGraph[(srcSnode-1)].getAdjSnodeAry(adjNodeArray);
-	map<IloInt, IloInt> adjSnodeToSlinkMap = subNetGraph[(srcSnode-1)].getAdjSnodeToSlinkMap();
+	IloNumArray adjVertArray(env, MAX_SIZE);
+	arrayZeroInitialize(adjVertArray, MAX_SIZE);
+	subNetGraph[(srcSnode-1)].getAdjSnodeAry(adjVertArray);
+	map<IloInt, IloInt> adjVertToEdgekMap = subNetGraph[(srcSnode-1)].getAdjSnodeToSlinkMap();
 	map<IloInt, IloNum> conSlinkCostMap = subNetGraph[(srcSnode-1)].getConSlinkCostMap();		// Map slink -->
 	//map<IloInt, IloNum> bkupBwUnitsReqMap = subNetGraph[(srcSnode-1)].getBkupBwUnitsReqMap();	// Map slink --> backup bandwidth units required for active path
 	if(SHOW){
 		cout<<"\n\tPrinting adjSnodeToSlinkMap for snode:"<<srcSnode<<endl;
-		for(map<IloInt, IloInt>::iterator it = adjSnodeToSlinkMap.begin(); it != adjSnodeToSlinkMap.end(); ++it)
+		for(map<IloInt, IloInt>::iterator it = adjVertToEdgekMap.begin(); it != adjVertToEdgekMap.end(); ++it)
 			cout<<"\t" << it->first <<"\t"<<it->second<<endl;
 
 		cout<<"\n\tPrinting conSlinkCostMap: "<<srcSnode<<endl;
@@ -1087,122 +1091,123 @@ void  LinkEmbedder::shortest_path(bool bkupPath, SnodesAryType& subNetGraph,  Me
 
 	// Create an array of vertices and put src node into first index
 	VerticesAryType verticeAry(env, GN);								 // verticeAry size GN = 10 000
-	IloInt vertCount=0, nodeId=1;
-	verticeAry[vertCount].setVerticeId(nodeId);
+	IloInt vertCount=0, vertRef=1;
+	verticeAry[vertCount].setVerticeId(vertRef);
 	verticeAry[vertCount].setCurrent(srcSnode);
 	verticeAry[vertCount].setPrevious(0);
 	verticeAry[vertCount].setPreToCurCost(0);
-	verticeAry[vertCount].setAdjNodeArray(adjNodeArray);
-	nodeId++;
+	verticeAry[vertCount].setAdjVertArray(adjVertArray);
+	vertRef++;
 	vertCount++;
 
-	// For src node adjacency vector, set priority = 1 for each directly connected nodes and add to priority queue
-	IloInt j=0;
-	if(SHOW_MORE)cout<<"\n\tStarting from srcSnode: "<<srcSnode<<endl;
-	if(SHOW_MORE)cout<<"\tAdjacent nodes of "<<srcSnode<<"\tslinkToAdj\tslinkCost\tpriority\tprevious\tcurrent";
-	while ((j<MAX_SIZE)&&( adjNodeArray[j]!=0)){
+	// ---------1 Add adjacent vertices of source to priority queue
+	IloInt srcAdjItr=0;
+	if(SHOW_MORE)cout<<"\n\tPutting Adjacent nodes of Source: "<<srcSnode<<" to prioQ ----------------------"<<endl;
+	if(SHOW_MORE)cout<<"\tAdjacent nodes of "<<srcSnode<<"\tslinkToAdj\tedgeCost\tpriority\tpredVertRef\tcurrVertId";
+	while ((srcAdjItr<MAX_SIZE)&&( adjVertArray[srcAdjItr]!=0)){
+		int adjVertId =  adjVertArray[srcAdjItr];
+		IloInt slinkToAdj = adjVertToEdgekMap[adjVertId];
 
-		IloInt adjNode =  adjNodeArray[j];
-		IloInt slinkToAdj = adjSnodeToSlinkMap[adjNode];
-		//if(SHOW)cout<<"\t\tadjNode : "<<adjNode<<"\tslink to adjNode : "<<slinkToAdj<<endl;
-		//int priority = 1;				// for all adjNodes to src, 	priority = 1
-		int priority = conSlinkCostMap[slinkToAdj];
+		int edgeCost = 1;
+		if(SL_COST_FOR_EDGE) edgeCost = conSlinkCostMap[slinkToAdj];
+		else if (conSlinkCostMap[slinkToAdj]>=INFINI) edgeCost = conSlinkCostMap[slinkToAdj]; // Removing active path links will still improve SPF results
+		int priority = edgeCost;
 
-		int previous = nodeId - 1;		// 								previous = 1
-		int current = adjNode;			//								current = adjNode
-		if(SHOW_MORE) cout<<"\n\t\t"<<adjNode<<" \t\t"<<slinkToAdj<<"\t\t"<<conSlinkCostMap[slinkToAdj]<<"\t\t"<<priority<<"\t\t"<<previous<<"\t\t"<<current;
-		prioQ.push(Trace_vertice(priority, previous, current));
-		j++;
+		int predVertRef = vertRef - 1;					// 	predecessor node ref = 1
+		if(SHOW_MORE) cout<<"\n\t\t"<<adjVertId<<" \t\t"<<slinkToAdj<<"\t\t"<<edgeCost<<"\t\t"<<priority<<"\t\t"<<predVertRef<<"\t\t"<<srcSnode;
+		prioQ.push(Trace_vertice(priority, predVertRef, adjVertId));
+		srcAdjItr++;
 	}
 	if(SHOW_MORE)cout<<endl;
+	adjVertToEdgekMap.clear();		// REUSED: Must be cleared after each use
+	conSlinkCostMap.clear();			// REUSED: Must be cleared after each use
 
 
-	adjSnodeToSlinkMap.clear();
-	conSlinkCostMap.clear();
-
-
-
-	// If src and dst are adjacent (and has only one link betweeen them) algorithm must only give 1 path between them. Otherwise 5 paths will be found
+	// ---------2 Determine number of shortest paths to be calculated
 	IloInt nb_in_out_link =  count_number_link(destSnode, subNetGraph, env);
 	IloInt adjacents_ind =  check_src_dest_adjanticity(srcSnode, destSnode, subNetGraph, env);		// adjacents_ind can be 1 or 0 if src and dest are adjacent
 	IloInt max_paths = 0;
-	if (adjacents_ind ==1 && nb_in_out_link == 1)
-		max_paths = 1;
+	if (adjacents_ind ==1 && nb_in_out_link == 1) max_paths = 1;// If src and dst are adjacent (and has only one link betweeen them) algorithm must only give 1 path between them
+	else if(!bkupPath) max_paths = ACTV_PER_VL;	// If finding active paths, max active paths per vlink
 	else
-		max_paths = ACTV_PER_VL;
+		max_paths = BKUP_PER_ACTV;	// If finding backup paths, max backup paths per vlink
 
-	//if(SHOW) printVerticeAry(env, verticeAry);
-
-	IloInt MAX_ITR = 9000;
-
+	IloInt MAX_ITR = 19999;
 	IloInt numPathsFound=0;
-	IloInt nextNode = srcSnode;																// Start with src by setting it as nextNode
-	while (numPathsFound <max_paths && (!prioQ.empty()) &&  vertCount<MAX_ITR){								// While max paths not reached and priority queue is not empty
+	IloInt prevVertId = srcSnode;																// Start with src by setting it as nextNod
+	while (numPathsFound <max_paths && !prioQ.empty() &&  vertCount<MAX_ITR){								// While max paths not reached and priority queue is not empty
+		IloInt valid_node=0, prePrio=0, predVertRef=0, currVertId=0;
 
-		IloInt valid_node=0, prePrio=0, previous=0, current=0;
-		//if(SHOW)cout<<"\n\tprePrio \tprevious\tcurrent"<<endl;
-		while ((valid_node == 0)&&(!prioQ.empty())){									// take out the fist node from the prioQ. Recall that we have initially given priority 1 to all adjanancy nodes of src
+		// --------- 1 Take top vert from the prioQ
+		while ((valid_node == 0)&&(!prioQ.empty())){
 			prePrio = prioQ.top().priority;
-			previous = prioQ.top().previous;
-			current = prioQ.top().current;
+			predVertRef = prioQ.top().predNodeRef;
+			currVertId = prioQ.top().currNodeId;
 			//if(SHOW) cout<<"\t"<<prePrio<<"\t\t"<<previous<<"\t\t"<<current;
-			if ((current != srcSnode) && (current != nextNode))
+			if ((currVertId != srcSnode) && (currVertId != prevVertId))
 				valid_node=1;
 			prioQ.pop();
 			//if(SHOW)cout<<"\n\tvalid_node = "<<valid_node<<endl;
 		}
 		if(SHOW_MORE)cout<<endl;
-		nextNode = current;																// set the first node came from prioQ as the nextNode
-		if(SHOW_MORE)cout<<"\n\tnextNode = "<<nextNode<<endl;
+
+		IloInt predVertIndx;
+		searchPredecessorVertIndx(verticeAry, vertCount, predVertRef, predVertIndx);// OUTPUT: predVertIndx
+		IloInt predVertId =  verticeAry[predVertIndx].getCurrent();
+		if(SHOW_MORE)cout<<"\tcurrNodeId: "<<currVertId<<"\tpredVertId: "<<predVertId<<endl;
 		//cout<<"\tcurrent = "<<current<<endl;
-		if (current == destSnode)																// If current node is the destination, new path found. Increment numOfPaths
+		if (currVertId == destSnode)																// If current node is the destination, new path found. Increment numOfPaths
 			numPathsFound++;
 
-		verticeAry[vertCount].setVerticeId(nodeId);
-		verticeAry[vertCount].setCurrent(current);
-		verticeAry[vertCount].setPrevious(previous);
+		verticeAry[vertCount].setVerticeId(vertRef);
+		verticeAry[vertCount].setCurrent(currVertId);
+		verticeAry[vertCount].setPrevious(predVertRef);
 		verticeAry[vertCount].setPreToCurCost(prePrio);
-		if(SHOW_MORE)cout<<"vertice "<<current<<" put into verticeAry["<<vertCount<<"]"<<endl;
-		arrayZeroInitialize(adjNodeArray, MAX_SIZE);
-		if (current != destSnode){															// If destination not reached							//Original SPAl
-			subNetGraph[(current - 1)].getAdjSnodeAry(adjNodeArray);
-			adjSnodeToSlinkMap = subNetGraph[current-1].getAdjSnodeToSlinkMap();
-			conSlinkCostMap = subNetGraph[current-1].getConSlinkCostMap();
+		if(SHOW_MORE)cout<<"\tvertice "<<currVertId<<" put into verticeAry["<<vertCount<<"]"<<endl;
+		arrayZeroInitialize(adjVertArray, MAX_SIZE);
+		if (currVertId != destSnode){															// If destination not reached							//Original SPAl
+			subNetGraph[(currVertId - 1)].getAdjSnodeAry(adjVertArray);
+			adjVertToEdgekMap = subNetGraph[currVertId-1].getAdjSnodeToSlinkMap();
+			conSlinkCostMap = subNetGraph[currVertId-1].getConSlinkCostMap();
 			//more=0 ;
-			j=0;
-			if(SHOW_MORE)cout<<"\tAdjacent nodes of "<<current<<"\tslinkToAdj\tslinkCost\tpriority\tprevious\tcurrent";
-			while ((j<MAX_SIZE)&&( adjNodeArray[j]!=0)){
-				IloInt adjNode =   adjNodeArray[j];
-				IloInt slinkToAdj = adjSnodeToSlinkMap[adjNode];
-				//IloBool non_nul = (adjNode !=0);
-				//if(non_nul){
-				j++;
-				//int priority = prePrio + 1;
-				int priority = prePrio + conSlinkCostMap[slinkToAdj];
-				previous = nodeId;
+			IloInt adjItr=0;
+			if(SHOW_MORE)cout<<"\tAdjacent nodes of "<<currVertId<<"\tslinkToAdj\tedgeCost\tpriority\tpredVertRef\tcurrVertId";
+			while ((adjItr<MAX_SIZE)&&( adjVertArray[adjItr]!=0)){
+				IloInt adjNodeId =   adjVertArray[adjItr];
+				IloInt slinkToAdj = adjVertToEdgekMap[adjNodeId];
 
-				if  (adjNode != srcSnode){
-					if(SHOW_MORE) cout<<"\n\t\t"<<adjNode<<" \t\t"<<slinkToAdj<<"\t\t"<<conSlinkCostMap[slinkToAdj]<<"\t\t"<<priority<<"\t\t"<<previous<<"\t\t"<<current;
-					//if(SHOW)cout<<"\t\tpriority = "<<priority<<"\t previous = "<<previous<<"\t current = "<<current_node<<endl;
-					prioQ.push(Trace_vertice(priority, (int)previous, (int)adjNode));
+				int edgeCost = 1;
+				if(SL_COST_FOR_EDGE) edgeCost = conSlinkCostMap[slinkToAdj];
+				else if (conSlinkCostMap[slinkToAdj]>=INFINI) edgeCost = conSlinkCostMap[slinkToAdj]; // Removing active path links will still improve SPF results
+				//if (edgeCost ==0) edgeCost = 1;
+				int priority = prePrio + edgeCost;
+				predVertRef = vertRef;
+				if  (adjNodeId != srcSnode && adjNodeId != predVertId){
+					if(SHOW_MORE) cout<<"\n\t\t"<<adjNodeId<<" \t\t"<<slinkToAdj<<"\t\t"<<edgeCost<<"\t\t"<<priority<<"\t\t"<<predVertRef<<"\t\t"<<currVertId;
+					prioQ.push(Trace_vertice(priority, (int)predVertRef, (int)adjNodeId));
 				}
-				//}
-				//else
-				//more=1;
+				adjItr++;
 			}// end while
 		} // pere != destination
-		verticeAry[vertCount].setAdjNodeArray(adjNodeArray);
+		else{
+			if(SHOW_MORE) cout<<"\t------------------------------- destSnode:"<<destSnode<<" reached----------------------------"<<endl;
+		}
+		verticeAry[vertCount].setAdjVertArray(adjVertArray);
 		vertCount++;
 		if(vertCount>=MAX_ITR)
 			cerr<<"XX";
-		//cerr<<"\nShortest parth search iterations maxed at "<<MAX_ITR<<". Force exit search algorithm"<<endl;
-		nodeId++;
+		if(SHOW_MORE && bkupPath && vertCount == 500)
+			sleep(2);
+		prevVertId = currVertId;					// current vertice will become previous vertice for the next Iteration
+		vertRef++;
 	} //END while((numPathsFound <max_paths && (!prioQ.empty()))
 
 	if(SHOW){
-		cout<<"\n\tverticeAry = ";
-		for(int i=0; i<verticeAry.getSize(); i++){
+		cout<<"\n\tverticeAry = \t";
+		int i=0;
+		while(verticeAry[i].getCurrent() != 0){
 			cout<<verticeAry[i].getCurrent()<<" ";
+			i++;
 		}
 		cout<<endl;
 	}
@@ -1220,75 +1225,95 @@ void  LinkEmbedder::shortest_path(bool bkupPath, SnodesAryType& subNetGraph,  Me
 		if (vertice == destSnode){
 			if(SHOW)cout<<"\tdest-found. Adding nodes: ";
 			IloInt find_src= 0;
-			IloInt vertIndx=i;
+			IloInt predVertIndx=i;
 			IloNumArray shotstPthAry(env, MAX_SIZE);
 			arrayZeroInitialize(shotstPthAry, MAX_SIZE);
 			IloNumArray bkupSlinkBwReqAry(env, MAX_SIZE);
 			arrayZeroInitialize(bkupSlinkBwReqAry, MAX_SIZE);
 
-			IloInt snodeCount=0;
-			shotstPthAry[snodeCount] = vertice;
+			IloInt shPthVertCount=0;
+			shotstPthAry[shPthVertCount] = vertice;
 			if(SHOW)cout<<" "<<vertice;
 			//adjSnodeToSlinkMap = subNetGraph[destSnode-1].getAdjSnodeToSlinkMap();
 			//conSlinkCostMap = subNetGraph[destSnode-1].getConSlinkCostMap();
 
-			IloInt sumSlinkCost = verticeAry[vertIndx].getPreToCurCost();		// sumSlinkCost == shortest path cost
-			snodeCount++;
+			IloInt sumSlinkCost = verticeAry[predVertIndx].getPreToCurCost();		// sumSlinkCost == shortest path cost
+			shPthVertCount++;
 			IloInt find_cycle=0;
 			//if(calculatedPaths<6)cout<<"\tpreToCurCost:"<<sumSlinkCost;
 			while ((find_src==0)&&(find_cycle==0)){
-				IloInt curSnode = verticeAry[vertIndx].getCurrent();
-				IloInt prvSnode = verticeAry[vertIndx].getPrevious();
-				adjSnodeToSlinkMap.clear();
+				IloInt currVertId = verticeAry[predVertIndx].getCurrent();
+				IloInt predVertRef = verticeAry[predVertIndx].getPrevious();
+				adjVertToEdgekMap.clear();
 				//IloInt costToPrv = verticeAry[vertIndx].getPreToCurCost();
 				//cout<<" "<<costToPrv;
-				searchParentVertIndx(verticeAry, vertCount, prvSnode, vertIndx);		// This function changes vertIndx
-				IloInt parentSnode =  verticeAry[vertIndx].getCurrent();				// parentSnode is same as prvSnode. But finding it through index reveals its parent as well
-				if (parentSnode == srcSnode)
+				searchPredecessorVertIndx(verticeAry, vertCount, predVertRef, predVertIndx);		// This function changes vertIndx
+				IloInt predVertId =  verticeAry[predVertIndx].getCurrent();				// parentSnode is same as prvSnode. But finding it through index reveals its parent as well
+				adjVertToEdgekMap = subNetGraph[currVertId-1].getAdjSnodeToSlinkMap();
+				IloInt slinkCurToPrv = adjVertToEdgekMap[predVertId];
+				if (predVertId == srcSnode)
 					find_src=1;
-				IloInt test_cycle =  findElementInVector(parentSnode, shotstPthAry, snodeCount);	// putting nodes one by one onto loopCheckAry and check for loops
+				IloInt test_cycle =  findElementInVector(predVertId, shotstPthAry, shPthVertCount);	// putting nodes one by one onto loopCheckAry and check for loops
 				if(test_cycle==0){
 					//cout<<"\tsnodeCount:"<<snodeCount;
-					shotstPthAry[snodeCount] = parentSnode;
+					shotstPthAry[shPthVertCount] = predVertId;
 					//sumSlinkCost += costToPrv;
-					adjSnodeToSlinkMap = subNetGraph[curSnode-1].getAdjSnodeToSlinkMap();
-					IloInt slinkCurToPrv = adjSnodeToSlinkMap[parentSnode];
+
+
 					//cout<<"\tslinkCurToPrv:"<<slinkCurToPrv;
-					bkupSlinkBwReqAry[snodeCount-1] = bkupBwUnitsReqAry[slinkCurToPrv-1];
+					bkupSlinkBwReqAry[shPthVertCount-1] = bkupBwUnitsReqAry[slinkCurToPrv-1];
 					//cout<<"\tbwUnitsReq:"<<bkupBwUnitsReqAry[slinkCurToPrv-1]<<endl;
-					snodeCount++;
-					if(SHOW)cout<<" "<<parentSnode<<"("<<slinkCurToPrv<<":"<<bkupBwUnitsReqAry[slinkCurToPrv-1]<<")";
+					shPthVertCount++;
+					if(SHOW)cout<<" "<<predVertId<<"("<<slinkCurToPrv<<":"<<bkupBwUnitsReqAry[slinkCurToPrv-1]<<")";
 				}
 				else{
-					if(SHOW)cout<<" ..... Cycle";
+					if(SHOW)cout<<" "<<predVertId<<"("<<slinkCurToPrv<<":"<<bkupBwUnitsReqAry[slinkCurToPrv-1]<<")"<<"----Cycle";
 					find_cycle=1;
 					sumSlinkCost = 0;
 				}
 
 			}// end while find src
 			if(SHOW)cout<<endl;
-			//cout<<endl;
-			if ((snodeCount - 1) > maxHops)	//If number of snodes in the shortest path is more than maxHops in request QoS class, path is ignored.
+
+			adjVertToEdgekMap.clear();
+			conSlinkCostMap.clear();
+
+			if ((shPthVertCount - 1) > maxHops){	//If number of snodes in the shortest path is more than maxHops in request QoS class, path is ignored.
 				//more_H_hops=1;
 				hopLimExceed = true;
+			}
 			else{
 				if (find_cycle == 0){
 					//cout<<"\t\tadd_meta_path for virtual link :"<<vlinkId<<" active path: "<<requestId<<endl;
 
 					if(SHOW){
-						cout<<"\t\tAdding meta path:"<<calculatedPaths<<"  [ ";
-						for(IloInt lcItr=0; lcItr<snodeCount; lcItr++) cout<<shotstPthAry[lcItr]<<" ";
+						cout<<"\t\tAdding meta path: "<<calculatedPaths<<"  [ ";
+						for(IloInt lcItr=0; lcItr<shPthVertCount; lcItr++) cout<<shotstPthAry[lcItr]<<" ";
 						cout<<"] for vlink:"<<vlinkId<<endl;
 					}
 
 					if(SHOW){
-						cout<<"\t\tbkupSlinkBwReqAry: ";
-						for(int bkbwItr = 0; bkbwItr<snodeCount-1; bkbwItr++){
-							cout<<bkupSlinkBwReqAry[bkbwItr];
+						cout<<"\t\tbkupSlinkBwReqAry: [ ";
+						for(int bkbwItr = 0; bkbwItr<shPthVertCount-1; bkbwItr++){
+							cout<<bkupSlinkBwReqAry[bkbwItr]<<" ";
 						}
-						cout<<endl;
+						cout<<"]"<<endl;
 					}
 
+					// if !SL_COST_FOR_EDGE i.e. edge costs are considered equal to 1 during shortest path calculation, sumSlinkCost must be manually calculated
+					if(!SL_COST_FOR_EDGE){
+						sumSlinkCost = 0;
+						for(IloInt lcItr=0; lcItr<shPthVertCount-1; lcItr++){
+							IloInt currVertId = shotstPthAry[lcItr];
+							IloInt nextVertId = shotstPthAry[lcItr+1];
+							adjVertToEdgekMap = subNetGraph[currVertId-1].getAdjSnodeToSlinkMap();
+							IloInt slinkToAdj = adjVertToEdgekMap[nextVertId];
+							conSlinkCostMap = subNetGraph[currVertId-1].getConSlinkCostMap();
+							sumSlinkCost +=  conSlinkCostMap[slinkToAdj];
+						}
+
+
+					}
 
 
 					add_meta_path(metaShtstPathVect, srcSnode, destSnode, requestId, vnpId, vlinkId, shotstPthAry, subNetGraph, shtstPathCount, sumSlinkCost, bkupSlinkBwReqAry, env);			//Original SPAl
@@ -1300,7 +1325,7 @@ void  LinkEmbedder::shortest_path(bool bkupPath, SnodesAryType& subNetGraph,  Me
 		}
 		i++;
 	}
-	adjNodeArray.end();
+	adjVertArray.end();
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------

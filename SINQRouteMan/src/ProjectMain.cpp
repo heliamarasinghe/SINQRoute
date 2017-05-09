@@ -43,7 +43,7 @@ int main (int  argc, char** argv){
 	// -----------------------------------------------------------------
 
 
-	int MAXTSLOT = 4, currTslot = 3;
+	int MAXTSLOT = 3, currTslot = 2;
 	/* 1. Discover switches and links and generate substrate topology */
 	if(initGenTopo){
 		//if(getSwitches)
@@ -60,7 +60,7 @@ int main (int  argc, char** argv){
 
 
 	while(currTslot<MAXTSLOT){
-		cout<<"\n\t ------------   TIME SLOT :  "<<currTslot<<"   --------------"<<endl;
+		cout<<"\n\t====================================   TIME SLOT :  "<<currTslot<<"   ====================================\n"<<endl;
 
 	/* 3. Getting Current Flow Allocation from Controller */
 		bool topoChange = false;
@@ -103,8 +103,8 @@ int main (int  argc, char** argv){
 			}
 			// Link embedding Works with both init and periodic
 			if(bkup==0)f14_ph2RemovedAddedPaths = LinkEmbedder::embedPeriodicLinks(currTslot);		// Embedding without backup paths
-			//else if(bkup==1)f14_ph2RemovedAddedPaths = LinkEmbedder::embedLinksWithSlrgBkup(currTslot);	// Embeding with SLRG aware backups
-			else if(bkup==2)f14_ph2RemovedAddedPaths = LinkEmbedder::embedLinksWithBkup(currTslot);	// Embedding with shared backups
+			else if(bkup==1)f14_ph2RemovedAddedPaths = LinkEmbedder::embedLinks_SlrgBkup(currTslot);	// Embeding with SLRG aware backups
+			else if(bkup==2)f14_ph2RemovedAddedPaths = LinkEmbedder::embedLinks_SharedBkup(currTslot);	// Embedding with shared backups
 
 			if(deployOnNet)SdnCtrlClient::addRemovePaths(f14_ph2RemovedAddedPaths);
 		}

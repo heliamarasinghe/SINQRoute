@@ -51,7 +51,7 @@ IloInt Vertice::getPreToCurCost(){
 	return preToCurCost;
 }
 
-void Vertice::setAdjNodeArray(IloNumArray& f_Tab){
+void Vertice::setAdjVertArray(IloNumArray& f_Tab){
 	for(int j=0;j<H_PATH;j++)
 		adjNodeAry[j]= f_Tab[j];
 }
