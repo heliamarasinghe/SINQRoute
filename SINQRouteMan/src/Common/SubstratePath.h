@@ -18,14 +18,14 @@ private:
 	IloInt vnpId;
 	IloInt vlinkId;
 	IloNum vlEmbdProfit;
-	IloNum vlEmbdngCost;
+	//IloNum vlEmbdngCost;
 	IloInt period;
 
 	IloInt acbkPairId;
 	IloInt numActvHops;
 	IloInt numBkupHops;
-	//IloInt actvPthCost;
-	//IloInt bkupPthCost;
+	IloNum actvPthCost;
+	IloNum bkupPthCost;
 
 	int actvSnodeAry[MAX_SIZE];		// previously 3*MAX_SIZE]
 	int bkupSnodeAry[MAX_SIZE];
@@ -53,8 +53,8 @@ public:
 	void setVlEmbdProfit(IloNum p);
 	IloNum getVlEmbdProfit();
 
-	void setVlEmbdngCost(IloNum cost);
-	IloNum getVlEmbdngCost();
+	//void setActvPthCost(IloNum cost);
+	//IloNum getVlEmbdngCost();
 
 	void setPeriod(IloInt p);
 	IloInt getPeriod();
@@ -70,11 +70,11 @@ public:
 	void setNumBkupHops(IloInt bkHops);
 	IloInt getNumBkupHops();
 
-	//void setActvPthCost(IloInt c);
-	//IloInt getActvPthCost();
+	void setActvPthCost(IloNum acCost);
+	IloNum getActvPthCost();
 
-	//void setBkupPthCost(IloInt bkCost);
-	//IloInt getBkupPthCost();
+	void setBkupPthCost(IloNum bkCost);
+	IloNum getBkupPthCost();
 
 
 	void setActvSnodeAry(IloNumArray& snodeAry);

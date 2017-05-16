@@ -20,9 +20,9 @@ const IloInt MAX_SIZE=20;
 
 const IloInt MAX_NB_LOCATION=3;
 const IloInt H_PATH=5;
-const IloInt GN=20000;
-const IloInt ACTV_PER_VL=6;			// Replaces MAX_PATH
-const IloInt BKUP_PER_ACTV = 6;
+const IloInt GN=10000;
+const IloInt ACTV_PER_VL=5;			// Default: 5  Replaces MAX_PATH
+const IloInt BKUP_PER_ACTV = 3;
 const IloInt INFINI=100000;			// Used in calculating theta matrix
 
 const IloNum BKUP_COST_PERCENT = 100.0;

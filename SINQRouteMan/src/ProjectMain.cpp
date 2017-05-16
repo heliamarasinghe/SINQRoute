@@ -36,14 +36,19 @@ int main (int  argc, char** argv){
 	/*8*/
 	bool deployOnNet = false;
 
-	// ---------------- vlink Embedding with Backup --------------------
-	int bkup = 2;		//		0 - No backup
-						//		1 - with SLRG aware backup
-						//		2 - with shared backup
-	// -----------------------------------------------------------------
+	// --------------------- vlink Embedding with Backup --------------------------
+	int bkup = 2;	//	0-No backup; 1-with SLRG aware backup; 2-with shared backup
+	// ----------------------------------------------------------------------------
+	/* Experimental procedure:
+	 * 		First run InitTrafficGenerator and InitNodeEmbedder for tSlot 0.
+	 * 		Then run PeriodicLinkEmbedder, LinkEmbedder_SharedBkup, LinkEmbedder_SrlgAware for tSlot 0 and find collect acceptance, profit results
+	 * 		Run PeriodinTrafficGenerator and PeriodicNodeEmbedder for tSlot 1
+	 * 		Then run PeriodicLinkEmbedder, LinkEmbedder_SharedBkup, LinkEmbedder_SrlgAware for tSlot 1 and find collect acceptance, profit results
+	 * 		Continue for tSlot 2, 3 ..... 10
+	 */
 
 
-	int MAXTSLOT = 3, currTslot = 2;
+	int MAXTSLOT = 20, currTslot = 0;
 	/* 1. Discover switches and links and generate substrate topology */
 	if(initGenTopo){
 		//if(getSwitches)
@@ -94,18 +99,22 @@ int main (int  argc, char** argv){
 		if(embedding){
 			char* f14_ph2RemovedAddedPaths;
 			if(currTslot==0){
-				//TrafficGenerator::generateInitTraffic();
-				//NodeEmbedder::embedInitNodes();
+				TrafficGenerator::generateInitTraffic();
+				sleep(1);
+				NodeEmbedder::embedInitNodes();
+				sleep(1);
 			}
 			else{
-				TrafficGenerator::generatePeriodicTraffic(currTslot);
+				TrafficGenerator::generatePeriodicTraffic(currTslot, bkup);
+				sleep(1);
 				NodeEmbedder::embedPeriodicNodes(currTslot, bkup);
+				sleep(1);
 			}
 			// Link embedding Works with both init and periodic
 			if(bkup==0)f14_ph2RemovedAddedPaths = LinkEmbedder::embedPeriodicLinks(currTslot);		// Embedding without backup paths
 			else if(bkup==1)f14_ph2RemovedAddedPaths = LinkEmbedder::embedLinks_SlrgBkup(currTslot);	// Embeding with SLRG aware backups
 			else if(bkup==2)f14_ph2RemovedAddedPaths = LinkEmbedder::embedLinks_SharedBkup(currTslot);	// Embedding with shared backups
-
+			sleep(1);
 			if(deployOnNet)SdnCtrlClient::addRemovePaths(f14_ph2RemovedAddedPaths);
 		}
 

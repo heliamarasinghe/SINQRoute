@@ -12,7 +12,7 @@
 //------------------------------------------------------------------------------------------------------------------
 //                     Program Beginning                                                                           -
 //------------------------------------------------------------------------------------------------------------------
-void TrafficGenerator::generatePeriodicTraffic(int currTslot){
+void TrafficGenerator::generatePeriodicTraffic(int currTslot, int bkup){
 	cout<<"\n\t------------ PeriodicTrafficGenerator: Generating IaaS Requests for TIME SLOT: "<<currTslot<<" -------------"<<endl;
 
 	bool TRAF_DBG = false;
@@ -28,7 +28,10 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 	// * Verify whether the periodicTrafficGenerator require f9_ph1AcceptedVlinks.txt or f12_ph2AcceptedVlinks.txt
 	char prv_f12_ph2AcceptedVlinks[50];
-	snprintf(prv_f12_ph2AcceptedVlinks, sizeof(char) * 50, "DataFiles/t%i/f12_ph2AcceptedVlinks.txt", prevTslot);		// currTslot/f12_ph2AcceptedVlinks.txt
+	if(bkup==0) snprintf(prv_f12_ph2AcceptedVlinks, sizeof(char) * 50, "DataFiles/t%i/f12_ph2AcceptedVlinks.txt", prevTslot);		// currTslot/f12_ph2AcceptedVlinks.txt
+	else if(bkup==1) snprintf(prv_f12_ph2AcceptedVlinks, sizeof(char) * 50, "DataFiles/t%i/f12_srlg_ph2AcceptedVlinks.txt", prevTslot);
+	else if (bkup==2) snprintf(prv_f12_ph2AcceptedVlinks, sizeof(char) * 50, "DataFiles/t%i/f12_shrd_ph2AcceptedVlinks.txt", prevTslot);
+	else cerr<<"\tPeriodicTrafficGenerator: Unable to recognize bkup parameter coming from main"<<endl;
 	//char f17_ctrlUpdatedNalocs[50];
 	//snprintf(f17_ctrlUpdatedNalocs, sizeof(char) * 50, "DataFiles/t%i/f17_ctrlUpdatedNalocs.txt", prevTslot);		// currTslot/f12_ph2AcceptedVlinks.txt
 
@@ -48,7 +51,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 	try
 	{
 
-		IloInt i=0 , j=0, k=0,  h=0, src=0, dest=0, class_QoS=0, find=0, nb_loc=0;
+		IloInt i=0 , j=0, k=0,  h=0, src=0, dest=0, qosCls=0, find=0, nb_loc=0;
 		IloInt request_id=0, bw=0, hops=0, link=0, vn_node=0, dest_candidate=0, src_candidate=0;
 
 		IloInt NB_VNP_NODE=0, NB_REQUEST=0, NB_NODE=0, NB_LINK=0;
@@ -58,10 +61,10 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 		IloInt average_path_unit_cost=0,  generated_unit_path_cost_part1=0, generated_unit_path_cost_part2=0, nb_hops=0, nb_link_current_vnp=0;
 
 		IloInt virtual_link_class=0, min_path_unit_cost=0, max_path_unit_cost=0, selected_path_unit_cost=0, bid=0;
-		IloInt vnp_id=0, virtual_link_id=1, rand_nb_node=0, rand_nb_links=0, comp_vn_node=0, num_candidate_embdedding_nodes=1;
+		IloInt vnpId=0, vlinkId=1, rand_nb_node=0, rand_nb_links=0, comp_vn_node=0, num_candidate_embdedding_nodes=1;
 		IloInt embedding_node_location=0, nb_candidate_embdedding_nodes=0;
 
-		IloInt period=0, nb_dropped_vnp_requests=0, nb_added_vnp_requests=0, current_number=0, num_demand=0, found=0;
+		IloInt period=0, nb_dropped_vnp_requests=0, nb_added_vnp_requests=0, current_number=0, found=0;
 
 		IloInt link_unit_cost=0, node_cpu_unit_cost=0, node_gpu_unit_cost=0, node_ram_unit_cost=0, node_storage_unit_cost=0, node_blade_unit_cost=0;
 
@@ -115,9 +118,9 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 		for(i=0;i<NB_LINK_CLASS;i++)
 		{
-			file2>>class_QoS>>bw>>hops;
+			file2>>qosCls>>bw>>hops;
 
-			Link_Class_QoS_Vect[i].SetQoS_Class_Id((IloInt)class_QoS);
+			Link_Class_QoS_Vect[i].SetQoS_Class_Id((IloInt)qosCls);
 			Link_Class_QoS_Vect[i].SetQoS_Class_Bandwidth((IloInt)bw);
 			Link_Class_QoS_Vect[i].SetQoS_Class_Max_Hops(hops);
 		}
@@ -141,7 +144,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 		for(i=0;i<NB_NODE_CLASS;i++)
 		{
-			file3>>class_QoS>>cpu>>gpu>>memory>>storage>>blades;
+			file3>>qosCls>>cpu>>gpu>>memory>>storage>>blades;
 
 			arrayZeroInitialize(location_vect, length_vect);
 
@@ -151,7 +154,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 				location_vect[j] = (IloNum) loc;
 			}
 
-			Node_Class_QoS_Vect[i].SetNode_QoS_Class_Id((IloInt)class_QoS);
+			Node_Class_QoS_Vect[i].SetNode_QoS_Class_Id((IloInt)qosCls);
 			Node_Class_QoS_Vect[i].SetRequired_CPU((IloInt)cpu);
 			Node_Class_QoS_Vect[i].SetRequired_GPU((IloInt)gpu);
 			Node_Class_QoS_Vect[i].SetNode_Location_Tab(location_vect);
@@ -172,7 +175,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 			cerr << "ERROR: could not open file `"<< prv_f12_ph2AcceptedVlinks << "`for reading"<< endl;
 
 		IloInt NB_PREVIOUS_ADD=0, NB_PREVIOUS_RESERVED=0;
-		if(TRAF_DBG)cout<<"Reading from file: f9_ph1AcceptedVlinks"<<endl;
+		if(TRAF_DBG)cout<<"Reading from file: "<<prv_f12_ph2AcceptedVlinks<<endl;
 		prv_file12>>previous_period;
 		prv_file12>>NB_PREVIOUS_REQUEST;
 		prv_file12>>NB_PREVIOUS_RESERVED;
@@ -187,19 +190,19 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 			cout<<"\t"<<NB_PREVIOUS_REQUEST<<endl;
 			cout<<"\t"<<NB_PREVIOUS_RESERVED<<endl;
 			cout<<"\t"<<NB_PREVIOUS_ADD<<endl;
-			cout<<"\tsrc\tdest\t\tvirtual_link_id<\tclass_QoS\tbid\tvnp_id\tperiod"<<endl;
+			cout<<"\tsrc\tdest\tvlinkId\tqosCls\tbid\tvnpId\tperiod"<<endl;
 		}
 
 		for (i=0;i<NB_PREVIOUS_REQUEST;i++){
-			prv_file12>>src>>dest>>virtual_link_id>>class_QoS>>bid>>vnp_id>>period;
+			prv_file12>>src>>dest>>vlinkId>>qosCls>>bid>>vnpId>>period;
 
-			if(TRAF_DBG)cout<<"\t"<<src<<"\t"<<dest<<"\t\t"<<virtual_link_id<<"\t\t"<<class_QoS<<"\t"<<bid<<"\t"<<vnp_id<<"\t"<<period<<endl;
+			if(TRAF_DBG)cout<<"\t"<<src<<"\t"<<dest<<"\t"<<vlinkId<<"\t"<<qosCls<<"\t"<<bid<<"\t"<<vnpId<<"\t"<<period<<endl;
 
 			Previous_Request_Vect[i].setSrcVnode((IloInt)src);//
 			Previous_Request_Vect[i].setDestVnode((IloInt)dest);
-			Previous_Request_Vect[i].setVlinkId((IloInt) virtual_link_id);
-			Previous_Request_Vect[i].setVlinkQosCls((IloInt)class_QoS);
-			Previous_Request_Vect[i].setVnpId((IloInt)vnp_id);
+			Previous_Request_Vect[i].setVlinkId((IloInt) vlinkId);
+			Previous_Request_Vect[i].setVlinkQosCls((IloInt)qosCls);
+			Previous_Request_Vect[i].setVnpId((IloInt)vnpId);
 			Previous_Request_Vect[i].SetBid((IloInt)bid);
 			Previous_Request_Vect[i].SetPeriod((IloInt)period);
 
@@ -228,14 +231,15 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 		h=0;
 
 		while (h < nb_dropped_vnp_requests){
-			num_demand = 1 + (int)((double)rand() / ((double)RAND_MAX + 1) * NB_VNP);
+			IloInt drpdVnpId = 1 + (int)((double)rand() / ((double)RAND_MAX + 1) * NB_VNP);
 
 			find=0;
-			find = (IloInt) findElementInVector(num_demand,Dropped_VNP_Request_Vect,h);
+			find = (IloInt) findElementInVector(drpdVnpId,Dropped_VNP_Request_Vect,h);
 			if (find==0){
-				Dropped_VNP_Request_Vect[h] = (IloNum) num_demand ;
+				Dropped_VNP_Request_Vect[h] = (IloNum)
+						drpdVnpId ;
 				h++;
-				if(TRAF_DBG)cout<<" "<<num_demand;
+				if(TRAF_DBG)cout<<" "<<drpdVnpId;
 			}
 		}
 		if(TRAF_DBG)cout<<endl;
@@ -249,25 +253,25 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 		if(TRAF_DBG) cout<<"\ttSlot\tvnp\tvlId\tsrc\tdst\tqos\tbid\tret/drop"<<endl;
 
 		for(i=0;i<NB_PREVIOUS_REQUEST;i++){
-			vnp_id = (IloInt) Previous_Request_Vect[i].getVnpId();
+			vnpId = (IloInt) Previous_Request_Vect[i].getVnpId();
 
-			found = (IloInt) findElementInVector(vnp_id, Dropped_VNP_Request_Vect, nb_dropped_vnp_requests);
+			found = (IloInt) findElementInVector(vnpId, Dropped_VNP_Request_Vect, nb_dropped_vnp_requests);
 			// If vnpId is not found in Dropped_VNP_Request_Vect, add the VNP to Reserved_Request_Vect
 			if (found == 0){
 				src = (IloInt) Previous_Request_Vect[i].getSrcVnode();
 				dest = (IloInt) Previous_Request_Vect[i].getDestVnode();
-				virtual_link_id = (IloInt) Previous_Request_Vect[i].getVlinkId();
-				class_QoS = (IloInt) Previous_Request_Vect[i].getVlinkQosCls();
+				vlinkId = (IloInt) Previous_Request_Vect[i].getVlinkId();
+				qosCls = (IloInt) Previous_Request_Vect[i].getVlinkQosCls();
 				bid = (IloInt) Previous_Request_Vect[i].getBid();
 				period = (IloInt) Previous_Request_Vect[i].getPeriod();
 
-				if(TRAF_DBG) cout<<"\t"<<period<<"\t"<<vnp_id<<"\t"<<virtual_link_id<<"\t"<<src<<"\t"<<dest<<"\t"<<class_QoS<<"\t"<<class_QoS<<"\t"<<bid<<"\tRETAIN"<<endl;
+				if(TRAF_DBG) cout<<"\t"<<period<<"\t"<<vnpId<<"\t"<<vlinkId<<"\t"<<src<<"\t"<<dest<<"\t"<<qosCls<<"\t"<<qosCls<<"\t"<<bid<<"\tRETAIN"<<endl;
 
 				Reserved_Request_Vect[NB_RESERVED_REQUEST].setSrcVnode(src);
 				Reserved_Request_Vect[NB_RESERVED_REQUEST].setDestVnode(dest);
-				Reserved_Request_Vect[NB_RESERVED_REQUEST].setVlinkQosCls(class_QoS);
-				Reserved_Request_Vect[NB_RESERVED_REQUEST].setVlinkId(virtual_link_id);
-				Reserved_Request_Vect[NB_RESERVED_REQUEST].setVnpId(vnp_id);
+				Reserved_Request_Vect[NB_RESERVED_REQUEST].setVlinkQosCls(qosCls);
+				Reserved_Request_Vect[NB_RESERVED_REQUEST].setVlinkId(vlinkId);
+				Reserved_Request_Vect[NB_RESERVED_REQUEST].setVnpId(vnpId);
 				Reserved_Request_Vect[NB_RESERVED_REQUEST].SetBid(bid);
 				Reserved_Request_Vect[NB_RESERVED_REQUEST].SetPeriod(period);
 
@@ -275,7 +279,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 			}
 			else
 			{
-				if(TRAF_DBG) cout<<"\t"<<period<<"\t"<<vnp_id<<"\t"<<virtual_link_id<<"\t"<<src<<"\t"<<dest<<"\t"<<class_QoS<<"\t"<<class_QoS<<"\t"<<bid<<"\tDROPPED"<<endl;
+				if(TRAF_DBG) cout<<"\t"<<period<<"\t"<<vnpId<<"\t"<<vlinkId<<"\t"<<src<<"\t"<<dest<<"\t"<<qosCls<<"\t"<<qosCls<<"\t"<<bid<<"\tDROPPED"<<endl;
 			}
 
 		}// end for
@@ -351,7 +355,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 		for(i=0;i<nb_added_vnp_requests;i++)
 		{
-			vnp_id=i+1;
+			vnpId=i+1;
 			rand_nb_node = (IloInt) vect_vnp_nb_nodes[i];
 			IloInt nbr_elet= length*rand_nb_node;
 			IloNumArray    vect_VNP_node_location(env,nbr_elet);
@@ -393,7 +397,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 				VNode_Location_Vect[comp_vn_node].SetVirtual_Node_Id((IloInt)vn_node);
 				VNode_Location_Vect[comp_vn_node].SetQoS_Class((IloInt)node_cls);
-				VNode_Location_Vect[comp_vn_node].SetVNP_Id((IloInt)vnp_id);
+				VNode_Location_Vect[comp_vn_node].SetVNP_Id((IloInt)vnpId);
 				VNode_Location_Vect[comp_vn_node].SetCandidate_Location_Tab(vect_location);
 				VNode_Location_Vect[comp_vn_node].SetPeriod((IloInt)current_period);
 
@@ -409,16 +413,16 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 
 		VlinkReqAryType  Add_Request_Vect(env,NB_ADD_REQUEST);
-		virtual_link_id=1;
+		vlinkId=1;
 
 		for(j=0;j<nb_added_vnp_requests;j++)
 		{
 			cvnp_nb_node  = (IloInt) vect_vnp_nb_nodes[j];
 			cvnp_nb_link = (IloInt) vect_vnp_nb_links[j];
-			vnp_id = j+1;
+			vnpId = j+1;
 
 			if(TRAF_DBG){
-				cout<<"VNP Id:"<<vnp_id<<endl;
+				cout<<"VNP Id:"<<vnpId<<endl;
 				cout<<"cvnp_nb_node:"<<cvnp_nb_node<<endl;
 				cout<<"cvnp_nb_link:"<<cvnp_nb_link<<endl;
 			}
@@ -444,7 +448,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 					if (i == cvnp_nb_node-1)
 					{
 						node = cvnp_nb_node;
-						is_connected = (IloInt) check_node_connected(Add_Request_Vect, cvnp_nb_node, vnp_id, node, nb_vnp_sd_counter);
+						is_connected = (IloInt) check_node_connected(Add_Request_Vect, cvnp_nb_node, vnpId, node, nb_vnp_sd_counter);
 						IloBool  node_not_connected = (is_connected == 0);
 
 						if (node_not_connected)
@@ -467,7 +471,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 				}// end else
 
-					find = (IloInt) search_vnp_request(Add_Request_Vect, src, dest, vnp_id, nb_vnp_sd_counter);
+					find = (IloInt) search_vnp_request(Add_Request_Vect, src, dest, vnpId, nb_vnp_sd_counter);
 
 				if ((find==0)&& (src!=dest))
 				{
@@ -475,8 +479,8 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 					Add_Request_Vect[nb_vnp_sd_counter].setSrcVnode((IloInt)src);
 					Add_Request_Vect[nb_vnp_sd_counter].setDestVnode((IloInt)dest);
-					Add_Request_Vect[nb_vnp_sd_counter].setVlinkId((IloInt) virtual_link_id);
-					Add_Request_Vect[nb_vnp_sd_counter].setVnpId((IloInt)vnp_id);
+					Add_Request_Vect[nb_vnp_sd_counter].setVlinkId((IloInt) vlinkId);
+					Add_Request_Vect[nb_vnp_sd_counter].setVnpId((IloInt)vnpId);
 					Add_Request_Vect[nb_vnp_sd_counter].setVlinkQosCls((IloInt)virtual_link_class);
 					Add_Request_Vect[nb_vnp_sd_counter].SetPeriod((IloInt)current_period);
 
@@ -484,12 +488,12 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 						cout<<endl;
 						cout<<"src:"<<src<<endl;
 						cout<<"dest:"<<dest<<endl;
-						cout<<"virtual link id:"<<virtual_link_id<<endl;
+						cout<<"virtual link id:"<<vlinkId<<endl;
 					}
 					nb_link_current_vnp++;
 
 					nb_vnp_sd_counter++;
-					virtual_link_id++;
+					vlinkId++;
 					i++;
 
 				}// end if
@@ -514,11 +518,11 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 		for(i=0;i<nb_added_vnp_requests;i++)
 		{
-			vnp_id = i+1;
+			vnpId = i+1;
 			rand_nb_node = (IloInt) vect_vnp_nb_nodes[i];
 			rand_nb_links = (IloInt) vect_vnp_nb_links[i];
 
-			file4<<vnp_id<<"       "<<rand_nb_node<<"       "<<rand_nb_links<<"      "<<current_period<<endl;
+			file4<<vnpId<<"       "<<rand_nb_node<<"       "<<rand_nb_links<<"      "<<current_period<<endl;
 
 		}
 
@@ -776,17 +780,17 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 		{
 			src = (IloInt) Add_Request_Vect[j].getSrcVnode();
 			dest = (IloInt) Add_Request_Vect[j].getDestVnode();
-			vnp_id = (IloInt) Add_Request_Vect[j].getVnpId();
+			vnpId = (IloInt) Add_Request_Vect[j].getVnpId();
 			virtual_link_class = (IloInt) Add_Request_Vect[j].getVlinkQosCls();
-			virtual_link_id = (IloInt) Add_Request_Vect[j].getVlinkId();
+			vlinkId = (IloInt) Add_Request_Vect[j].getVlinkId();
 
 			hops = (IloInt) Link_Class_QoS_Vect[virtual_link_class-1].GetQoS_Class_Max_Hops();
 
 			arrayZeroInitialize(candidate_src_vect,length);
-			search_candidate_location(src, VNode_Location_Vect, vnp_id, candidate_src_vect,NB_VNP_NODE);
+			search_candidate_location(src, VNode_Location_Vect, vnpId, candidate_src_vect,NB_VNP_NODE);
 
 			arrayZeroInitialize(candidate_dest_vect,length);
-			search_candidate_location(dest, VNode_Location_Vect, vnp_id, candidate_dest_vect,NB_VNP_NODE);
+			search_candidate_location(dest, VNode_Location_Vect, vnpId, candidate_dest_vect,NB_VNP_NODE);
 
 			//cout<<"virtual_link_id:"<<virtual_link_id<<endl;
 
@@ -821,9 +825,9 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 									Potantial_Embedding_Nodes_Vect[nb_candidate_embdedding_nodes].setCandidSrcSnode((IloInt)src_candidate);
 									Potantial_Embedding_Nodes_Vect[nb_candidate_embdedding_nodes].setCandidDestSnode((IloInt)dest_candidate);
-									Potantial_Embedding_Nodes_Vect[nb_candidate_embdedding_nodes].setVlinkId((IloInt) virtual_link_id);
+									Potantial_Embedding_Nodes_Vect[nb_candidate_embdedding_nodes].setVlinkId((IloInt) vlinkId);
 									Potantial_Embedding_Nodes_Vect[nb_candidate_embdedding_nodes].setVlinkQosCls(virtual_link_class);
-									Potantial_Embedding_Nodes_Vect[nb_candidate_embdedding_nodes].setVnpId((IloInt)vnp_id);
+									Potantial_Embedding_Nodes_Vect[nb_candidate_embdedding_nodes].setVnpId((IloInt)vnpId);
 									Potantial_Embedding_Nodes_Vect[nb_candidate_embdedding_nodes].setEmbeddingNodeCombinationId((IloInt)num_candidate_embdedding_nodes);
 
 									nb_candidate_embdedding_nodes++;
@@ -864,15 +868,15 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 		{
 			src = (IloInt)  Potantial_Embedding_Nodes_Vect[j].getCandidSrcSnode();
 			dest = (IloInt) Potantial_Embedding_Nodes_Vect[j].getCandidDestSnode();
-			class_QoS = (IloInt) Potantial_Embedding_Nodes_Vect[j].getVlinkQosCls();
+			qosCls = (IloInt) Potantial_Embedding_Nodes_Vect[j].getVlinkQosCls();
 			request_id = (IloInt) Potantial_Embedding_Nodes_Vect[j].getEmbeddingNodeCombinationId();
-			virtual_link_id = (IloInt) Potantial_Embedding_Nodes_Vect[j].getVlinkId();
-			vnp_id = (IloInt) Potantial_Embedding_Nodes_Vect[j].getVnpId();
+			vlinkId = (IloInt) Potantial_Embedding_Nodes_Vect[j].getVlinkId();
+			vnpId = (IloInt) Potantial_Embedding_Nodes_Vect[j].getVnpId();
 
-			hops = (IloInt) Link_Class_QoS_Vect[class_QoS-1].GetQoS_Class_Max_Hops();
+			hops = (IloInt) Link_Class_QoS_Vect[qosCls-1].GetQoS_Class_Max_Hops();
 
 
-			H_paths(Vect_Substrate_Graph, Path_Vect, src, dest, hops, request_id, vnp_id, virtual_link_id, COUNT_PATH, env);
+			H_paths(Vect_Substrate_Graph, Path_Vect, src, dest, hops, request_id, vnpId, vlinkId, COUNT_PATH, env);
 
 
 		}
@@ -891,22 +895,22 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 		for(k=0;k<NB_ADD_REQUEST;k++)
 		{
-			class_QoS = (IloInt) Add_Request_Vect[k].getVlinkQosCls();
-			virtual_link_id = (IloInt) Add_Request_Vect[k].getVlinkId();
+			qosCls = (IloInt) Add_Request_Vect[k].getVlinkQosCls();
+			vlinkId = (IloInt) Add_Request_Vect[k].getVlinkId();
 
 			src = (IloInt) Add_Request_Vect[k].getSrcVnode();
 			dest = (IloInt) Add_Request_Vect[k].getDestVnode();
-			vnp_id = (IloInt) Add_Request_Vect[k].getVnpId();
+			vnpId = (IloInt) Add_Request_Vect[k].getVnpId();
 
-			search_cpu_requirement_src_dest_nodes(src, dest, vnp_id, VNode_Location_Vect, Node_Class_QoS_Vect, src_cls, dest_cls);
+			search_cpu_requirement_src_dest_nodes(src, dest, vnpId, VNode_Location_Vect, Node_Class_QoS_Vect, src_cls, dest_cls);
 
-			bw = (IloInt) Link_Class_QoS_Vect[class_QoS-1].getQosClsBw();
+			bw = (IloInt) Link_Class_QoS_Vect[qosCls-1].getQosClsBw();
 
 			src_cpu_cls = (IloInt) Node_Class_QoS_Vect[src_cls-1].getVnodeCpuReq();
 			dest_cpu_cls = (IloInt) Node_Class_QoS_Vect[dest_cls-1].getVnodeCpuReq();
 
-			search_min_path_unit_cost(Path_Vect, COUNT_PATH, virtual_link_id,vnp_id , bw_unit_cost_vect, cpu_unit_cost_vect, bw,src_cpu_cls, dest_cpu_cls, min_path_unit_cost, min_src_dest_cost, env);
-			search_max_path_unit_cost(Path_Vect, COUNT_PATH, virtual_link_id, vnp_id, bw_unit_cost_vect, cpu_unit_cost_vect, bw, src_cpu_cls, dest_cpu_cls, max_path_unit_cost, max_src_dest_cost, env);
+			search_min_path_unit_cost(Path_Vect, COUNT_PATH, vlinkId,vnpId , bw_unit_cost_vect, cpu_unit_cost_vect, bw,src_cpu_cls, dest_cpu_cls, min_path_unit_cost, min_src_dest_cost, env);
+			search_max_path_unit_cost(Path_Vect, COUNT_PATH, vlinkId, vnpId, bw_unit_cost_vect, cpu_unit_cost_vect, bw, src_cpu_cls, dest_cpu_cls, max_path_unit_cost, max_src_dest_cost, env);
 
 			average_path_unit_cost = (IloInt)((max_path_unit_cost + min_path_unit_cost)/2);
 
@@ -936,7 +940,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 				cout<<"virtual_link_id:"<<k+1<<endl;
 
-				cout<<"QoS_class:"<<class_QoS<<endl;
+				cout<<"QoS_class:"<<qosCls<<endl;
 				cout<<"bw:"<<bw<<endl;
 
 				cout<<"min_src_dest_cost:"<<min_src_dest_cost<<endl;
@@ -968,24 +972,25 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 		VlinkReqAryType  New_Request_Vect(env, NB_REQUEST);
 
 		int reqItr=0;
-		//cout<<"src\tdest\tvirtual_link_id\t  class_QoS\tbid\tvnp_id\tperiod"<<endl;
+		cout<<"\tvlinks retained and newly generated in tSlot: "<<currTslot<<endl;
+		cout<<"src\tdest\tvirtual_link_id\t  class_QoS\tbid\tvnp_id\tperiod\tRTND-NEW"<<endl;
 		for (i=0;i<NB_RESERVED_REQUEST;i++)
 		{
 			src = (IloInt) Reserved_Request_Vect[i].getSrcVnode();
 			dest = (IloInt) Reserved_Request_Vect[i].getDestVnode();
-			class_QoS = (IloInt) Reserved_Request_Vect[i].getVlinkQosCls();
-			virtual_link_id = (IloInt) Reserved_Request_Vect[i].getVlinkId();
-			vnp_id = (IloInt) Reserved_Request_Vect[i].getVnpId();
+			qosCls = (IloInt) Reserved_Request_Vect[i].getVlinkQosCls();
+			vlinkId = (IloInt) Reserved_Request_Vect[i].getVlinkId();
+			vnpId = (IloInt) Reserved_Request_Vect[i].getVnpId();
 			bid = (IloInt) Reserved_Request_Vect[i].getBid();
 			period = (IloInt) Reserved_Request_Vect[i].getPeriod();
 
-			//cout<<src<<"\t"<<dest<<"\t\t"<<virtual_link_id<<"\t\t"<<class_QoS<<"\t"<<bid<<"\t"<<vnp_id<<"\t"<<period<<endl;
+			cout<<src<<"\t"<<dest<<"\t\t"<<vlinkId<<"\t\t"<<qosCls<<"\t"<<bid<<"\t"<<vnpId<<"\t"<<period<<"\tRTND-"<<endl;
 
 			New_Request_Vect[reqItr].setSrcVnode((IloInt)src);
 			New_Request_Vect[reqItr].setDestVnode((IloInt)dest);
-			New_Request_Vect[reqItr].setVlinkQosCls((IloInt)class_QoS);
-			New_Request_Vect[reqItr].setVlinkId((IloInt)virtual_link_id);
-			New_Request_Vect[reqItr].setVnpId((IloInt)vnp_id);
+			New_Request_Vect[reqItr].setVlinkQosCls((IloInt)qosCls);
+			New_Request_Vect[reqItr].setVlinkId((IloInt)vlinkId);
+			New_Request_Vect[reqItr].setVnpId((IloInt)vnpId);
 			New_Request_Vect[reqItr].SetBid((IloInt)bid);
 			New_Request_Vect[reqItr].SetPeriod((IloInt)period);
 
@@ -996,17 +1001,18 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 		{
 			src = (IloInt) Add_Request_Vect[i].getSrcVnode();
 			dest = (IloInt) Add_Request_Vect[i].getDestVnode();
-			vnp_id = (IloInt) Add_Request_Vect[i].getVnpId();
-			class_QoS = (IloInt) Add_Request_Vect[i].getVlinkQosCls();
-			virtual_link_id = (IloInt)Add_Request_Vect[i].getVlinkId();
+			vnpId = (IloInt) Add_Request_Vect[i].getVnpId();
+			qosCls = (IloInt) Add_Request_Vect[i].getVlinkQosCls();
+			vlinkId = (IloInt)Add_Request_Vect[i].getVlinkId();
 			bid = (IloInt) Add_Request_Vect[i].getBid();
 			period = (IloInt) Add_Request_Vect[i].getPeriod();
+			cout<<src<<"\t"<<dest<<"\t\t"<<vlinkId<<"\t\t"<<qosCls<<"\t"<<bid<<"\t"<<vnpId<<"\t"<<period<<"\t-NEW"<<endl;
 
 			New_Request_Vect[reqItr].setSrcVnode((IloInt)src);
 			New_Request_Vect[reqItr].setDestVnode((IloInt)dest);
-			New_Request_Vect[reqItr].setVlinkQosCls((IloInt)class_QoS);
-			New_Request_Vect[reqItr].setVlinkId((IloInt)virtual_link_id);
-			New_Request_Vect[reqItr].setVnpId((IloInt)vnp_id);
+			New_Request_Vect[reqItr].setVlinkQosCls((IloInt)qosCls);
+			New_Request_Vect[reqItr].setVlinkId((IloInt)vlinkId);
+			New_Request_Vect[reqItr].setVnpId((IloInt)vnpId);
 			New_Request_Vect[reqItr].SetBid((IloInt)bid);
 			New_Request_Vect[reqItr].SetPeriod((IloInt)period);
 
@@ -1030,12 +1036,12 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 
 			vn_node = (IloInt)VNode_Location_Vect[i].GetVirtual_Node_Id();
 			node_cls = (IloInt)VNode_Location_Vect[i].GetQoS_Class();
-			vnp_id = (IloInt) VNode_Location_Vect[i].GetVNP_Id();
+			vnpId = (IloInt) VNode_Location_Vect[i].GetVNP_Id();
 			period = (IloInt) VNode_Location_Vect[i].GetPeriod();
 
 			VNode_Location_Vect[i].GetCandidate_Location_Tab(vect_location);
 
-			file6<<vn_node<<"       "<<node_cls<<"         "<<vnp_id<<"        "<<period<<endl;
+			file6<<vn_node<<"       "<<node_cls<<"         "<<vnpId<<"        "<<period<<endl;
 
 			for (j=0;j<length;j++)
 			{
@@ -1073,15 +1079,16 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot){
 		{
 			src = (IloInt) New_Request_Vect[i].getSrcVnode();
 			dest = (IloInt) New_Request_Vect[i].getDestVnode();
-			virtual_link_id = (IloInt) New_Request_Vect[i].getVlinkId();
-			class_QoS = (IloInt) New_Request_Vect[i].getVlinkQosCls();
+			vlinkId = (IloInt) New_Request_Vect[i].getVlinkId();
+			qosCls = (IloInt) New_Request_Vect[i].getVlinkQosCls();
 			bid = (IloInt) New_Request_Vect[i].getBid();
-			vnp_id = (IloInt) New_Request_Vect[i].getVnpId();
+			vnpId = (IloInt) New_Request_Vect[i].getVnpId();
 			period = (IloInt)New_Request_Vect[i].getPeriod();
 
 			//cout<<New_Request_Vect<<endl;
-			cout<<"\t"<<period<<"\t"<<vnp_id<<"\t"<<virtual_link_id<<"\t"<<src<<"\t"<<dest<<"\t"<<class_QoS<<"\t"<<bid<<endl;
-			file7 <<src<<"         "<<dest<<"         "<<virtual_link_id<<"        "<<class_QoS<<"       "<<bid<<"      "<<vnp_id<<"     "<<period<<endl;
+			cout<<"\t"<<period<<"\t"<<vnpId<<"\t"<<vlinkId<<"\t"<<src<<"\t"<<dest<<"\t"<<qosCls<<"\t"<<bid<<endl;
+			// Reading in PeriodicNodeEmbedder  file7>>src>>dest>>virtual_link_id>>class_QoS>>bid>>vnp_id>>period;
+			file7 <<src<<"\t"<<dest<<"\t"<<vlinkId<<"\t"<<qosCls<<"\t"<<bid<<"\t"<<vnpId<<"\t"<<period<<endl;
 		}
 
 		file7.close();

@@ -470,7 +470,7 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
     					Reserved_embedding_Vect[NB_Reserved_Requests].setVnpId(vnp_id);
     					Reserved_embedding_Vect[NB_Reserved_Requests].setVlinkId(virtual_link_id);
     					Reserved_embedding_Vect[NB_Reserved_Requests].setVlEmbdProfit(virtual_link_profit);
-    					Reserved_embedding_Vect[NB_Reserved_Requests].setVlEmbdngCost(cost);
+    					Reserved_embedding_Vect[NB_Reserved_Requests].setActvPthCost(cost);
     					Reserved_embedding_Vect[NB_Reserved_Requests].setPeriod(period);
 
     					Reserved_embedding_Vect[NB_Reserved_Requests].setActvSlinkAry(arc_list);
@@ -487,7 +487,7 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
     				   Removed_request_Vect[remPathCount].setVnpId(vnp_id);
     				   Removed_request_Vect[remPathCount].setVlinkId(virtual_link_id);
     				   Removed_request_Vect[remPathCount].setVlEmbdProfit(virtual_link_profit);
-    				   Removed_request_Vect[remPathCount].setVlEmbdngCost(cost);
+    				   Removed_request_Vect[remPathCount].setActvPthCost(cost);
     				   Removed_request_Vect[remPathCount].setPeriod(period);
     				   Removed_request_Vect[remPathCount].setActvSlinkAry(arc_list);
     				   Removed_request_Vect[remPathCount].setActvSnodeAry(node_list_prv);
@@ -955,7 +955,7 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
     			  vnp_id = (IloInt) Reserved_embedding_Vect[i].getVnpId();
                   virtual_link_id = (IloInt) Reserved_embedding_Vect[i].getVlinkId();
                   virtual_link_profit = (IloInt) Reserved_embedding_Vect[i].getVlEmbdProfit();
-    			  cost = (IloInt) Reserved_embedding_Vect[i].getVlEmbdngCost();
+    			  cost = (IloInt) Reserved_embedding_Vect[i].getActvPthCost();
     			  period = (IloInt) Reserved_embedding_Vect[i].getPeriod();
     			  Reserved_embedding_Vect[i].getActvSlinkAry(arc_list);
     			  Reserved_embedding_Vect[i].getActvSnodeAry(node_list_prv);
@@ -1049,7 +1049,7 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
     			  vnp_id = (IloInt) path_embedding_tab[i].getVnpId();
                   virtual_link_id = (IloInt) path_embedding_tab[i].getVlinkId();
                   virtual_link_profit = (IloInt) path_embedding_tab[i].getVlEmbdProfit();
-    			  cost = (IloInt) path_embedding_tab[i].getVlEmbdngCost();
+    			  cost = (IloInt) path_embedding_tab[i].getActvPthCost();
     			  path_embedding_tab[i].getActvSlinkAry(arc_list);
     			  path_embedding_tab[i].getActvSnodeAry(node_list_prv);
 

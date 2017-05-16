@@ -20,7 +20,7 @@ void TrafficGenerator::generateInitTraffic(){
 		const char*  f4_vnReqTopo	= "DataFiles/t0/f4_vnReqTopo.txt";			// t0/f4_vnReqTopo.txt
 		const char*  f5_subUnitCost	= "DataFiles/t0/f5_subUnitCost.txt";		// t0/f5_subUnitCost.txt
 		const char*  f6_vnReqNode	= "DataFiles/t0/f6_vnReqNode.txt";			// t0/f6_vnReqNode.txt
-		const char*  outF7_vnReqLink	= "DataFiles/t0/f7_vnReqLink.txt";			// t0/f7_vnReqLink.txt
+		const char*  f7_vnReqLink	= "DataFiles/t0/f7_vnReqLink.txt";			// t0/f7_vnReqLink.txt
 
 		IloInt i=0 , j=0, k=0, l=0, h=0, src=0, dest=0, class_QoS=0, find=0;
 		IloInt request_id=0, bw=0, hops=0, link=0, vn_node=0, dest_candidate=0, src_candidate=0;
@@ -657,15 +657,15 @@ void TrafficGenerator::generateInitTraffic(){
 					//------------------------------------------------------------------------------------------
 					//                     FILE 7: Save the traffic matrix into file: traffic.txt                       -
 					//------------------------------------------------------------------------------------------
-    						ofstream file7(outF7_vnReqLink);
+    						ofstream file7(f7_vnReqLink);
 
 							if (!file7)
-							  cerr << "ERROR: could not open file `"<< outF7_vnReqLink << "`for writing"<< endl;
+							  cerr << "ERROR: could not open file `"<< f7_vnReqLink << "`for writing"<< endl;
 
-                           file7<<0<<endl;
-                           file7<<NB_REQUEST<<endl;
-						   file7<<0<<endl;
-						   file7<<0<<endl;
+                           file7<<0<<endl;			// current_period
+                           file7<<NB_REQUEST<<endl;	// totVlCount = NB_REQUEST
+						   file7<<0<<endl;			// rtndVlCount = NB_RESERVED_REQUEST
+						   file7<<0<<endl;			// newVlCount = NB_ADD_REQUEST
 
 							for (i=0;i<NB_REQUEST;i++)
 							   {
@@ -676,7 +676,7 @@ void TrafficGenerator::generateInitTraffic(){
 								  bid = (IloInt) Request_Vect[i].getBid();
 								  vnp_id = (IloInt) Request_Vect[i].getVnpId();
 
-								  file7 <<src<<"         "<<dest<<"         "<<virtual_link_id<<"        "<<class_QoS<<"       "<<bid<<"       "<<vnp_id<<"     "<<current_period<<endl;
+								  file7 <<src<<"\t"<<dest<<"\t"<<virtual_link_id<<"\t"<<class_QoS<<"\t"<<bid<<"\t"<<vnp_id<<"\t"<<current_period<<endl;
 							   }
 
 							file7.close();

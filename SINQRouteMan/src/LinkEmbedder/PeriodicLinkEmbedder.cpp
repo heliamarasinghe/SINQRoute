@@ -355,7 +355,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setVnpId(vnp_id);
 				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setVlinkId(virtual_link_id);
 				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setVlEmbdProfit(virtual_link_profit);
-				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setVlEmbdngCost(cost);
+				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setActvPthCost(cost);
 				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setPeriod(period);
 				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setActvSlinkAry(arc_list);
 				rtndVlinkEmbeddingVect[numRtndVlinkEmbdFound].setActvSnodeAry(node_list_prv);
@@ -369,7 +369,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setVnpId(vnp_id);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setVlinkId(virtual_link_id);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setVlEmbdProfit(virtual_link_profit);
-				rmvdVlinkEmbedingVect[rmvdVlinkCount].setVlEmbdngCost(cost);
+				rmvdVlinkEmbedingVect[rmvdVlinkCount].setActvPthCost(cost);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setPeriod(period);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setActvSlinkAry(arc_list);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setActvSnodeAry(node_list_prv);
@@ -758,7 +758,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 			IloInt vnp_id = (IloInt) rtndVlinkEmbeddingVect[i].getVnpId();
 			IloInt virtual_link_id = (IloInt) rtndVlinkEmbeddingVect[i].getVlinkId();
 			IloInt virtual_link_profit = (IloInt) rtndVlinkEmbeddingVect[i].getVlEmbdProfit();
-			IloInt cost = (IloInt) rtndVlinkEmbeddingVect[i].getVlEmbdngCost();
+			IloInt cost = (IloInt) rtndVlinkEmbeddingVect[i].getActvPthCost();
 			IloInt period = (IloInt) rtndVlinkEmbeddingVect[i].getPeriod();
 			rtndVlinkEmbeddingVect[i].getActvSlinkAry(arc_list);
 			rtndVlinkEmbeddingVect[i].getActvSnodeAry(node_list_prv);
@@ -853,7 +853,7 @@ char* LinkEmbedder::embedPeriodicLinks(int currTslot){
 			IloInt vnp_id = (IloInt) path_embedding_tab[i].getVnpId();
 			IloInt virtual_link_id = (IloInt) path_embedding_tab[i].getVlinkId();
 			IloInt virtual_link_profit = (IloInt) path_embedding_tab[i].getVlEmbdProfit();
-			cost = (IloInt) path_embedding_tab[i].getVlEmbdngCost();
+			cost = (IloInt) path_embedding_tab[i].getActvPthCost();
 			path_embedding_tab[i].getActvSlinkAry(arc_list);
 			path_embedding_tab[i].getActvSnodeAry(node_list_prv);
 

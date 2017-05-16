@@ -135,7 +135,7 @@ void LinkEmbedder::search_embedding_path(MetaSubPathAryType& path_tab, IloInt& n
 			profit = bid - cost;
 
 			embedding_tab[current_nb_path].setVlEmbdProfit(profit);
-			embedding_tab[current_nb_path].setVlEmbdngCost(cost);
+			embedding_tab[current_nb_path].setActvPthCost(cost);
 
 			current_nb_path++;
 
@@ -255,7 +255,8 @@ void LinkEmbedder::searchEmbdAcbkPair(MetaActvBkupPairAryType& actvBkupPathPairA
 			cout<<bid<<"\t"<<actvPthcost<<"+"<<bkupPthCost<<"\t\t"<<profit<<endl;
 
 			newlyEmbdedVlinkAry[embdVlItr].setVlEmbdProfit(profit);						// SAVE:	profit
-			newlyEmbdedVlinkAry[embdVlItr].setVlEmbdngCost(acbkPairEmbdCost);					// SAVE:	acbkPairEmbdCost
+			newlyEmbdedVlinkAry[embdVlItr].setActvPthCost(actvPthcost);					// SAVE:	actvPthcost
+			newlyEmbdedVlinkAry[embdVlItr].setBkupPthCost(bkupPthCost);					// SAVE:	actvPthcost
 
 			embdVlItr++;
 
@@ -1047,7 +1048,7 @@ void  LinkEmbedder::shortest_path(bool bkupPath, SnodesAryType& subNetGraph,  Me
 	bool SHOW_MORE = false;
 	//if(!bkupPath && requestId==0) SHOW=true;
 	if(bkupPath && requestId==0) {
-		SHOW = true;
+		//SHOW = true;
 		//SHOW_MORE = true;
 	}
 
@@ -1128,11 +1129,10 @@ void  LinkEmbedder::shortest_path(bool bkupPath, SnodesAryType& subNetGraph,  Me
 	IloInt adjacents_ind =  check_src_dest_adjanticity(srcSnode, destSnode, subNetGraph, env);		// adjacents_ind can be 1 or 0 if src and dest are adjacent
 	IloInt max_paths = 0;
 	if (adjacents_ind ==1 && nb_in_out_link == 1) max_paths = 1;// If src and dst are adjacent (and has only one link betweeen them) algorithm must only give 1 path between them
-	else if(!bkupPath) max_paths = ACTV_PER_VL;	// If finding active paths, max active paths per vlink
-	else
-		max_paths = BKUP_PER_ACTV;	// If finding backup paths, max backup paths per vlink
+	else if(bkupPath) max_paths = BKUP_PER_ACTV;	// If finding active paths, max active paths per vlink
+	else max_paths = ACTV_PER_VL;	// If finding backup paths, max backup paths per vlink
 
-	IloInt MAX_ITR = 19999;
+	IloInt MAX_ITR = 9999;	//Must be less than GN
 	IloInt numPathsFound=0;
 	IloInt prevVertId = srcSnode;																// Start with src by setting it as nextNod
 	while (numPathsFound <max_paths && !prioQ.empty() &&  vertCount<MAX_ITR){								// While max paths not reached and priority queue is not empty
@@ -1580,6 +1580,7 @@ IloInt LinkEmbedder::searchRtndReqFrmPrv(VlinkReqAryType& requestVect, IloInt& n
 	IloInt find_req=0, s=0;
 	IloInt c_vnp=0, c_vlink=0, c_period=0;
 	while ((s < nbr_demand ) && (find_req ==0)){
+
 		c_vnp =   requestVect[s].getVnpId();
 		c_vlink =  requestVect[s].getVlinkId();
 		c_period =  requestVect[s].getPeriod();

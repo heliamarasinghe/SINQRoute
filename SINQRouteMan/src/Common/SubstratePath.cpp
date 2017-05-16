@@ -15,15 +15,15 @@ SubstratePath::SubstratePath(){
 	vnpId			= 0;
 	vlinkId			= 0;
 	vlEmbdProfit	= 0.0;
-	vlEmbdngCost	= 0.0;
+	//vlEmbdngCost	= 0.0;
 	period			= 0;
 
 	acbkPairId		= 0;
 	numActvHops		= 0;
 	numBkupHops		= 0;
 
-	//actvPthCost	= 0;
-	//bkupPthCost	= 0;
+	actvPthCost	= 0.0;
+	bkupPthCost	= 0.0;
 
 	for(IloInt k=0; k<MAX_SIZE; k++){
 		actvSnodeAry[k]=0;
@@ -74,12 +74,12 @@ IloNum SubstratePath::getVlEmbdProfit(){
 	return vlEmbdProfit;
 }
 
-void SubstratePath::setVlEmbdngCost(IloNum vlCost){
-	vlEmbdngCost = vlCost;
-}
-IloNum SubstratePath::getVlEmbdngCost(){
-	return vlEmbdngCost;
-}
+//void SubstratePath::setActvPthCost(IloNum vlCost){
+//	vlEmbdngCost = vlCost;
+//}
+//IloNum SubstratePath::getVlEmbdngCost(){
+//	return vlEmbdngCost;
+//}
 
 void SubstratePath::setPeriod(IloInt p){
 	period=p;
@@ -113,20 +113,20 @@ IloInt SubstratePath::getNumBkupHops(){
 }
 
 
-/*void SubstratePath::setVlEmbdngCost(IloInt acCost){
+void SubstratePath::setActvPthCost(IloNum acCost){
 		actvPthCost=acCost;
 	}
-    IloInt SubstratePath::getVlEmbdngCost(){
+    IloNum SubstratePath::getActvPthCost(){
     	return actvPthCost;
     }
 
 
-    void SubstratePath::setBkupPthCost(IloInt bkCost){
+    void SubstratePath::setBkupPthCost(IloNum bkCost){
 		bkupPthCost=bkCost;
 	}
-    IloInt SubstratePath::getBkupPthCost(){
+    IloNum SubstratePath::getBkupPthCost(){
     	return bkupPthCost;
-    }*/
+    }
 
 
 

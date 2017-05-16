@@ -46,7 +46,7 @@ public:
 //       };
 
 	static void generateInitTraffic();
-	static void generatePeriodicTraffic(int);
+	static void generatePeriodicTraffic(int currTslot, int bkup);
 
 	//static void table_initialization(IloNumArray&, IloInt&);
 

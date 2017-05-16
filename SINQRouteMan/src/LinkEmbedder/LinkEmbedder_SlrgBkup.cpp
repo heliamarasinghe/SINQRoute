@@ -10,7 +10,7 @@
 
 
 char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
-	cout<<"\n\t*** Executing Link Embedder with SLRG Backups ***"<<endl;
+	cout<<"\n\n\t----------------------- Executing Link Embedder with SLRG aware Backups for TIME SLOT: "<<currTslot<<" ------------------------"<<endl;
 
 	//int prevTslot = currTslot-1;
 	//IloInt vect_length=MAX_SIZE;
@@ -32,23 +32,23 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 	char f9_ph1AcceptedVlinks[50];
 	snprintf(f9_ph1AcceptedVlinks, sizeof(char) * 50, "DataFiles/t%i/f9_ph1AcceptedVlinks.txt", currTslot);			// currTslot/f9_ph1AcceptedVlinks.txt
 
-	char prv_fbk11_ph2EmbeddedVnodes[50];
+	char prv_f11_srlg_ph2EmbeddedVnodes[50];
 	if(currTslot>0)
-		snprintf(prv_fbk11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/fbk11_ph2EmbeddedVnodes.txt", currTslot-1);	// currTslot/f11_ph2EmbeddedVnodes.txt
+		snprintf(prv_f11_srlg_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_srlg_ph2EmbeddedVnodes.txt", currTslot-1);	// currTslot/f11_ph2EmbeddedVnodes.txt
 	else
-		snprintf(prv_fbk11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/init/fbk11_ph2EmbeddedVnodes.txt");
+		snprintf(prv_f11_srlg_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/init/f11_srlg_ph2EmbeddedVnodes.txt");
 	//char f17_ctrlUpdatedNalocs[50];
 	//snprintf(f17_ctrlUpdatedNalocs, sizeof(char) * 50, "DataFiles/t%i/f17_ctrlUpdatedNalocs.txt", prevTslot);		// currTslot/f12_ph2AcceptedVlinks.txt
 
 	// Files being written
-	char fbk11_ph2EmbeddedVnodes[50];
-	snprintf(fbk11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/fbk11_ph2EmbeddedVnodes.txt", currTslot);		// currTslot/f11_ph2EmbeddedVnodes.txt
+	char f11_srlg_ph2EmbeddedVnodes[50];
+	snprintf(f11_srlg_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_srlg_ph2EmbeddedVnodes.txt", currTslot);		// currTslot/f11_ph2EmbeddedVnodes.txt
 	char f12_ph2AcceptedVlinks[50];
 	snprintf(f12_ph2AcceptedVlinks, sizeof(char) * 50, "DataFiles/t%i/f12_ph2AcceptedVlinks.txt", currTslot);		// currTslot/f12_ph2AcceptedVlinks.txt
-	char fbk13_cplexLinkModel[50];
-	snprintf(fbk13_cplexLinkModel, sizeof(char) * 50, "DataFiles/t%i/fbk13_cplexLinkModel.lp", currTslot);				// currTslot/f13_cplexLinkModel.lp
-	char* fbk14_ph2AddRemovePaths = new char[50];
-	snprintf(fbk14_ph2AddRemovePaths, sizeof(char) * 50, "DataFiles/t%i/fbk14_ph2RemvdAddedPaths.txt", currTslot);		// Contains added and removed vlinks as a tab delimited intermediate physical switch IDs
+	char f13_srlg_cplexLinkModel[50];
+	snprintf(f13_srlg_cplexLinkModel, sizeof(char) * 50, "DataFiles/t%i/f13_srlg_cplexLinkModel.lp", currTslot);				// currTslot/f13_cplexLinkModel.lp
+	char* f14_srlg_ph2AddRemovePaths = new char[50];
+	snprintf(f14_srlg_ph2AddRemovePaths, sizeof(char) * 50, "DataFiles/t%i/f14_srlg_ph2RemvdAddedPaths.txt", currTslot);		// Contains added and removed vlinks as a tab delimited intermediate physical switch IDs
 
 	IloEnv env;
 
@@ -267,10 +267,10 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		//         				FILE 11: 	Reading Embedding result of previous Tslot
 		// 									Finding VN requests retained to current Tslot
 		//------------------------------------------------------------------------------------------------------------
-		cout<<"\tprv_f11\t Embedding result of previous Tslot from File: "<<prv_fbk11_ph2EmbeddedVnodes<<endl;
-		ifstream prv_fbk11(prv_fbk11_ph2EmbeddedVnodes);
+		cout<<"\tprv_f11\t Embedding result of previous Tslot from File: "<<prv_f11_srlg_ph2EmbeddedVnodes<<endl;
+		ifstream prv_fbk11(prv_f11_srlg_ph2EmbeddedVnodes);
 		if (!prv_fbk11)
-			cerr << "ERROR: could not open file "<< prv_fbk11_ph2EmbeddedVnodes <<"for reading"<< endl;
+			cerr << "ERROR: could not open file "<< prv_f11_srlg_ph2EmbeddedVnodes <<"for reading"<< endl;
 		IloInt embdVnodesInPrv = 0;
 		prv_fbk11>>embdVnodesInPrv;//35
 
@@ -443,7 +443,7 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setVnpId(vnpId);
 				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setVlinkId(vlinkId);
 				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setVlEmbdProfit(vlEmbdProfit);
-				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setVlEmbdngCost(vlEmbdngCost);
+				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setActvPthCost(vlEmbdngCost);
 				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setPeriod(period);
 				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setAcbkPairId(acbkPairId);
 				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setNumActvHops(numActvHops);
@@ -463,7 +463,7 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setVnpId(vnpId);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setVlinkId(vlinkId);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setVlEmbdProfit(vlEmbdProfit);
-				rmvdVlinkEmbedingVect[rmvdVlinkCount].setVlEmbdngCost(vlEmbdngCost);
+				rmvdVlinkEmbedingVect[rmvdVlinkCount].setActvPthCost(vlEmbdngCost);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setPeriod(period);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setAcbkPairId(acbkPairId);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setNumActvHops(numActvHops);
@@ -542,17 +542,17 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 			//arrayZeroInitialize(embdBkupSlinkList, MAX_SIZE);
 			rtndVlinkEmbeddingVect[vlItr].getBkupSlinkAry(embdBkupSlinkList);
 
-			cout<<"\tnumActvHops:"<<numActvHops<<"\t numBkupHops"<<numBkupHops<<endl;
-			cout<<"\tbslId:\taslIds"<<endl;
+			if(LINK_DBG1)cout<<"\tnumActvHops:"<<numActvHops<<"\t numBkupHops"<<numBkupHops<<endl<<"\tbslId:\taslIds"<<endl;
+
 			for(IloInt bslItr=0; bslItr<numBkupHops; bslItr++){
 				IloInt bslId = embdBkupSlinkList[bslItr];
-				cout<<"\t"<<bslId<<":\t";
+				if(LINK_DBG1)cout<<"\t"<<bslId<<":\t";
 				for(IloInt aslItr=0; aslItr<numActvHops; aslItr++){
 					IloInt aslId = embdActvSlinkList[aslItr];
-					cout<<"  "<<aslId;
-					deltaMat[bslId][aslId] += vlinkBw;
+					if(LINK_DBG1)cout<<"  "<<aslId;
+					deltaMat[bslId-1][aslId-1] += vlinkBw;
 				}
-				cout<<endl;
+				if(LINK_DBG1)cout<<endl;
 			}
 
 			/*
@@ -580,7 +580,7 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 					moreBsl=false;
 			}*/
 
-			if(vlItr==8){
+			if(LINK_DBG1 && vlItr==8){
 			//if(false){
 				cout<<"\tvlItr: "<<vlItr;
 				cout<<"\tnumSubLinks:"<<numSubLinks<<endl;
@@ -595,7 +595,7 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 
 
 		// Printing deltaMat
-		if(true){
+		if(LINK_DBG1){
 			cout<<"\n\tPrinting deltaMat"<<endl;
 			for (IloInt bsl =0; bsl<numSubLinks; bsl++){
 				for (IloInt asl =0; asl<numSubLinks; asl++) {
@@ -628,7 +628,7 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 			}
 		}
 
-		if(false){
+		if(LINK_DBG1){
 			cout<<"\n\tPrinting residual bandwith array after deducting backup bandwidth"<<endl;
 			cout<<"\t\tslId\tresidualBw"<<endl;
 			for(int slId=1; slId<=numSubLinks; slId++){
@@ -647,8 +647,10 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		//------------------------------------------------------------------------------------------
 		//                               Finding Active paths                      -
 		//------------------------------------------------------------------------------------------review
-		cout<<"\n\t Finding Active paths"<<endl;
-		cout<<"\t req\t srcVnode\t destVnode\t vlinkId\t vnpId\t srcSnode\t destSnode\t class_QoS\t maxHops"<<endl;
+		if(LINK_DBG1){
+			cout<<"\n\t Finding Active paths"<<endl;
+			cout<<"\t req\t srcVnode\t destVnode\t vlinkId\t vnpId\t srcSnode\t destSnode\t class_QoS\t maxHops"<<endl;
+		}
 		MetaSubPathAryType actvPathAry(env, maxMetaActvPaths);
 
 		// For active paths, bkSlinkBwUnitsReq_betaAry has only zeros for each slink
@@ -658,7 +660,7 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		IloInt actvPathCount = 0;
 		for(IloInt j=0;j<newVlinkReqCount;j++){
 			IloInt request_id = j+1;
-			cout<<"\t "<<request_id;
+			if(LINK_DBG1)cout<<"\t "<<request_id;
 			IloInt srcVnode =    newVlinkReqVect[j].getSrcVnode();
 			IloInt destVnode =   newVlinkReqVect[j].getDestVnode();
 
@@ -672,17 +674,19 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 			IloInt maxHops =   linkQosClsAry[class_QoS-1].GetQoS_Class_Max_Hops();
 
 
-			cout<<"\t "<<srcVnode<<"\t\t "<<destVnode<<"\t\t "<<vlinkId<<"\t\t "<<vnpId<<"\t "<<srcSnode<<"\t\t "<<destSnode<<"\t\t "<<class_QoS<<"\t\t "<<maxHops<<endl;
+			if(LINK_DBG1)cout<<"\t "<<srcVnode<<"\t\t "<<destVnode<<"\t\t "<<vlinkId<<"\t\t "<<vnpId<<"\t "<<srcSnode<<"\t\t "<<destSnode<<"\t\t "<<class_QoS<<"\t\t "<<maxHops<<endl;
 			shortest_path(false, subNetGraph, actvPathAry, srcSnode, destSnode, maxHops, request_id, vnpId, vlinkId, actvPathCount, bkSlBwUnitsReqAry_beta, env);
 			//cout<<"\t Next"<<endl;
 
 		}
 
-		cout<<"\t\t numShortestPaths:"<<actvPathCount<<endl;
-		cout<<"\t nb_candidate_embedding_nodes:"<<maxMetaActvPaths<<endl;
 
-		if(LINK_DBG1)
-		printing_meta_path(actvPathAry, actvPathCount, env);
+		if(LINK_DBG1){
+			cout<<"\n\t adedVlinkReqVect.size = "<<newVlinkReqVect.getSize()<<"\tadedVlinkCountInPhOne = "<<newVlinkReqCount<<endl;
+			cout<<"\t numShortestPaths:"<<actvPathCount<<endl;
+			cout<<"\t nb_candidate_embedding_nodes:"<<maxMetaActvPaths<<endl;
+			printing_meta_path(actvPathAry, actvPathCount, env);
+		}
 
 		map<IloInt, set<IloInt>> vlinkToActvPthMap;
 		for(IloInt aPthItr = 0; aPthItr< actvPathCount; aPthItr++){
@@ -698,13 +702,11 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		//		required on l* for the backup path ρ↑(π), if l is used in active path π↑(e)
 		//--------------------------------------------------------------------------------------------------------
 		cout<<"\n\t Caculating Theta matrix"<<endl;
-		cout<<"\n\tadedVlinkReqVect.size = "<<newVlinkReqVect.getSize()<<endl;
-		cout<<"\tadedVlinkCountInPhOne = "<<newVlinkReqCount<<endl;
-		IloInt numActvBkupPairs = 0;
 
 		cout<<"\n\t\tvlinks and corresponding active path IDs for wich backups are calculated"<<endl;
 		cout<<"\t\tXX shows that active path before it has a backup path that exceed maximum search iterations"<<endl;
-		cout<<"\t\tvlinkId\tActive paths for which backups were calculated"<<endl;
+		cout<<"\n\t\tvlinkId\t Active path IDs"<<endl;
+		IloInt numActvBkupPairs = 0;
 		IloInt PRINT_AP = 0;	//ex 169
 
 		for(IloInt avlItr=0; avlItr<newVlinkReqCount; avlItr++){				// For each vlink request
@@ -773,16 +775,17 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 			IloInt vlinkId = newVlinkReqVect[avlItr].getVlinkId();			// beta values
 			IloInt bkupPathCount = 0;
 			MetaSubPathAryType bkupPathAry(env, maxMetaBkupPaths);
-			//cout<<"\t\t"<<vlinkId<<"\t";
+			cout<<"\t\t"<<vlinkId<<"\t";
 			for(IloInt actvPthId : vlinkToActvPthMap[vlinkId]){
+
 
 				//MetaSubPath actvSpath = actvPathVect[actvPthId];
 				//IloInt srcSnode = actvPathVect[actvPthId].getSrcSnode();
 				//cout<<"\t\tsrcSnode = "<<srcSnode<<endl;
 				IloInt numActvHops = actvPathAry[actvPthId].getNumHops();
-				if(actvPthId == PRINT_AP){
+				if(LINK_DBG2 && actvPthId == PRINT_AP){
 					cout<<"\t------------------------------------------------------------------------------"<<endl;
-					cout<<"\tBEGIN: etails of backup parth calculation for Active path ID:"<<actvPthId<<" with numHops:"<<numActvHops<<endl;
+					cout<<"\tBEGIN: Details of backup parth calculation for Active path ID:"<<actvPthId<<" with numHops:"<<numActvHops<<endl;
 				}
 				//cout<<"\t\t numHops = "<<numHops<<endl;
 
@@ -819,7 +822,7 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 				for(IloInt aslItr = 0; aslItr<numActvHops; aslItr++){		// for each slink in active path
 
 					IloInt slinkInActivePth = actvPthSlinkAry[aslItr];
-					if(actvPthId == PRINT_AP)cout<<"\t\taslItr:"<<aslItr<<" slink ID:"<<slinkInActivePth<<endl;
+					if(LINK_DBG2 && actvPthId == PRINT_AP)cout<<"\t\taslItr:"<<aslItr<<" slink ID:"<<slinkInActivePth<<endl;
 					for(IloInt slinkInBkupPth = 0; slinkInBkupPth<numSubLinks; slinkInBkupPth++){		// For each slink in substrate toplogy
 						//if(actvPthId == PRINT_AP)
 							//cout<<slinkInBkupPth<<"("<<thetaMat[slinkInBkupPth][slinkInActivePth]<<") "<<endl;
@@ -847,7 +850,7 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 				}
 
 
-				if(actvPthId == PRINT_AP){
+				if(LINK_DBG2 && actvPthId == PRINT_AP){
 					cout<<"\tBeta array for active path \t"<<actvPthId<<" = ";
 					for(int i=0; i<numSubLinks; i++)
 						cout<<" "<<bkSlBwCostAry[i];
@@ -873,7 +876,7 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 					//subNetGraph[snItr].setBkupBwUnitsReqMap(bkupBwUnitsReqMap);
 				}
 
-				if(actvPthId == PRINT_AP){
+				if(LINK_DBG2 && actvPthId == PRINT_AP){
 					//Printing conSlinkCostMap corresponding to active path
 					IloNumArray actvPthSlinkAry(env, MAX_SIZE);									// numHops = numSlinks
 					arrayZeroInitialize(actvPthSlinkAry, MAX_SIZE);
@@ -1167,7 +1170,7 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		//-----------------------------------------------------------------------------------------------------
 		cout<<"\t E- Solving ILP Model"<<endl;
 		//-----------------------------------------------------------------------------------------------------
-		ILP_solver.exportModel(fbk13_cplexLinkModel);
+		ILP_solver.exportModel(f13_srlg_cplexLinkModel);
 		ILP_solver.solve();
 
 		//-----------------------------------------------------------------------------------------------------
@@ -1294,11 +1297,11 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		//***********************************************************************************************************
 
 		//-----------------------------------------------------------------------------------------------------
-		cout<<"\n\t Saving VN embedding solution in FILE: "<<fbk11_ph2EmbeddedVnodes<<endl;
+		cout<<"\n\t Saving VN embedding solution in FILE: "<<f11_srlg_ph2EmbeddedVnodes<<endl;
 		//-----------------------------------------------------------------------------------------------------
-		ofstream fbk11(fbk11_ph2EmbeddedVnodes);
+		ofstream fbk11(f11_srlg_ph2EmbeddedVnodes);
 		if (!fbk11)
-			cerr << "ERROR: could not open file "<< fbk11_ph2EmbeddedVnodes<< "for reading"<< endl;
+			cerr << "ERROR: could not open file "<< f11_srlg_ph2EmbeddedVnodes<< "for reading"<< endl;
 		IloInt ph2EmbdVnodeCount = rtndVnodeCount + acptdVnodeCount;
 		IloInt reserved_cpu=0;
 		fbk11<<ph2EmbdVnodeCount<<endl;
@@ -1345,7 +1348,9 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 			IloInt qosCls 	 	=	rtndVlinkEmbeddingVect[rvlItr].getQosCls();
 			IloInt vlBwReq 	 	=	linkQosClsAry[qosCls-1].getQosClsBw();
 			IloNum vlEmbdProfit =	rtndVlinkEmbeddingVect[rvlItr].getVlEmbdProfit();
-			IloNum vlEmbdCost	=	rtndVlinkEmbeddingVect[rvlItr].getVlEmbdngCost();
+			IloNum actvPthCost	=	rtndVlinkEmbeddingVect[rvlItr].getActvPthCost();
+			IloNum bkupPthCost	=	rtndVlinkEmbeddingVect[rvlItr].getBkupPthCost();
+			IloNum vlEmbdCost 	= 	actvPthCost + bkupPthCost;
 			IloInt numActvHops	=	rtndVlinkEmbeddingVect[rvlItr].getNumActvHops();
 			IloInt numBkupHops	=	rtndVlinkEmbeddingVect[rvlItr].getNumBkupHops();
 
@@ -1494,7 +1499,9 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 			IloInt vnpId 		=	newlyEmbdedVlinkAry[evlItr].getVnpId();
 			IloInt vlinkId 		=	newlyEmbdedVlinkAry[evlItr].getVlinkId();
 			IloNum vlEmbdProfit =	newlyEmbdedVlinkAry[evlItr].getVlEmbdProfit();
-			IloNum vlEmbdCost 	=	newlyEmbdedVlinkAry[evlItr].getVlEmbdngCost();
+			IloNum actvPthCost	=	newlyEmbdedVlinkAry[evlItr].getActvPthCost();
+			IloNum bkupPthCost	=	newlyEmbdedVlinkAry[evlItr].getBkupPthCost();
+			IloNum vlEmbdCost 	= 	actvPthCost + bkupPthCost;
 			IloInt numActvHops	=	newlyEmbdedVlinkAry[evlItr].getNumActvHops();
 			IloInt numBkupHops	=	newlyEmbdedVlinkAry[evlItr].getNumBkupHops();
 
@@ -1692,11 +1699,11 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		//				| <vnp_id>  \t  <QoS_cls>  \t  <node_list dlmt(,)>	|
 		//				-----------------------------------------------------
 		//----------------------------------------------------------------------------------------------------------
-		cout<<"\t Saving added and removed paths (vlinks) into FILE: "<<fbk14_ph2AddRemovePaths<<endl;
-		ofstream f14(fbk14_ph2AddRemovePaths);
+		cout<<"\t Saving added and removed paths (vlinks) into FILE: "<<f14_srlg_ph2AddRemovePaths<<endl;
+		ofstream f14(f14_srlg_ph2AddRemovePaths);
 
 		if (!f14)
-			cerr << "ERROR: could not open file "<< fbk14_ph2AddRemovePaths<< "for writing"<< endl;
+			cerr << "ERROR: could not open file "<< f14_srlg_ph2AddRemovePaths<< "for writing"<< endl;
 
 		f14<<prvEmbdRmvdCurr<<endl;
 		f14<<acptedVlinkCount<<endl;
@@ -1810,8 +1817,5 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		cerr << "ERROR: " << e.getMessage()<< endl;
 	}
 	env.end();
-	return fbk14_ph2AddRemovePaths;
+	return f14_srlg_ph2AddRemovePaths;
 }
-
-
-

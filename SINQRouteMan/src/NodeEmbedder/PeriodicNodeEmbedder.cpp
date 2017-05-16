@@ -22,17 +22,16 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 	snprintf(f5_subUnitCost, sizeof(char) * 50, "DataFiles/t%i/f5_subUnitCost.txt", currTslot);				// currTslot/f5_subUnitCost.txt
 	char f6_vnReqNode[50];
 	snprintf(f6_vnReqNode, sizeof(char) * 50, "DataFiles/t%i/f6_vnReqNode.txt", currTslot);					// currTslot/f6_vnReqNode.txt
-	//const char*  f11_ph2EmbeddedVnodes="DataFiles/t0/f11_ph2EmbeddedVnodes.txt";		
-
-	char prv_f11_ph2EmbeddedVnodes[50];
-	if(bkup==0) snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_ph2EmbeddedVnodes.txt", prevTslot); // prevTslot/f11_ph2EmbeddedVnodes.txt
-	else if(bkup==1) snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_ph2EmbeddedVnodes.txt", prevTslot); // prevTslot/f11_ph2EmbeddedVnodes.txt
-	else if (bkup==2) snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/fbk11_ph2EmbeddedVnodes.txt", prevTslot); // prevTslot/fbk11_ph2EmbeddedVnodes.txt
-
-
 	char f7_vnReqLink[50];
 	snprintf(f7_vnReqLink, sizeof(char) * 50, "DataFiles/t%i/f7_vnReqLink.txt", currTslot);					// currTslot/f7_vnReqLink.txt
 
+	// This file contains both node embedding and link embedding information.
+	// But PeriodicNodeEmbedder only reads node embedding data (first half of file). Hence can use both f11 and fbk11 files
+	char prv_f11_ph2EmbeddedVnodes[50];
+	if(bkup==0) snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_ph2EmbeddedVnodes.txt", prevTslot); // prevTslot/f11_ph2EmbeddedVnodes.txt
+	else if(bkup==1) snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_srlg_ph2EmbeddedVnodes.txt", prevTslot); // prevTslot/f11_ph2EmbeddedVnodes.txt
+	else if (bkup==2) snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_shrd_ph2EmbeddedVnodes.txt", prevTslot); // prevTslot/fbk11_ph2EmbeddedVnodes.txt
+	else cerr<<"\tPeriodicNodeEmbedder: Unable to recognize bkup parameter coming from main"<<endl;
 	// Files being written
 	char f8_ph1EmbeddedVnodes[50];
 	snprintf(f8_ph1EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f8_ph1EmbeddedVnodes.txt", currTslot);	//f8_ph1EmbeddedVnodes.txt
@@ -382,7 +381,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 			else
 				if(NODE_DBG0)cout<<"\t"<<period<<"\t"<<vnp_id<<"\t"<<vnode<<"\t"<<embdSnode<<"\t"<<cls<<"\trmvd"<<endl;
 		}
-		prv_file11.close();
+		prv_file11.close();	// Does not read link embedding information
 		if(NODE_DBG0)cout<<"\t File reading successful"<<endl;
 
 
@@ -847,8 +846,10 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 				j++;
 			}
 
-			cout<<"\t"<<period<<"\t"<<vnp_id<<"\t"<<virtual_link_id<<"\t"<<src<<"\t"<<dest<<"\t"<<class_QoS<<"\t"<<bid<<endl;
 			file9 <<src<<"\t"<<dest<<"\t"<<virtual_link_id<<"\t"<<class_QoS<<"\t"<<bid<<"\t"<<vnp_id<<"\t"<<period<<endl;
+
+
+			cout<<"\t"<<period<<"\t"<<vnp_id<<"\t"<<virtual_link_id<<"\t"<<src<<"\t"<<dest<<"\t"<<class_QoS<<"\t"<<bid<<endl;
 		}
 
 		file9.close();

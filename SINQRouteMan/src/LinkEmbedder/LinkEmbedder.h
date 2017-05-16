@@ -14,11 +14,11 @@
 
 //----------------------------------------------------DEBUG Switches-----------------------------------------------------//
 const bool LINK_DBG0 = false;	// Reading Files
-const bool LINK_DBG1 = true;	// Active path calculation
+const bool LINK_DBG1 = false;	// Active path calculation
 const bool LINK_DBG2 = false;	// Active/backup pair calculation
 const bool LINK_DBG3 = false;	// Constraints
 const bool LINK_DBG4 = false;	// Objective Function
-const bool LINK_DBG5 = true;	// Embedding Result
+const bool LINK_DBG5 = true;	// Embedding Result printing and saving
 const bool LINK_DBG6 = false;	// Performance Evaluation
 
 
