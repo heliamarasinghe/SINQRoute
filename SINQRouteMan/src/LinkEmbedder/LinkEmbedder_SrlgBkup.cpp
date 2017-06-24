@@ -9,11 +9,29 @@
 
 
 
-char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
-	cout<<"\n\n\t----------------------- Executing Link Embedder with SLRG aware Backups for TIME SLOT: "<<currTslot<<" ------------------------"<<endl;
+char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot, bool shrdAsBase){
+	cout<<"\n\n\t----------------------- Executing Link Embedder with SRLG aware Backups for TIME SLOT: "<<currTslot<<" ------------------------"<<endl;
 
 	//int prevTslot = currTslot-1;
 	//IloInt vect_length=MAX_SIZE;
+	IloNum SRLG_FIX_COST = 1000.0;
+
+	// Edge weights of the network topology graph used to calculate shortest paths
+	bool SL_COST_FOR_EDGE = false;	// IF true:  slink costs are set as priority values
+	// IF false: priority values are set as 1. After calculating min-hop shortest paths, cost of paths will be calculated by summing up link costs
+	// Note: This shows a difference in effectiveness of Eppstein shortest path algirithm for SHRD and SRLG approaches.
+	// TRUE:  SRLG-BKUP gives better shortest paths
+	// FALSE: SHRD-BKUP gives better shortest paths
+
+	/*IloInt ACTV_PER_VL, BKUP_PER_ACTV;
+		if (currTslot <1){
+			ACTV_PER_VL		= 3;
+			BKUP_PER_ACTV 	= 3;
+		}
+		else{
+			ACTV_PER_VL		= 8;
+			BKUP_PER_ACTV 	= 8;
+		}*/
 
 	// Files being read
 	const char*  f1_subTopo="DataFiles/init/f1_subTopo.txt";														// init/f1_subTopo.txt
@@ -32,23 +50,32 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 	char f9_ph1AcceptedVlinks[50];
 	snprintf(f9_ph1AcceptedVlinks, sizeof(char) * 50, "DataFiles/t%i/f9_ph1AcceptedVlinks.txt", currTslot);			// currTslot/f9_ph1AcceptedVlinks.txt
 
-	char prv_f11_srlg_ph2EmbeddedVnodes[50];
+	char prv_f11_ph2EmbeddedVnodes[50];
 	if(currTslot>0)
-		snprintf(prv_f11_srlg_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_srlg_ph2EmbeddedVnodes.txt", currTslot-1);	// currTslot/f11_ph2EmbeddedVnodes.txt
+		if(shrdAsBase)
+			snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_shrd_ph2EmbeddedVnodes.txt", currTslot-1);	// currTslot/f11_ph2EmbeddedVnodes.txt
+		else
+			snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_srlg_ph2EmbeddedVnodes.txt", currTslot-1);	// currTslot/f11_ph2EmbeddedVnodes.txt
 	else
-		snprintf(prv_f11_srlg_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/init/f11_srlg_ph2EmbeddedVnodes.txt");
+		if(shrdAsBase)
+			snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/init/f11_shrd_ph2EmbeddedVnodes.txt");
+		else
+			snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/init/f11_srlg_ph2EmbeddedVnodes.txt");
 	//char f17_ctrlUpdatedNalocs[50];
 	//snprintf(f17_ctrlUpdatedNalocs, sizeof(char) * 50, "DataFiles/t%i/f17_ctrlUpdatedNalocs.txt", prevTslot);		// currTslot/f12_ph2AcceptedVlinks.txt
 
 	// Files being written
 	char f11_srlg_ph2EmbeddedVnodes[50];
 	snprintf(f11_srlg_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_srlg_ph2EmbeddedVnodes.txt", currTslot);		// currTslot/f11_ph2EmbeddedVnodes.txt
-	char f12_ph2AcceptedVlinks[50];
-	snprintf(f12_ph2AcceptedVlinks, sizeof(char) * 50, "DataFiles/t%i/f12_ph2AcceptedVlinks.txt", currTslot);		// currTslot/f12_ph2AcceptedVlinks.txt
+	char f12_srlg_ph2AcceptedVlinks[50];
+	snprintf(f12_srlg_ph2AcceptedVlinks, sizeof(char) * 50, "DataFiles/t%i/f12_srlg_ph2AcceptedVlinks.txt", currTslot);		// currTslot/f12_ph2AcceptedVlinks.txt
 	char f13_srlg_cplexLinkModel[50];
 	snprintf(f13_srlg_cplexLinkModel, sizeof(char) * 50, "DataFiles/t%i/f13_srlg_cplexLinkModel.lp", currTslot);				// currTslot/f13_cplexLinkModel.lp
 	char* f14_srlg_ph2AddRemovePaths = new char[50];
 	snprintf(f14_srlg_ph2AddRemovePaths, sizeof(char) * 50, "DataFiles/t%i/f14_srlg_ph2RemvdAddedPaths.txt", currTslot);		// Contains added and removed vlinks as a tab delimited intermediate physical switch IDs
+
+	char* f21_srlg_ph2PerformanceResults = new char[50];
+	snprintf(f21_srlg_ph2PerformanceResults, sizeof(char) * 50, "DataFiles/Performance/f21_srlg_ph2PerfRslts.txt");
 
 	IloEnv env;
 
@@ -131,10 +158,12 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		ifstream f4(f4_vnReqTopo);
 		if (!f4)
 			cerr << "ERROR: could not open file `"<< f4_vnReqTopo << "`for reading"<< endl;
-		IloInt NB_VNP = 0;
-		f4>>NB_VNP;			// In dthis whole file, NB_VNP is useful
-		VnReqTopoAryType VnReqTopoAry(env, NB_VNP);
-		for(IloInt i=0;i<NB_VNP;i++){
+		IloInt iaasReqPh1 = 0;
+		IloInt vnodReqPh1 = 0;
+		IloInt vlnkReqPh1 = 0;
+		f4>>iaasReqPh1;			// In dthis whole file, NB_VNP is useful
+		VnReqTopoAryType VnReqTopoAry(env, iaasReqPh1);
+		for(IloInt i=0;i<iaasReqPh1;i++){
 			IloInt vnpId=0, numOfVnodes=0, numOfVlinks=0, period=0;
 			f4>>vnpId>>numOfVnodes>>numOfVlinks>>period;
 			VnReqTopoAry[i].setVlinkCount(numOfVlinks);
@@ -157,12 +186,12 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		IloNumArray snodeCpuUnitCostAry(env, numSubNodes);
 		IloNumArray slinkBwUnitCostAry(env, numSubLinks);
 
-		for(IloInt j=0;j<numSubLinks;j++){
+		for(IloInt slItr=0; slItr<numSubLinks; slItr++){
 			IloInt bwUniCost=0;
 			//f5>>slinkBwUnitCostAry[j];
 			f5>>bwUniCost;
 			//slinkBwUniCostAry[j] = bwUniCost;
-			slinkBwUnitCostAry[j] = bwUniCost;
+			slinkBwUnitCostAry[slItr] = bwUniCost;
 		}
 
 		for(IloInt j=0;j<numSubNodes;j++)
@@ -181,8 +210,8 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		IloInt ph1EmbdVnodeCount=0;
 		f8>>ph1EmbdVnodeCount;
 		Virtual_Node_Embedding_tab  ph1EmbdVnodes(env, ph1EmbdVnodeCount);
-		IloNumArray accepted_vnp_id_tab(env,NB_VNP );
-		arrayZeroInitialize(accepted_vnp_id_tab, NB_VNP);
+		IloNumArray accepted_vnp_id_tab(env,iaasReqPh1 );
+		arrayZeroInitialize(accepted_vnp_id_tab, iaasReqPh1);
 		IloInt newVnpReqCount=0;
 		if(LINK_DBG0){
 			cout<<"\n\t nb_vnode = "<<ph1EmbdVnodeCount<<endl;
@@ -267,10 +296,10 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		//         				FILE 11: 	Reading Embedding result of previous Tslot
 		// 									Finding VN requests retained to current Tslot
 		//------------------------------------------------------------------------------------------------------------
-		cout<<"\tprv_f11\t Embedding result of previous Tslot from File: "<<prv_f11_srlg_ph2EmbeddedVnodes<<endl;
-		ifstream prv_fbk11(prv_f11_srlg_ph2EmbeddedVnodes);
+		cout<<"\tprv_f11\t Embedding result of previous Tslot from File: "<<prv_f11_ph2EmbeddedVnodes<<endl;
+		ifstream prv_fbk11(prv_f11_ph2EmbeddedVnodes);
 		if (!prv_fbk11)
-			cerr << "ERROR: could not open file "<< prv_f11_srlg_ph2EmbeddedVnodes <<"for reading"<< endl;
+			cerr << "ERROR: could not open file "<< prv_f11_ph2EmbeddedVnodes <<"for reading"<< endl;
 		IloInt embdVnodesInPrv = 0;
 		prv_fbk11>>embdVnodesInPrv;//35
 
@@ -316,12 +345,13 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 
 		for(IloInt i=0;i<embdVlinksInPrv;i++){
 			IloInt srcSnode=0, dstSnode=0, qosCls=0, vnpId=0, vlinkId=0, period=0, acbkPairId=0, numActvHops=0, numBkupHops;
-			IloNum vlEmbdProfit=0.0, vlEmbdngCost=0.0;
+			IloNum vlEmbdProfit=0.0, vlActvPthCost = 0.0;
+			IloNum vlBkupPthCost=0.0;					// Although vlBkupPthCost is read from f11, it is not used
 			string newVl;
 			prv_fbk11>>newVl;
 			if(newVl!="vl")
 				cerr<<"\n\tvlink reading in prv_fll is out of sync"<<endl;
-			prv_fbk11>>srcSnode>>dstSnode>>qosCls>>vnpId>>vlinkId>>vlEmbdProfit>>vlEmbdngCost>>period>>acbkPairId>>numActvHops>>numBkupHops;
+			prv_fbk11>>srcSnode>>dstSnode>>qosCls>>vnpId>>vlinkId>>vlEmbdProfit>>vlActvPthCost>>vlBkupPthCost>>period>>acbkPairId>>numActvHops>>numBkupHops;
 			/*
 				10		src
 				3		dest
@@ -344,7 +374,7 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 			IloNumArray  prevEmbdBkupSlinkList(env, MAX_SIZE);
 			arrayZeroInitialize(prevEmbdBkupSlinkList, MAX_SIZE);
 
-			IloInt bw =  linkQosClsAry[qosCls-1].getQosClsBw();
+			//IloInt bw =  linkQosClsAry[qosCls-1].getQosClsBw();
 			IloInt found = searchRtndReqFrmPrv(rtndVlinkReqVect, rtndVlinkCountFrmPrv, vlinkId, vnpId, period);
 
 			// Read Active path snodes from prv_f11
@@ -362,88 +392,26 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 				IloNum actvSlink;
 				prv_fbk11>>actvSlink;	//26 8
 				prevEmbdActvSlinkList[aslItr] = actvSlink;
-				if (found ==1)
-					slinkResidualBwAry[actvSlink-1] = slinkResidualBwAry[actvSlink-1] - bw;
+				//if (found ==1)
+				//	slinkResidualBwAry[actvSlink-1] = slinkResidualBwAry[actvSlink-1] - bw;
 			}
 			//cout<<"\t\tprevEmbdActvSlinkList: "; for(IloInt i=0; i<prevEmbdActvSlinkList.getSize(); i++) cout<<prevEmbdActvSlinkList[i]<<" "; cout<<endl;
 
 			// Read Backup path slinks from prv_f11
 			for(IloInt bslItr=0; bslItr<numBkupHops; bslItr++){
 				prv_fbk11>>prevEmbdBkupSlinkList[bslItr];
-				// NOTE: BW reserved for backup were deducted from slink-capacity after finding δ matrix
 			}
 			//cout<<"\t\tprevEmbdBkupSlinkList: "; for(IloInt i=0; i<prevEmbdBkupSlinkList.getSize(); i++) cout<<prevEmbdBkupSlinkList[i]<<" "; cout<<endl;
 
-			/*cerr<<"\n\t Cannot read active and backup paths from prv_f11 using WHILE loop terminated with 0"<<endl;
-			// Reading Snode list along the active path
-			IloInt k=0;
-			IloBool moreElmnts=true;
-			while ((k < MAX_SIZE) && (moreElmnts)){
-				IloInt acPthSnode;
-				prv_f11>>acPthSnode;	//10 9 3 0
-				if (acPthSnode!=0){
-					prevEmbdActvSnodeList[k] = (IloNum) acPthSnode;
-					k++;
-				}
-				else
-					moreElmnts=false;
-			}
-			// Reading Snode list along the backup path
-			k=0;
-			moreElmnts=true;
-			while ((k < MAX_SIZE) && (moreElmnts)){
-				IloInt bkPthSnode;
-				prv_f11>>bkPthSnode;	//10 9 3 0
-				if (bkPthSnode!=0){
-					prevEmbdBkupSnodeList[k] = (IloNum) bkPthSnode;
-					k++;
-				}
-				else
-					moreElmnts=false;
-			}
-
-			// Reading active slink list along the path
-			k=0;
-			moreElmnts=true;
-			//Srarch whether the vlink is retained from previous time slot
-
-			while ((k < MAX_SIZE) && (moreElmnts)){
-				IloInt actvSlink;
-				prv_f11>>actvSlink;	//26 8 0
-				if (actvSlink !=0){
-					prevEmbdActvSlinkList[k] = (IloNum) actvSlink;
-					if (found ==1)
-						slinkResidualBwAry[actvSlink-1] = slinkResidualBwAry[actvSlink-1] - bw;
-					k++;
-				}
-				else
-					moreElmnts=false;
-			}
-
-			// Reading backup slink list along the path
-			k=0;
-			moreElmnts=true;
-			while ((k < MAX_SIZE) && (moreElmnts)){
-				IloInt bkupSlink;
-				prv_f11>>bkupSlink;	//26 8 0
-				if (bkupSlink !=0){
-					prevEmbdBkupSlinkList[k] = bkupSlink;
-					//if (found ==1)
-					//	avlblActvBwAry[bkupSlink-1] = avlblActvBwAry[bkupSlink-1] - bw;
-					k++;
-				}
-				else
-					moreElmnts=false;
-			}*/
-
 			if (found == 1){
+				if(LINK_DBG0)cout<<"\t\tvlink retained"<<endl;
 				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setSrcSnode(srcSnode);
 				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setDstSnode(dstSnode);
 				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setQosCls(qosCls);
 				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setVnpId(vnpId);
 				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setVlinkId(vlinkId);
 				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setVlEmbdProfit(vlEmbdProfit);
-				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setActvPthCost(vlEmbdngCost);
+				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setActvPthCost(vlActvPthCost);
 				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setPeriod(period);
 				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setAcbkPairId(acbkPairId);
 				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setNumActvHops(numActvHops);
@@ -452,18 +420,19 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setBkupSnodeAry(prevEmbdBkupSnodeList);
 				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setActvSlinkAry(prevEmbdActvSlinkList);
 				rtndVlinkEmbeddingVect[rtndVlinkEmbdCount].setBkupSlinkAry(prevEmbdBkupSlinkList);
-
+				if(LINK_DBG0)cout<<"\t\tadded to rtndVlinkEmbeddingVect"<<endl;
 				rtndVlinkEmbdCount++;
 			}
 
 			else if(found == 0){
+				if(LINK_DBG0)cout<<"\t\tvlink removed"<<endl;
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setSrcSnode(srcSnode);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setDstSnode(dstSnode);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setQosCls(qosCls);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setVnpId(vnpId);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setVlinkId(vlinkId);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setVlEmbdProfit(vlEmbdProfit);
-				rmvdVlinkEmbedingVect[rmvdVlinkCount].setActvPthCost(vlEmbdngCost);
+				rmvdVlinkEmbedingVect[rmvdVlinkCount].setActvPthCost(vlActvPthCost);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setPeriod(period);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setAcbkPairId(acbkPairId);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setNumActvHops(numActvHops);
@@ -472,119 +441,53 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setBkupSnodeAry(prevEmbdBkupSnodeList);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setActvSlinkAry(prevEmbdActvSlinkList);
 				rmvdVlinkEmbedingVect[rmvdVlinkCount].setBkupSlinkAry(prevEmbdBkupSlinkList);
-
+				if(LINK_DBG0)cout<<"\t\tadded to rmvdVlinkEmbedingVect"<<endl;
 				rmvdVlinkCount++;
 			}
+			if(LINK_DBG0)cout<<"\t\trtndVlinkEmbdCount="<<rtndVlinkEmbdCount<<"\trmvdVlinkCount="<<rmvdVlinkCount<<endl;
 		}// end for routing paths
-
-		if(false){
-			cout<<"\n\tPrinting residual bandwith array after deducting active bandwidth"<<endl;
-			cout<<"\t\tslId\tresidualBw"<<endl;
-			for(int slId=1; slId<=numSubLinks; slId++){
-				cout<<"\t\t"<<slId<<"\t"<<slinkResidualBwAry[slId-1]<<endl;
-			}
-		}
 
 		if(rmvdVlinkCount != prvEmbdRmvdCurr){
 			cerr<<"\n\tRemoved path counts does not match. Making nbRemovedPaths = remPathCount\n";
 			prvEmbdRmvdCurr = rmvdVlinkCount;
 		}
 		prv_fbk11.close();
-		cout<<"\t\t Retained Vlink embedding entries found \t= "<<rtndVlinkEmbdCount<<endl;
+		if(LINK_DBG0)cout<<"\t\t Retained Vlink embedding entries found \t= "<<rtndVlinkEmbdCount<<endl;
+		// ===========================================================================================================================//
 
-
-
-
-
-		//**********************************************************************************************************
-		cout<<"\n\t ---------------------------------  Network definition  ---------------------------------"<<endl;
-		//**********************************************************************************************************
-		//cout<<"\n\t Network definition"<<endl;
-		SnodesAryType  subNetGraph(env,numSubNodes);
-		substrate_Graph_creation(subNetGraph, subLinksAry, numSubLinks, numSubNodes, env); 	// subLinksAry <-- array of substrate links each with src/dst Snodes and id
-		adjacency_list_creation(subNetGraph, numSubNodes, env);
-		//substrate_graph_printing(Vect_Substrate_Graph, env, NB_NODE);
-
-
-		//--------------------------------------------------------------------------------------------------------
-		//									Caculating Delsta( δ ) matrix for t-1
-		//--------------------------------------------------------------------------------------------------------
-		//		For a given sub link l*, Delta^(l*)_l represent the sum of backup bandwidth allocated to
-		//				existing vlinks whose active paths use the substrate link l.
-		//--------------------------------------------------------------------------------------------------------
-		cout<<"\n\t CCaculating Delta matrix for previous time slot"<<endl;
-		// Defining and initializing deltaMat
-		IloNum deltaMat [numSubLinks][numSubLinks];
-		for (IloInt bsl =0; bsl<numSubLinks; bsl++)		// bsl = substrate link l* in backup path
-			for (IloInt asl =0; asl<numSubLinks; asl++)	// asl = substrate link l in active path
-				deltaMat [bsl][asl] = 0.0;
-
-
-
-		// Iterating over vlinks retained and fill deltaMat with bandwidth values
+		// ----------------------- Deducting Active and Backup bandwidth from slinks --------------------
+		// Iterating over vlinks retained and deducting active and backup path bandwidth from used slinks
 		for(int vlItr=0; vlItr<rtndVlinkEmbdCount; vlItr++){
-
-
-
-			//IloInt vlinkId = rtndVlinkEmbeddingVect[vlItr].getVlinkId();
 			IloInt qosCls = rtndVlinkEmbeddingVect[vlItr].getQosCls();
 			IloNum vlinkBw =  linkQosClsAry[qosCls-1].getQosClsBw();
-
-
+			// ----------------- Deducting Active Bandwidth -------------------
 			IloInt numActvHops = rtndVlinkEmbeddingVect[vlItr].getNumActvHops();
-			IloInt numBkupHops = rtndVlinkEmbeddingVect[vlItr].getNumBkupHops();
-
-
 			IloNumArray  embdActvSlinkList(env, MAX_SIZE);
-			//arrayZeroInitialize(embdActvSlinkList, MAX_SIZE);
 			rtndVlinkEmbeddingVect[vlItr].getActvSlinkAry(embdActvSlinkList);
+			for(IloInt aslItr=0; aslItr<numActvHops; aslItr++){
+				IloInt aslId = embdActvSlinkList[aslItr];
+				slinkResidualBwAry[aslId-1] = slinkResidualBwAry[aslId-1] - vlinkBw;
+				if(slinkResidualBwAry[aslId-1]<0){
+					cerr<<"\n\tResidual bandwidth on slink "<<aslId<<" is less than zero. i.e. "<<slinkResidualBwAry[aslId-1]<<endl;
+					slinkResidualBwAry[aslId-1] = 0;
+				}
+			}
+			// ----------------- Deducting Backup Bandwidth -------------------
+			IloInt numBkupHops = rtndVlinkEmbeddingVect[vlItr].getNumBkupHops();
 			IloNumArray  embdBkupSlinkList(env, MAX_SIZE);
-			//arrayZeroInitialize(embdBkupSlinkList, MAX_SIZE);
 			rtndVlinkEmbeddingVect[vlItr].getBkupSlinkAry(embdBkupSlinkList);
-
-			if(LINK_DBG1)cout<<"\tnumActvHops:"<<numActvHops<<"\t numBkupHops"<<numBkupHops<<endl<<"\tbslId:\taslIds"<<endl;
-
 			for(IloInt bslItr=0; bslItr<numBkupHops; bslItr++){
 				IloInt bslId = embdBkupSlinkList[bslItr];
-				if(LINK_DBG1)cout<<"\t"<<bslId<<":\t";
-				for(IloInt aslItr=0; aslItr<numActvHops; aslItr++){
-					IloInt aslId = embdActvSlinkList[aslItr];
-					if(LINK_DBG1)cout<<"  "<<aslId;
-					deltaMat[bslId-1][aslId-1] += vlinkBw;
+				slinkResidualBwAry[bslId-1] = slinkResidualBwAry[bslId-1] - vlinkBw;
+				if(slinkResidualBwAry[bslId-1]<0){
+					cerr<<"\n\tResidual bandwidth on slink "<<bslId<<" is less than zero. i.e. "<<slinkResidualBwAry[bslId-1]<<endl;
+					slinkResidualBwAry[bslId-1] = 0;
 				}
-				if(LINK_DBG1)cout<<endl;
 			}
-
-			/*
-			IloInt bslItr=0;
-			IloBool moreBsl=true;
-			while ((bslItr< MAX_SIZE) && (moreBsl)){				// Iterate over backup substrate links (bsl)
-				IloInt bsl = embdBkupSlinkList[bslItr];
-				if (bsl !=0){
-					IloInt alItr=0;
-					IloBool moreAsl=true;
-					while ((alItr< MAX_SIZE) && (moreAsl)){		// Iterate over active substrate links (asl)
-						IloInt asl = embdActvSlinkList[alItr];
-						cout<<"\talItr:"<<alItr<<" \tasl:"<<asl<<endl;
-						if (asl !=0){												// if there is no 0 at the end of active path, this becomes a never ending while loop
-							deltaMat[bsl][asl] += vlinkBw;
-							alItr++;
-						}
-						else
-							moreAsl = false;
-
-					}
-					bslItr++;
-				}
-				else
-					moreBsl=false;
-			}*/
-
 			if(LINK_DBG1 && vlItr==8){
 			//if(false){
 				cout<<"\tvlItr: "<<vlItr;
 				cout<<"\tnumSubLinks:"<<numSubLinks<<endl;
-
 				cout<<"\tPrinting slinkBwUnitCostAry: ";
 				for(IloInt slItr=0; slItr<numSubLinks; slItr++)
 					cout<<slinkBwUnitCostAry[slItr]<<" ";
@@ -592,44 +495,8 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 			}
 		}
 
-
-
-		// Printing deltaMat
-		if(LINK_DBG1){
-			cout<<"\n\tPrinting deltaMat"<<endl;
-			for (IloInt bsl =0; bsl<numSubLinks; bsl++){
-				for (IloInt asl =0; asl<numSubLinks; asl++) {
-					cout << deltaMat[bsl][asl] << " ";
-				}
-				cout << endl;
-			}
-			cout << endl;
-		}
-
-		// Finding reserved backup bandwith for existing for each link in t-1
-		IloNum bkupRsvdOnLink [numSubLinks];
-		for (IloInt bsl = 0; bsl<numSubLinks; bsl++){
-			IloNum max = 0;
-			for (IloInt asl =0; asl<numSubLinks; asl++) {
-				IloNum cur = deltaMat[bsl][asl];
-				if(cur>max){
-					max = cur;
-				}
-			}
-			bkupRsvdOnLink[bsl] = max;
-		}
-
-		// Deducting Reserved backup bandwidth from slinks to get available residual bandwidth Bₗʳ
-		for (IloInt slItr = 0; slItr<numSubLinks; slItr++){
-			slinkResidualBwAry[slItr] = slinkResidualBwAry[slItr] - bkupRsvdOnLink[slItr];
-			if(slinkResidualBwAry[slItr]<0){
-				cerr<<"\n\tResidual bandwidth on slink "<<slItr+1<<" is less than zero. i.e. "<<slinkResidualBwAry[slItr]<<endl;
-				slinkResidualBwAry[slItr] = 0;
-			}
-		}
-
-		if(LINK_DBG1){
-			cout<<"\n\tPrinting residual bandwith array after deducting backup bandwidth"<<endl;
+		if(true){
+			cout<<"\n\tPrinting residual bandwith array after deducting active and backup bandwidth"<<endl;
 			cout<<"\t\tslId\tresidualBw"<<endl;
 			for(int slId=1; slId<=numSubLinks; slId++){
 				cout<<"\t\t"<<slId<<"\t"<<slinkResidualBwAry[slId-1]<<endl;
@@ -637,25 +504,30 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		}
 
 
-		// ========================================================================================================
-		//								Creating an Array of active-backup path pairs
-		// ========================================================================================================
+
+
+		// ===================================================================================================================================
+		cout<<"\n\t ------------------------------------------------  Network definition  ---------------------------------------------"<<endl;
+		// ===================================================================================================================================
+		//cout<<"\n\t Network definition"<<endl;
+		SnodesAryType  subNetGraph(env,numSubNodes);
+		substrate_Graph_creation(subNetGraph, subLinksAry, numSubLinks, numSubNodes, env); 	// subLinksAry <-- array of substrate links each with src/dst Snodes and id
+		adjacency_list_creation(subNetGraph, numSubNodes, env);
+		//substrate_graph_printing(Vect_Substrate_Graph, env, NB_NODE);
+
+		// ------------------------------------------- Creating an Array to hold active-backup path pairs -------------------------------------
 		IloInt maxMetaActvPaths = newVlinkReqCount*ACTV_PER_VL;
 		IloInt maxMetaBkupPaths = maxMetaActvPaths * BKUP_PER_ACTV;
 		MetaActvBkupPairAryType acbkPairAry(env, maxMetaBkupPaths);
 
-		//------------------------------------------------------------------------------------------
-		//                               Finding Active paths                      -
-		//------------------------------------------------------------------------------------------review
+		//----------------------------------------------------------- Finding Active paths -----------------------------------------------------
 		if(LINK_DBG1){
 			cout<<"\n\t Finding Active paths"<<endl;
 			cout<<"\t req\t srcVnode\t destVnode\t vlinkId\t vnpId\t srcSnode\t destSnode\t class_QoS\t maxHops"<<endl;
 		}
 		MetaSubPathAryType actvPathAry(env, maxMetaActvPaths);
-
-		// For active paths, bkSlinkBwUnitsReq_betaAry has only zeros for each slink
 		IloNumArray bkSlBwUnitsReqAry_beta(env, numSubLinks);
-		arrayZeroInitialize(bkSlBwUnitsReqAry_beta, numSubLinks);
+		arrayZeroInitialize(bkSlBwUnitsReqAry_beta, numSubLinks);	// For active paths, bkSlinkBwUnitsReq_betaAry has only zeros for each slink
 
 		IloInt actvPathCount = 0;
 		for(IloInt j=0;j<newVlinkReqCount;j++){
@@ -663,21 +535,16 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 			if(LINK_DBG1)cout<<"\t "<<request_id;
 			IloInt srcVnode =    newVlinkReqVect[j].getSrcVnode();
 			IloInt destVnode =   newVlinkReqVect[j].getDestVnode();
-
 			IloInt vlinkId =   newVlinkReqVect[j].getVlinkId();
 			IloInt vnpId =   newVlinkReqVect[j].getVnpId();
-
 			IloInt srcSnode = getCandidSnodeForVnode(ph1EmbdVnodes,ph1EmbdVnodeCount,srcVnode, vnpId);
 			IloInt destSnode = getCandidSnodeForVnode(ph1EmbdVnodes,ph1EmbdVnodeCount,destVnode, vnpId);
-
 			IloInt class_QoS =   newVlinkReqVect[j].getVlinkQosCls();
 			IloInt maxHops =   linkQosClsAry[class_QoS-1].GetQoS_Class_Max_Hops();
 
-
 			if(LINK_DBG1)cout<<"\t "<<srcVnode<<"\t\t "<<destVnode<<"\t\t "<<vlinkId<<"\t\t "<<vnpId<<"\t "<<srcSnode<<"\t\t "<<destSnode<<"\t\t "<<class_QoS<<"\t\t "<<maxHops<<endl;
-			shortest_path(false, subNetGraph, actvPathAry, srcSnode, destSnode, maxHops, request_id, vnpId, vlinkId, actvPathCount, bkSlBwUnitsReqAry_beta, env);
+			shortest_path(false, SL_COST_FOR_EDGE, currTslot, subNetGraph, actvPathAry, srcSnode, destSnode, maxHops, request_id, vnpId, vlinkId, actvPathCount, bkSlBwUnitsReqAry_beta, env);
 			//cout<<"\t Next"<<endl;
-
 		}
 
 
@@ -688,168 +555,62 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 			printing_meta_path(actvPathAry, actvPathCount, env);
 		}
 
+		// Map that stores all active paths calculated for each vlink
 		map<IloInt, set<IloInt>> vlinkToActvPthMap;
 		for(IloInt aPthItr = 0; aPthItr< actvPathCount; aPthItr++){
 			IloInt vlinkId = actvPathAry[aPthItr].getVlinkId();
 			vlinkToActvPthMap[vlinkId].insert(aPthItr);
 		}
 
-		//--------------------------------------------------------------------------------------------------------
-		//									Caculating θ matrix for New vlinks
-		//--------------------------------------------------------------------------------------------------------
-		//		For each new vlink request, calculate theta value matrix
-		//		For a given new vlink e, for each substrate link l*, θ↑(l*)_l represent the backup bandwidth units
-		//		required on l* for the backup path ρ↑(π), if l is used in active path π↑(e)
-		//--------------------------------------------------------------------------------------------------------
-		cout<<"\n\t Caculating Theta matrix"<<endl;
 
+		// ------------------------------------------------------ Caculating SRLG backups ------------------------------------------------------
+		//	When calculating backup paths for each active path, cost of stbstrate links used in the active path are set to INFINI to make sure
+		// 		those links are not used in the backup paths (SRLG aware).
+		// 	Cost of substrate links that are not used in active paths = vlBwUniReq * slinkBwUnitCost
+		//--------------------------------------------------------------------------------------------------------------------------------------
 		cout<<"\n\t\tvlinks and corresponding active path IDs for wich backups are calculated"<<endl;
 		cout<<"\t\tXX shows that active path before it has a backup path that exceed maximum search iterations"<<endl;
 		cout<<"\n\t\tvlinkId\t Active path IDs"<<endl;
 		IloInt numActvBkupPairs = 0;
 		IloInt PRINT_AP = 0;	//ex 169
 
-		for(IloInt avlItr=0; avlItr<newVlinkReqCount; avlItr++){				// For each vlink request
+		for(IloInt vlItr=0; vlItr<newVlinkReqCount; vlItr++){				// For each vlink request
 
-			// Defining and initializing thetaMat
-			IloNum thetaMat [numSubLinks][numSubLinks];
-			//IloNum bkBwUnitsReqMat [numSubLinks][numSubLinks];
-			/*for(IloInt bsl=0; bsl<numSubLinks; bsl++)
-				for(IloInt asl=0; asl<numSubLinks; asl++){
-					if(bsl==asl)
-						thetaMat [bsl][asl] = INFINI;
-					else
-						thetaMat [bsl][asl] = 0.0;
-				}*/
-
-			IloInt clsQoS = newVlinkReqVect[avlItr].getVlinkQosCls();
+			IloInt clsQoS = newVlinkReqVect[vlItr].getVlinkQosCls();
 			IloInt vlinkReqBw = linkQosClsAry[clsQoS-1].getQosClsBw();
 
+			IloInt vnpId = newVlinkReqVect[vlItr].getVnpId();
+			IloInt vlinkId = newVlinkReqVect[vlItr].getVlinkId();
 
-			if(LINK_DBG2)cout<<"\n\tCalculating theta values"<<endl;
-			for (IloInt bsl =0; bsl<numSubLinks; bsl++){
-				for (IloInt asl =0; asl<numSubLinks; asl++) {
-					IloNum dlta = deltaMat[bsl][asl];
-					IloNum dltaPlsReqBw = dlta + vlinkReqBw;
-					IloNum rsvdBkupBw = bkupRsvdOnLink[bsl];
-					if(asl == bsl){
-						thetaMat[bsl][asl] = INFINI;
-						//bkBwUnitsReqMat[bsl][asl] = 0.0;
-					}
-					else if(rsvdBkupBw >= dltaPlsReqBw){
-						thetaMat[bsl][asl] = 0.0;
-						//bkBwUnitsReqMat[bsl][asl] = 0.0;
-					}
-					else if(slinkResidualBwAry[bsl] >= (dltaPlsReqBw-rsvdBkupBw)){
-						//thetaMat[bsl][asl] = slinkBwUnitCostAry[bsl]*(dltaPlsReqBw-rsvdBkupBw);
-						thetaMat[bsl][asl] = dltaPlsReqBw-rsvdBkupBw;
-						//bkBwUnitsReqMat[bsl][asl] = dltaPlsReqBw-rsvdBkupBw;
-					}
-					else{
-						thetaMat[bsl][asl] = INFINI;
-						//bkBwUnitsReqMat[bsl][asl] = 0.0;
-					}
-				}
-			}
-
-			if(LINK_DBG2){
-				cout<<"\n\tPrinting theta matrix"<<endl;
-				for (IloInt bsl =0; bsl<numSubLinks; bsl++){
-					cout<<"\t";
-					for (IloInt asl =0; asl<numSubLinks; asl++) {
-						cout<<thetaMat[bsl][asl]<<"  ";
-
-					}
-					cout<<endl;
-				}
-				cout<<endl;
-			}
-
-
-
-
-			//Calculating beta values for each active path (cost of using each slink in disjoint backup)
-			//cout<<"\n\tCaculating beta values for each active path"<<endl;
-
-			IloInt vnpId = newVlinkReqVect[avlItr].getVnpId();
-			IloInt vlinkId = newVlinkReqVect[avlItr].getVlinkId();			// beta values
 			IloInt bkupPathCount = 0;
 			MetaSubPathAryType bkupPathAry(env, maxMetaBkupPaths);
 			cout<<"\t\t"<<vlinkId<<"\t";
 			for(IloInt actvPthId : vlinkToActvPthMap[vlinkId]){
 
+				IloNumArray bkSlBwCostAry(env, numSubLinks);				// bkSlinkBwCost = β x bwUniCost
+				arrayZeroInitialize(bkSlBwCostAry, numSubLinks);
 
-				//MetaSubPath actvSpath = actvPathVect[actvPthId];
-				//IloInt srcSnode = actvPathVect[actvPthId].getSrcSnode();
-				//cout<<"\t\tsrcSnode = "<<srcSnode<<endl;
-				IloInt numActvHops = actvPathAry[actvPthId].getNumHops();
-				if(LINK_DBG2 && actvPthId == PRINT_AP){
-					cout<<"\t------------------------------------------------------------------------------"<<endl;
-					cout<<"\tBEGIN: Details of backup parth calculation for Active path ID:"<<actvPthId<<" with numHops:"<<numActvHops<<endl;
+				// Initializing bkSlBwUnitsReqAry_beta array with vlBwUniReq values and
+				// Initializing bkSlBwCostAry with vlBwUniReq * slinkBwUnitCost values
+				for(IloInt slItr=0; slItr<numSubLinks; slItr++){
+					IloNum slinkBwUnitCost = slinkBwUnitCostAry[slItr];
+					bkSlBwUnitsReqAry_beta[slItr] 	= vlinkReqBw;
+					bkSlBwCostAry[slItr] 			= vlinkReqBw * slinkBwUnitCost;
 				}
-				//cout<<"\t\t numHops = "<<numHops<<endl;
 
+				// Increasing bkSlBwCost values of slinks used in actvPath to SRLG_FIX_COST * bwUnitCost
 				IloNumArray actvPthSlinkAry(env, MAX_SIZE);									// numHops = numSlinks
 				arrayZeroInitialize(actvPthSlinkAry, MAX_SIZE);
 				actvPathAry[actvPthId].getUsedSlinkAry(actvPthSlinkAry);
 
-				IloNumArray actvPthSnodeAry(env, MAX_SIZE);									// numHops = numSlinks
-				arrayZeroInitialize(actvPthSnodeAry, MAX_SIZE);
-				actvPathAry[actvPthId].getUsedSnodeAry(actvPthSnodeAry);
-
-
-				//for(IloInt asnItr=0; asnItr<numHops; asnItr++){		// Iterate from src to node before dst in the path
-				//	IloInt actvPthSnode = actvPthSnodeAry[asnItr];
-				//	IloInt actvPthSlink = actvPthSlinkAry[asnItr];
-				//}
-
-//				cout<<"\t";
-//				for(int i=0; i<(numHops); i++)
-//					cout<<"\t"<<actvPthSlinkAry[i];
-//				cout<<endl;
-
-				//------------------------------- Calculating  β  values and  βcˡ_b  values---------------------------------
-				// Calculating backup bandwith units required (and cost) on each substrate link, for each active path
-				// ---------------------------------------------------------------------------------------------------------
-
-				IloNumArray bkSlBwCostAry(env, numSubLinks);				// bkSlinkBwCost = β x bwUniCost
-				arrayZeroInitialize(bkSlBwCostAry, numSubLinks);
-				//IloNumArray bkupSlinkBwReqAry(env, numSubLinks);
-				arrayZeroInitialize(bkSlBwUnitsReqAry_beta, numSubLinks);// bkSlinkBwUnitsReq_betaAry is used with zero initialized for Active paths
-
-
-				//if(actvPthId == PRINT_AP)cout<<"\tnumHops = "<<numActvHops<<endl;
+				IloInt numActvHops = actvPathAry[actvPthId].getNumHops();
 				for(IloInt aslItr = 0; aslItr<numActvHops; aslItr++){		// for each slink in active path
+					IloInt slinkIdInActivePth = actvPthSlinkAry[aslItr];
+					IloNum bwUnitCostOfUsedSlinks = slinkBwUnitCostAry[slinkIdInActivePth-1];
+					IloNum betaCostOfUsedSlink = SRLG_FIX_COST * bwUnitCostOfUsedSlinks;
 
-					IloInt slinkInActivePth = actvPthSlinkAry[aslItr];
-					if(LINK_DBG2 && actvPthId == PRINT_AP)cout<<"\t\taslItr:"<<aslItr<<" slink ID:"<<slinkInActivePth<<endl;
-					for(IloInt slinkInBkupPth = 0; slinkInBkupPth<numSubLinks; slinkInBkupPth++){		// For each slink in substrate toplogy
-						//if(actvPthId == PRINT_AP)
-							//cout<<slinkInBkupPth<<"("<<thetaMat[slinkInBkupPth][slinkInActivePth]<<") "<<endl;
-
-						IloNum bwUnitsReq = thetaMat[slinkInBkupPth][slinkInActivePth-1];
-						//cout<<"\tbwUnitsReq:"<<bwUnitsReq<<endl;
-						IloNum bwUnitCost = slinkBwUnitCostAry[slinkInBkupPth];
-						//cout<<"\tbwUnitCost:"<<bwUnitCost<<endl;
-						// ------------------- Inter-demand and Intra-demand sharing ---------------------
-						//NOTE: If β = Σθ, we does not consider intra-demand sharing
-						//		Thus we used β = max(θ)  for every slink in active path ∀ l ∈
-						// Previous code:
-						//bkupBwUnitsReqAry[slinkInBkupPth] += bwUnitsReq;
-						//betaSlinkCostAry[slinkInBkupPth] += bwUnitsReq * bwUnitCost;
-
-
-						if(bkSlBwUnitsReqAry_beta[slinkInBkupPth] < bwUnitsReq){
-							//cout<<"\tbkSlBwUnitsReqAry_beta[slinkInBkupPth]: "<<bkSlBwUnitsReqAry_beta[slinkInBkupPth]<<"\tbwUnitsReq:"<<bwUnitsReq<<endl;
-							bkSlBwUnitsReqAry_beta[slinkInBkupPth] = bwUnitsReq;					// β = max(θ)
-						//if(bkSlinkBwCostAry[slinkInBkupPth] < (bwUnitsReq * bwUnitCost))
-							bkSlBwCostAry[slinkInBkupPth] = bwUnitsReq * bwUnitCost;				// bkSlinkBwCost = βcˡ_b
-						}
-					}
-					//if(actvPthId == PRINT_AP)
+					bkSlBwCostAry[slinkIdInActivePth-1] = betaCostOfUsedSlink;
 				}
-
-
 				if(LINK_DBG2 && actvPthId == PRINT_AP){
 					cout<<"\tBeta array for active path \t"<<actvPthId<<" = ";
 					for(int i=0; i<numSubLinks; i++)
@@ -866,14 +627,6 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 						//cout<<"\t" << it->first <<"\t"<<it->second<<endl;
 					}
 					subNetGraph[snItr].setConSlinkCostMap(conSlinkCostMap);
-
-					//map<IloInt, IloNum> bkupBwUnitsReqMap = subNetGraph[snItr].getBkupBwUnitsReqMap();					// Read and update conSlinkCostMap
-					//for(map<IloInt, IloNum>::iterator it = bkupBwUnitsReqMap.begin(); it != bkupBwUnitsReqMap.end(); ++it) {
-					//	IloInt slinkId = it->first;
-					//	it->second = bkupSlinkBwReqAry[IloInt(slinkId-1)];
-					//	//cout<<"\t" << it->first <<"\t"<<it->second<<endl;
-					//}
-					//subNetGraph[snItr].setBkupBwUnitsReqMap(bkupBwUnitsReqMap);
 				}
 
 				if(LINK_DBG2 && actvPthId == PRINT_AP){
@@ -907,9 +660,9 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 				IloInt srcSnode = actvPathAry[actvPthId].getSrcSnode();
 				IloInt dstSnode = actvPathAry[actvPthId].getDstSnode();
 
-				IloInt class_QoS = newVlinkReqVect[avlItr].getVlinkQosCls();
+				IloInt class_QoS = newVlinkReqVect[vlItr].getVlinkQosCls();
 				IloInt maxHops = linkQosClsAry[class_QoS-1].GetQoS_Class_Max_Hops();	// Max Hop constraint is used to filter shortest paths. Thus ot need as CPLEX constraint
-				shortest_path(true, subNetGraph, bkupPathAry, srcSnode, dstSnode, maxHops, actvPthId, vnpId, vlinkId, bkupPathCount, bkSlBwUnitsReqAry_beta, env);
+				shortest_path(true, SL_COST_FOR_EDGE, currTslot, subNetGraph, bkupPathAry, srcSnode, dstSnode, maxHops, actvPthId, vnpId, vlinkId, bkupPathCount, bkSlBwUnitsReqAry_beta, env);
 
 				//TODO: Each backup path in bkupPathAry must have a datastructure that store use of backup bandwith units
 				// values from conSlinkCostMap cannot be directly used since available slink bandwidth constraint must be calculated without individual slink bandwidth unit costs
@@ -939,8 +692,8 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 				acbkPairYindxAryOfVl[bpCount] = numActvBkupPairs;
 
 				acbkPairAry[numActvBkupPairs].setActvBkupPairId(numActvBkupPairs);					// id = index
-				acbkPairAry[numActvBkupPairs].setSrcVnode(newVlinkReqVect[avlItr].getSrcVnode());
-				acbkPairAry[numActvBkupPairs].setDstVnode(newVlinkReqVect[avlItr].getDestVnode());
+				acbkPairAry[numActvBkupPairs].setSrcVnode(newVlinkReqVect[vlItr].getSrcVnode());
+				acbkPairAry[numActvBkupPairs].setDstVnode(newVlinkReqVect[vlItr].getDestVnode());
 				acbkPairAry[numActvBkupPairs].setSrcSnode(bkupPathAry[bpCount].getSrcSnode());
 				acbkPairAry[numActvBkupPairs].setDstSnode(bkupPathAry[bpCount].getDstSnode());
 				acbkPairAry[numActvBkupPairs].setVlinkId(vlinkId);
@@ -976,8 +729,8 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 				numActvBkupPairs++;
 			}
 
-			newVlinkReqVect[avlItr].setNumAcbkPairs(bpCount);					// Number of active/backup pairs found for this vlink
-			newVlinkReqVect[avlItr].setAcbkPairYindxAry(acbkPairYindxAryOfVl);	// corresponding yAry indexes of active/backup pairs fond for this vlink
+			newVlinkReqVect[vlItr].setNumAcbkPairs(bpCount);					// Number of active/backup pairs found for this vlink
+			newVlinkReqVect[vlItr].setAcbkPairYindxAry(acbkPairYindxAryOfVl);	// corresponding yAry indexes of active/backup pairs fond for this vlink
 
 			if(LINK_DBG2)
 				printing_meta_path(bkupPathAry, bkupPathCount, env);
@@ -1093,79 +846,6 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		ILP_model.add(obj_func);
 		obj_func.setExpr(vlEmbdngProfit);
 
-//		IloRange range_const(env,-obj_func,0);
-//		ILP_model.add(range_const);
-
-			/*
-		//--------------------------------------------------------------------------------
-		// E- Calculation of the objective function Maximize the PIP Profit              -
-		//--------------------------------------------------------------------------------
-		cout<<"\t E- Calculation of the objective function Maximize the PIP Profit"<<endl;
-		IloExpr substrate_network_revenue(env);
-		IloExpr substrate_cost(env);
-		IloNumArray    arc_vect(env,vect_length);
-
-		for(IloInt vlItr=0; vlItr<newVlinkReqCount; vlItr++){
-			IloInt vlBid 		= newVlinkReqVect[vlItr].getBid();
-			IloInt vnpId 	= newVlinkReqVect[vlItr].getVnpId();
-			IloInt vlinkId 	= newVlinkReqVect[vlItr].getVlinkId();
-			IloInt srcVnode = newVlinkReqVect[vlItr].getSrcVnode();
-			IloInt dstVnode	= newVlinkReqVect[vlItr].getDestVnode();
-			IloInt vlSrcCls = search_vnode_class(srcVnode, vnpId,ph1EmbdVnodes, ph1EmbdVnodeCount);
-			IloInt vlDstCls = search_vnode_class(dstVnode, vnpId,ph1EmbdVnodes, ph1EmbdVnodeCount);
-			IloInt vlSrcCpu	= nodeQosClsAry[vlSrcCls-1].getVnodeCpuReq();
-			IloInt vlDstCpu	= nodeQosClsAry[vlDstCls-1].getVnodeCpuReq();
-			IloInt vnpZindx = search_z_index(vnpId, traceZary, newVnpReqCount);
-			IloInt vlQosCls = newVlinkReqVect[vlItr].getVlinkQosCls();
-			IloInt vlReqBw 	= linkQosClsAry[vlQosCls-1].getQosClsBw();
-			//---------- Calculating Revenue = P^e z^n ---------//
-			substrate_network_revenue += vlBid*zAry[vnpZindx];	//		REVENUE
-			//--------------------------------------------------//
-
-			//---------------- Calculating Cost ----------------//
-			IloInt j=0, no_more_emb_path=0;
-			while ((j < actvPathCount)&& (no_more_emb_path == 0)){
-				IloInt curVlinkId =   actvPathAry[j].getVlinkId();
-				IloInt curVnpId =   actvPathAry[j].getVnpId();
-				if((curVnpId == vnpId)&&(curVlinkId == vlinkId)){
-					IloInt num_path =   actvPathAry[j].getMetaSpathId();
-					IloInt src_emb =    actvPathAry[j].getSrcSnode();
-					IloInt dest_emb =   actvPathAry[j].getDstSnode();
-					arrayZeroInitialize(arc_vect,vect_length);
-					actvPathAry[j].getUsedSlinkAry(arc_vect);
-					IloInt src_cost =   cpu_unit_cost_vect[src_emb-1];
-					IloInt dest_cost =   cpu_unit_cost_vect[dest_emb-1];
-					IloInt emb_path_cost=src_cost*vlSrcCpu + dest_cost*vlDstCpu;
-					IloInt l=0, exit=0;
-					while (l<vect_length){
-						IloInt current_arc =   arc_vect[l];
-						IloBool not_nul = (current_arc !=0);
-						if (not_nul) {
-							IloInt link_cost=   bw_unit_cost_vect[current_arc-1];
-							emb_path_cost+=vlReqBw*link_cost;
-						}
-						else
-							exit=1;
-						l++;
-					}
-					IloInt yIndx = search_var_index(traceYary, vlinkId, num_path, yLength);
-					substrate_cost+= emb_path_cost*yAry[yIndx];
-				}
-				j++;
-			}// go through the list of potantial embedding paths/nodes.
-
-		}// go through the list of virtual links requests
-
-
-		IloObjective obj_func(IloMaximize(env));
-		ILP_model.add(obj_func);
-
-		obj_func.setExpr(substrate_network_revenue - substrate_cost);
-
-		IloRange range_const(env,-obj_func,0);
-		ILP_model.add(range_const);
-		*/
-
 
 		//-----------------------------------------------------------------------------------------------------
 		cout<<"\t E- Solving ILP Model"<<endl;
@@ -1196,12 +876,14 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		//-----------------------------------------------------------------------------------------------------
 		env.out()<< "zVals: Represents embedded VNP requests\n" << zVals << endl;	// embedded VNP requests
 		IloInt numVlFromAcptedVnp=0;
+		IloInt acptdIaaSCount = 0;
 		for(IloInt i=0;i<newVnpReqCount;i++) {
 			IloNum current_value = (IloNum) zVals[i];
 			if (current_value > EPSELON_1){
 				IloInt vnpId =   traceZary[i].getVnpId();
 				IloInt vlPerVnp =   VnReqTopoAry[vnpId-1].getVlinkCount();
 				numVlFromAcptedVnp += vlPerVnp;
+				acptdIaaSCount++;
 			}
 		}
 		env.out()<< "yVals: Represents selected active/backup pairs\n" << yVals << endl;//selected active/backup pairs for vlinks
@@ -1261,9 +943,6 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 
 		IloInt acptdVnodeCount=0;
 
-		cout<<"\n\t nb_vnode = "<<ph1EmbdVnodeCount<<endl;
-		cout<<"\t Preliminary_Node_Embedding_Vect.size = "<<ph1EmbdVnodes.getSize()<<endl;
-		cout<<"\t zvals.size = "<<zVals.getSize()<<",  \tzvals = "<<zVals<<endl;
 
 		for(IloInt vnodeItr=0; vnodeItr<ph1EmbdVnodeCount; vnodeItr++){
 			IloInt vnpId =   ph1EmbdVnodes[vnodeItr].getVnpId();
@@ -1340,8 +1019,10 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 
 		IloInt Reserved_PIP_profit=0;
 		IloInt Reserved_PIP_cost=0;
-		IloInt reserved_bw =0;
-		IloInt nb_reserved_total_path_hops=0;
+		IloNum Reserved_PIP_cost_actv = 0.0, Reserved_PIP_cost_bkup = 0.0;
+		IloInt rtnd_actv_bw =0;
+		IloInt rtnd_total_actv_path_hops=0, rtnd_total_bkup_path_hops=0;
+		//IloInt nb_reserved_total_path_hops=0;
 
 		// ------------------------------ RETAINED vlinks from previous tslot -----------------------------//
 		for(IloInt rvlItr=0; rvlItr<rtndVlinkEmbdCount; rvlItr++){				//First store embedding details of retained-vlinks(rvl) from previous tslots
@@ -1366,6 +1047,8 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 			rtndVlinkEmbeddingVect[rvlItr].getBkupSlinkAry(rtndBkupSlinkList);
 
 			Reserved_PIP_profit	+=	vlEmbdProfit;
+			Reserved_PIP_cost_actv += actvPthCost;
+			Reserved_PIP_cost_bkup += bkupPthCost;
 			Reserved_PIP_cost	+=	vlEmbdCost;
 
 			//cout<<"\tvl"<<endl;
@@ -1376,7 +1059,8 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 			fbk11<<rtndVlinkEmbeddingVect[rvlItr].getVnpId()<<endl;					//	f11 <<	vnpId
 			fbk11<<rtndVlinkEmbeddingVect[rvlItr].getVlinkId()<<endl;					//	f11 <<	vlinkId
 			fbk11<<vlEmbdProfit<<endl;												//	f11 <<	vlEmbdProfit
-			fbk11<<vlEmbdCost<<endl;													//	f11 <<	vlEmbdCost
+			fbk11<<actvPthCost<<endl;													//	f11 <<	actvPthCost
+			fbk11<<bkupPthCost<<endl;
 			fbk11<<rtndVlinkEmbeddingVect[rvlItr].getPeriod()<<endl;					//	f11 <<	tSlot
 
 			fbk11<<rtndVlinkEmbeddingVect[rvlItr].getAcbkPairId()<<endl;				//	f11 <<	acbkPairId
@@ -1405,8 +1089,8 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 				if (!valExistInArray(aslInPth, actvSlinksUsedByEndOfT, numSubLinks))
 					actvSlinksUsedByEndOfT[aslInPth-1]= (IloNum) aslInPth;
 				fbk11<<aslInPth<<" ";													// 	f11 <<	rtndActvLinkList
-				reserved_bw+=vlBwReq;
-				nb_reserved_total_path_hops++;
+				rtnd_actv_bw+=vlBwReq;
+				rtnd_total_actv_path_hops++;
 			}
 			fbk11<<endl;
 			// Save Backup path slinks in file
@@ -1415,6 +1099,7 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 				if (!valExistInArray(bslInPth, bkupSlinksUsedByEndOfT, numSubLinks))
 					bkupSlinksUsedByEndOfT[bslInPth-1]= (IloNum) bslInPth;
 				fbk11<<bslInPth<<" ";													// 	f11 <<	rtndActvSnodeList
+				rtnd_total_bkup_path_hops++;
 			}
 			fbk11<<endl;
 
@@ -1481,8 +1166,10 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		//IloInt used_bw =0;
 		//IloInt nb_total_path_hops=0;
 		VlinkReqAryType  Updated_Request_Vect(env,numVlFromAcptedVnp);
-		IloInt  PIP_cost=0, used_bw=0, nb_total_path_hops=0;
+		IloInt  PIP_cost=0, new_actv_bw=0, total_actv_path_hops=0, total_bkup_path_hops=0;
+		IloNum PIP_cost_actv = 0.0, PIP_cost_bkup = 0.0;
 		IloInt nb_accepted_req=0;
+
 		/*
 		cout<<"\n\tPrinting embdSubPathAry"<<endl;
 		cout<<"\t\tvnpId\tvlinkId"<<endl;
@@ -1517,6 +1204,8 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 			newlyEmbdedVlinkAry[evlItr].getBkupSlinkAry(embdBkupSlinkList);
 
 			PIP_profit	+=	vlEmbdProfit;
+			PIP_cost_actv += actvPthCost;
+			PIP_cost_bkup += bkupPthCost;
 			PIP_cost	+=	vlEmbdCost;
 
 			//prv_f11>>srcSnode>>dstSnode>>qosCls>>vnpId>>vlinkId>>vlEmbdProfit>>vlEmbdngCost>>period>>acbkPairId>>numActvHops>>numBkupHops;
@@ -1527,7 +1216,8 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 			fbk11<<vnpId<<endl;
 			fbk11<<vlinkId<<endl;
 			fbk11<<vlEmbdProfit<<endl;
-			fbk11<<vlEmbdCost<<endl;
+			fbk11<<actvPthCost<<endl;													//	f11 <<	actvPthCost
+			fbk11<<bkupPthCost<<endl;													//	f11 <<	bkupPthCost
 			fbk11<<curTslot<<endl;
 			fbk11<<newlyEmbdedVlinkAry[evlItr].getAcbkPairId()<<endl;					//	f11 <<	acbkPairId
 			fbk11<<numActvHops<<endl;									//	f11 <<	numActvHops
@@ -1555,8 +1245,8 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 				if (!valExistInArray(aslInPth, actvSlinksUsedByEndOfT, numSubLinks))
 					actvSlinksUsedByEndOfT[aslInPth-1]= (IloNum) aslInPth;
 				fbk11<<aslInPth<<" ";													// 	f11 <<	embdActvLinkList
-				used_bw+=vlBwReq;
-				nb_total_path_hops++;
+				new_actv_bw+=vlBwReq;
+				total_actv_path_hops++;
 			}
 			fbk11<<endl;
 			// Save Backup path slinks in file
@@ -1565,6 +1255,7 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 				if (!valExistInArray(bslInPth, bkupSlinksUsedByEndOfT, numSubLinks))
 					bkupSlinksUsedByEndOfT[bslInPth-1]= (IloNum) bslInPth;
 				fbk11<<bslInPth<<" ";													// 	f11 <<	embdActvSnodeList
+				total_bkup_path_hops++;
 			}
 			fbk11<<endl;
 
@@ -1645,12 +1336,12 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		//------------------------------------------------------------------------------------------------------------------------
 		// 		Saving phase 2 accepted virtual links in file -->  f12_ph2AcceptedVlinks (mainly used by the TrafficGenerator
 		//------------------------------------------------------------------------------------------------------------------------
-		cout<<"\t Saving phase 2 accepted link details in file: "<<f12_ph2AcceptedVlinks<<endl;
+		cout<<"\t Saving phase 2 accepted link details in file: "<<f12_srlg_ph2AcceptedVlinks<<endl;
 		//const char*  filename10="C:/ILOG/CPLEX121/abdallah_work/data/PhaseI_accepted_traffic_us_metro20_p9.txt";
-		ofstream f12(f12_ph2AcceptedVlinks);
+		ofstream f12(f12_srlg_ph2AcceptedVlinks);
 
 		if (!f12)
-			cerr << "ERROR: could not open file `"<< f12_ph2AcceptedVlinks << "`for reading"<< endl;
+			cerr << "ERROR: could not open file `"<< f12_srlg_ph2AcceptedVlinks << "`for reading"<< endl;
 
 		IloInt NB_REQUEST =  rtndVlinkCountFrmPrv + nb_accepted_req;
 
@@ -1757,6 +1448,9 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		//              Performance Evaluation of Embedding solution    -
 		//---------------------------------------------------------------
 		if(LINK_DBG6)cout<<"\n\t Performance Evaluation results of embedding solution"<<endl;
+
+		ofstream f21(f21_srlg_ph2PerformanceResults, ofstream::app);
+
 		IloInt nb_used_arc = 0;
 		for (IloInt l=0;l<numSubLinks;l++){
 			IloInt current_value =  actvSlinksUsedByEndOfT[l];
@@ -1779,36 +1473,110 @@ char* LinkEmbedder::embedLinks_SlrgBkup(int currTslot){
 		IloNum PIP_profit_unit_available_bw = (IloNum)((PIP_profit + Reserved_PIP_profit)/available_bw);
 		IloNum PIP_profit_unit_available_cpu = (IloNum)((PIP_profit + Reserved_PIP_profit)/available_cpu);
 
-		IloNum bw_efficiency = (IloNum)((used_bw + reserved_bw)/available_bw);
+		IloNum bw_efficiency = (IloNum)((new_actv_bw + rtnd_actv_bw)/available_bw);
 		IloNum cpu_efficiency = (IloNum)((used_cpu + reserved_cpu)/available_cpu);
 
-		IloNum nb_hop_per_path = (IloNum)(nb_total_path_hops + nb_reserved_total_path_hops)/(IloNum)(acptedVlinkCount + rtndVlinkEmbdCount);
+		//IloNum nb_hop_per_path = (IloNum)(nb_total_path_hops + nb_reserved_total_path_hops)/(IloNum)(acptedVlinkCount + rtndVlinkEmbdCount);
+		IloNum nb_hop_per_actv = (IloNum)(total_actv_path_hops + rtnd_total_actv_path_hops)/(IloNum)(acptedVlinkCount + rtndVlinkEmbdCount);
+		IloNum nb_hop_per_bkup = (IloNum)(total_bkup_path_hops + rtnd_total_bkup_path_hops)/(IloNum)(acptedVlinkCount + rtndVlinkEmbdCount);
 		IloNum acceptance= (IloNum)acptedVlinkCount/(IloNum)newVlinkReqCount;
 		if(LINK_DBG6){
-			cout<<"\t\tPIP new profit:"<<PIP_profit<<endl;
-			cout<<"\t\tPIP reserved profit:"<<Reserved_PIP_profit<<endl;
-			cout<<"\t\tPIP profit:"<<PIP_profit + Reserved_PIP_profit<<endl;
-			cout<<"\t\tPIP new cost:"<<PIP_cost<<endl;
-			cout<<"\t\tPIP reserved cost:"<<Reserved_PIP_cost<<endl;
-			cout<<"\t\tPIP cost:"<<PIP_cost + Reserved_PIP_cost<<endl;
-			cout<<"\t\tnb accepted new vnode:"<<acptdVnodeCount<<endl;
-			cout<<"\t\tnb accepted reserved vnode:"<<rtndVnodeCount<<endl;
+			cout<<"\t\t\t------------------------------------------------------------------------------"<<endl;
+			cout<<"\t\t\t----------------- SRLG PERFORMANCE RESULTS FOR TSLOT: "<<currTslot<<"     ------------------"<<endl;
+			cout<<"\t\t\t------------------------------------------------------------------------------"<<endl;
+			cout<<"\t\tIaaS provider new profit:"<<PIP_profit<<endl;
+			cout<<"\t\tIaaS provider reserved profit:"<<Reserved_PIP_profit<<endl;
+			cout<<"\t\tIaaS provider total profit:"<<PIP_profit + Reserved_PIP_profit<<endl;
+
+			cout<<"\t\tIaaS provider new cost:"<<PIP_cost<<endl;
+			cout<<"\t\tIaaS provider reserved cost:"<<Reserved_PIP_cost<<endl;
+			cout<<"\t\tIaaS provider cost:"<<PIP_cost + Reserved_PIP_cost<<endl;
+
+			cout<<"\t\tNumber of accepted new vnodes:"<<acptdVnodeCount<<endl;
+			cout<<"\t\tN accepted reserved vnode:"<<rtndVnodeCount<<endl;
+
 			cout<<"\t\tnb requests:"<<NB_REQUEST<<endl;
-			cout<<"\t\tnb new requests:"<<newVlinkReqCount<<endl;
+			cout<<"\t\tnb new requests:"<<newVlinkReqCount<<endl;				// newVlinkEmbedPh1
 			cout<<"\t\tnb reserved requests:"<<rtndVlinkCountFrmPrv<<endl;
 			cout<<"\t\tnb accepted new requests:"<<acptedVlinkCount<<endl;
 			cout<<"\t\tnb accepted reserved requests:"<<rtndVlinkEmbdCount<<endl;
+
 			cout<<"\t\tblocking:"<<(1 - acceptance)*100<<"%"<<endl;
-			cout<<"\t\tnew used bw:"<<used_bw<<endl;
-			cout<<"\t\treserved used bw:"<<reserved_bw<<endl;
+
+			cout<<"\t\tnew used bw:"<<new_actv_bw<<endl;			// new_actv_bw
+			cout<<"\t\treserved used bw:"<<rtnd_actv_bw<<endl;	// rtnd_actv_bw
+
 			cout<<"\t\tnew used cpu:"<<used_cpu<<endl;
 			cout<<"\t\treserved used cpu:"<<reserved_cpu<<endl;
+
 			cout<<"\t\tbw efficiency:"<<bw_efficiency<<endl;
-			cout<<"\t\tPIP profit unit of available bw:"<<PIP_profit_unit_available_bw<<endl;
 			cout<<"\t\tcpu efficiency:"<<cpu_efficiency<<endl;
-			cout<<"\t\tPIP profit unit of available cpu:"<<PIP_profit_unit_available_cpu<<endl;
-			cout<<"\t\tnb average hops per VN link:"<<nb_hop_per_path<<endl;
+
+			cout<<"\t\tIaaS provider profit unit of available bw:"<<PIP_profit_unit_available_bw<<endl;
+
+			cout<<"\t\tIaaS provider profit unit of available cpu:"<<PIP_profit_unit_available_cpu<<endl;
+
+			cout<<"\t\tnb average hops per active vlink:"<<nb_hop_per_actv<<endl;
+			cout<<"\t\tnb average hops per backup vlink:"<<nb_hop_per_bkup<<endl;
 		}
+		if(currTslot==0)
+		f21<<"tslot \tiaasReqPh1\tiaasAcpPh1\tiaasAcpPh2\tretIaaS "
+				"\tvnodReqPh1\tvnodAcpPh1\tvnodAcpPh2\tretVnod "
+				"\tvlnkReqPh1\tvlnkAcpPh1\tvlnkAcpPh2\tretVlnk "
+				"\tnwCpu\tretCpu\tcpuEffi "
+				"\tnwActvBw\trtActvBw\tnwBkupBw\trtBkupBw\tbwEffi "
+				"\tacceptance "
+				"\tnwPrft\tretPrft "
+				"\tnwActvCost\tnwBkupCost\trtActvCost\trtBkupCost "
+				"\tprftPerBw\tprftPerCpu "
+				"\thopsPerActv\thopsPerBkup"<<endl;
+		IloInt notCalcYet = 1000;
+
+		f21<<currTslot<<"\t";
+
+		f21<<iaasReqPh1<<"\t";					// iaasReqPh1
+		f21<<newVnpReqCount<<"\t";				// iaasAcpPh1 = iaasReqPh2
+		f21<<acptdIaaSCount<<"\t";				// iaasAcpPh2
+		f21<<notCalcYet<<"\t";					// retIaaS
+
+		f21<<vnodReqPh1<<"\t";					// vnodReqPh1
+		f21<<ph1EmbdVnodeCount<<"\t";			// vnodAcpPh1
+		f21<<acptdVnodeCount<<"\t";				// vnodAcpPh2
+		f21<<rtndVnodeCount<<"\t";				// retVnod
+
+		f21<<vlnkReqPh1<<"\t";					// vlnkReqPh1
+		f21<<newVlinkReqCount<<"\t";			// vlnkAcpPh1
+		f21<<acptedVlinkCount<<"\t";			// vlnkAcpPh2
+		f21<<rtndVlinkCountFrmPrv<<"\t";		// retVlnk
+
+		f21<<used_cpu<<"\t";					// nwCpu
+		f21<<reserved_cpu<<"\t";				// retCpu
+		f21<<cpu_efficiency<<"\t";				// cpuEffi
+
+		f21<<new_actv_bw<<"\t";					// nwActvBw
+		f21<<rtnd_actv_bw<<"\t";				// rtActvBw
+		f21<<notCalcYet<<"\t";					// nwBkupBw
+		f21<<notCalcYet<<"\t";					// rtBkupBw
+		f21<<bw_efficiency<<"\t";				// bwEffi		//this must include backp bandwidth as well
+
+		f21<<acceptance<<"\t";					// acceptance
+
+		f21<<PIP_profit<<"\t";					// nwPrft
+		f21<<Reserved_PIP_profit<<"\t";			// retPrft
+
+		f21<<PIP_cost_actv<<"\t";				// nwActvCost
+		f21<<PIP_cost_bkup<<"\t";				// nwBkupCost
+		f21<<Reserved_PIP_cost_actv<<"\t";		// rtActvCost
+		f21<<Reserved_PIP_cost_bkup<<"\t";		// rtBkupCost
+
+		f21<<PIP_profit_unit_available_bw<<"\t";// prftPerBw
+		f21<<PIP_profit_unit_available_cpu<<"\t";// prftPerCpu
+
+		f21<<nb_hop_per_actv<<"\t";					// hopsPerActv
+		f21<<nb_hop_per_bkup<<"\t";					// hopsPerBkup
+
+		f21<<endl;
+		f21.close();
 		//-------------------------------------------------------------------------------------------------------------
 		//                                   End of Cplex model                                                       -
 		//-------------------------------------------------------------------------------------------------------------

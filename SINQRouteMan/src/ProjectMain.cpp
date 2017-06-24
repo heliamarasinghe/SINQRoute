@@ -36,9 +36,7 @@ int main (int  argc, char** argv){
 	/*8*/
 	bool deployOnNet = false;
 
-	// --------------------- vlink Embedding with Backup --------------------------
-	int bkup = 2;	//	0-No backup; 1-with SLRG aware backup; 2-with shared backup
-	// ----------------------------------------------------------------------------
+
 	/* Experimental procedure:
 	 * 		First run InitTrafficGenerator and InitNodeEmbedder for tSlot 0.
 	 * 		Then run PeriodicLinkEmbedder, LinkEmbedder_SharedBkup, LinkEmbedder_SrlgAware for tSlot 0 and find collect acceptance, profit results
@@ -47,8 +45,16 @@ int main (int  argc, char** argv){
 	 * 		Continue for tSlot 2, 3 ..... 10
 	 */
 
+	// --------------------------------------------- shared backup embedding as base ---------------------------------------------
+	bool shrdAsBase = true;	// when true: srlg and nobk link embedding methods will use f11_shrd_ph2AcceptedVnodes as prv_f11.
+							// Thus previous shared-backup link embeddings results will be the reference for new time slot.
+	// ----------------------------------------------- vlink Embedding with Backup -----------------------------------------------
+	int bkup = 2;			//  Works when shrdAsBase == false
+							//	0-No backup; 1-with SRLG aware backup; 2-with shared backup
+	//----------------------------------------------------------------------------------------------------------------------------
 
-	int MAXTSLOT = 20, currTslot = 0;
+
+	int MAXTSLOT = 40, currTslot = 0;
 	/* 1. Discover switches and links and generate substrate topology */
 	if(initGenTopo){
 		//if(getSwitches)
@@ -100,21 +106,33 @@ int main (int  argc, char** argv){
 			char* f14_ph2RemovedAddedPaths;
 			if(currTslot==0){
 				TrafficGenerator::generateInitTraffic();
-				sleep(1);
+				sleep(2);
 				NodeEmbedder::embedInitNodes();
-				sleep(1);
+				sleep(2);
 			}
 			else{
-				TrafficGenerator::generatePeriodicTraffic(currTslot, bkup);
-				sleep(1);
-				NodeEmbedder::embedPeriodicNodes(currTslot, bkup);
-				sleep(1);
+				TrafficGenerator::generatePeriodicTraffic(currTslot, bkup, shrdAsBase);
+				sleep(2);
+				NodeEmbedder::embedPeriodicNodes(currTslot, bkup, shrdAsBase);
+				sleep(2);
 			}
 			// Link embedding Works with both init and periodic
-			if(bkup==0)f14_ph2RemovedAddedPaths = LinkEmbedder::embedPeriodicLinks(currTslot);		// Embedding without backup paths
-			else if(bkup==1)f14_ph2RemovedAddedPaths = LinkEmbedder::embedLinks_SlrgBkup(currTslot);	// Embeding with SLRG aware backups
-			else if(bkup==2)f14_ph2RemovedAddedPaths = LinkEmbedder::embedLinks_SharedBkup(currTslot);	// Embedding with shared backups
-			sleep(1);
+			if(shrdAsBase){
+
+				f14_ph2RemovedAddedPaths = LinkEmbedder::embedLinks_SharedBkup(currTslot, shrdAsBase);	// Embedding with shared backups
+				sleep(2);
+				f14_ph2RemovedAddedPaths = LinkEmbedder::embedLinks_SlrgBkup(currTslot, shrdAsBase);	// Embeding with SLRG aware backups
+				sleep(2);
+				f14_ph2RemovedAddedPaths = LinkEmbedder::embedLinks_NoBkup(currTslot, shrdAsBase);		// Embedding without backup paths
+				sleep(2);
+			}
+			else{
+				if(bkup==0)f14_ph2RemovedAddedPaths = LinkEmbedder::embedLinks_NoBkup(currTslot, shrdAsBase);		// Embedding without backup paths
+				else if(bkup==1)f14_ph2RemovedAddedPaths = LinkEmbedder::embedLinks_SlrgBkup(currTslot, shrdAsBase);	// Embeding with SLRG aware backups
+				else if(bkup==2)f14_ph2RemovedAddedPaths = LinkEmbedder::embedLinks_SharedBkup(currTslot, shrdAsBase);	// Embedding with shared backups
+				sleep(1);
+			}
+
 			if(deployOnNet)SdnCtrlClient::addRemovePaths(f14_ph2RemovedAddedPaths);
 		}
 

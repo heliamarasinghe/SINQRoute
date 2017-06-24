@@ -163,7 +163,7 @@ void SubstratePath::getActvSlinkAry(IloNumArray& slinkAry){
 
 void SubstratePath::setBkupSlinkAry(IloNumArray& slinkAry){
 	if(numBkupHops==0)
-		std::cerr<<"\tSubstratePath:: numBkupHops must be set before bkupSlinkAry"<<std::endl;
+		std::cerr<<"\tSubstratePath:: numBkupHops=0 must be set before bkupSlinkAry"<<std::endl;
 	for(IloInt i=0; i<numBkupHops; i++)
 		bkupSlinkAry[i]=slinkAry[i];
 }

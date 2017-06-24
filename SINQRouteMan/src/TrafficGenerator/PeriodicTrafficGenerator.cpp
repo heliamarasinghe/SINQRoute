@@ -12,7 +12,7 @@
 //------------------------------------------------------------------------------------------------------------------
 //                     Program Beginning                                                                           -
 //------------------------------------------------------------------------------------------------------------------
-void TrafficGenerator::generatePeriodicTraffic(int currTslot, int bkup){
+void TrafficGenerator::generatePeriodicTraffic(int currTslot, int bkup, bool shrdAsBase){
 	cout<<"\n\t------------ PeriodicTrafficGenerator: Generating IaaS Requests for TIME SLOT: "<<currTslot<<" -------------"<<endl;
 
 	bool TRAF_DBG = false;
@@ -28,10 +28,14 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot, int bkup){
 
 	// * Verify whether the periodicTrafficGenerator require f9_ph1AcceptedVlinks.txt or f12_ph2AcceptedVlinks.txt
 	char prv_f12_ph2AcceptedVlinks[50];
-	if(bkup==0) snprintf(prv_f12_ph2AcceptedVlinks, sizeof(char) * 50, "DataFiles/t%i/f12_ph2AcceptedVlinks.txt", prevTslot);		// currTslot/f12_ph2AcceptedVlinks.txt
-	else if(bkup==1) snprintf(prv_f12_ph2AcceptedVlinks, sizeof(char) * 50, "DataFiles/t%i/f12_srlg_ph2AcceptedVlinks.txt", prevTslot);
-	else if (bkup==2) snprintf(prv_f12_ph2AcceptedVlinks, sizeof(char) * 50, "DataFiles/t%i/f12_shrd_ph2AcceptedVlinks.txt", prevTslot);
-	else cerr<<"\tPeriodicTrafficGenerator: Unable to recognize bkup parameter coming from main"<<endl;
+	if(shrdAsBase)
+		snprintf(prv_f12_ph2AcceptedVlinks, sizeof(char) * 50, "DataFiles/t%i/f12_shrd_ph2AcceptedVlinks.txt", prevTslot);
+	else{
+		if(bkup==0) snprintf(prv_f12_ph2AcceptedVlinks, sizeof(char) * 50, "DataFiles/t%i/f12_ph2AcceptedVlinks.txt", prevTslot);		// currTslot/f12_ph2AcceptedVlinks.txt
+		else if(bkup==1) snprintf(prv_f12_ph2AcceptedVlinks, sizeof(char) * 50, "DataFiles/t%i/f12_srlg_ph2AcceptedVlinks.txt", prevTslot);
+		else if (bkup==2) snprintf(prv_f12_ph2AcceptedVlinks, sizeof(char) * 50, "DataFiles/t%i/f12_shrd_ph2AcceptedVlinks.txt", prevTslot);
+		else cerr<<"\tPeriodicTrafficGenerator: Unable to recognize bkup parameter coming from main"<<endl;
+	}
 	//char f17_ctrlUpdatedNalocs[50];
 	//snprintf(f17_ctrlUpdatedNalocs, sizeof(char) * 50, "DataFiles/t%i/f17_ctrlUpdatedNalocs.txt", prevTslot);		// currTslot/f12_ph2AcceptedVlinks.txt
 
@@ -68,7 +72,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot, int bkup){
 
 		IloInt link_unit_cost=0, node_cpu_unit_cost=0, node_gpu_unit_cost=0, node_ram_unit_cost=0, node_storage_unit_cost=0, node_blade_unit_cost=0;
 
-		IloInt previous_period=0, NB_PREVIOUS_REQUEST=0, NB_ADD_REQUEST=0, NB_RESERVED_REQUEST=0;
+		IloInt prvTslot=0, totVlinksEmbdedAfterPrvTslot=0, NB_ADD_REQUEST=0, NB_RESERVED_REQUEST=0;
 
 		IloInt exit_src=0, exit_dest=0, current_period=0, selected_src_dest_cost=0, max_src_dest_cost=0, min_src_dest_cost=0;
 		IloInt src_cpu_cls=0, dest_cpu_cls=0, length_vect=0, cpu=0, gpu=0, memory=0, storage=0, loc=0, node_cls=0, src_cls=0, dest_cls=0, blades=0;
@@ -174,26 +178,26 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot, int bkup){
 		if (!prv_file12)
 			cerr << "ERROR: could not open file `"<< prv_f12_ph2AcceptedVlinks << "`for reading"<< endl;
 
-		IloInt NB_PREVIOUS_ADD=0, NB_PREVIOUS_RESERVED=0;
+		IloInt vlinksAdedDuringPrvTslot=0, vlinksRtndDuringPrvTslot=0;
 		if(TRAF_DBG)cout<<"Reading from file: "<<prv_f12_ph2AcceptedVlinks<<endl;
-		prv_file12>>previous_period;
-		prv_file12>>NB_PREVIOUS_REQUEST;
-		prv_file12>>NB_PREVIOUS_RESERVED;
-		prv_file12>>NB_PREVIOUS_ADD;
+		prv_file12>>prvTslot;
+		prv_file12>>totVlinksEmbdedAfterPrvTslot;		// totVlinksEmbdedAfterPrvTslot = vlinksRtndDuringPrvTslot + vlinksAdedDuringPrvTslot
+		prv_file12>>vlinksRtndDuringPrvTslot;
+		prv_file12>>vlinksAdedDuringPrvTslot;
 
-		VlinkReqAryType  Previous_Request_Vect(env, NB_PREVIOUS_REQUEST);
+		VlinkReqAryType  Previous_Request_Vect(env, totVlinksEmbdedAfterPrvTslot);
 
-		current_period = previous_period+1;
+		current_period = prvTslot+1;
 
 		if(TRAF_DBG){
-			cout<<"\t"<<previous_period<<endl;
-			cout<<"\t"<<NB_PREVIOUS_REQUEST<<endl;
-			cout<<"\t"<<NB_PREVIOUS_RESERVED<<endl;
-			cout<<"\t"<<NB_PREVIOUS_ADD<<endl;
+			cout<<"\t"<<prvTslot<<endl;
+			cout<<"\t"<<totVlinksEmbdedAfterPrvTslot<<endl;
+			cout<<"\t"<<vlinksRtndDuringPrvTslot<<endl;
+			cout<<"\t"<<vlinksAdedDuringPrvTslot<<endl;
 			cout<<"\tsrc\tdest\tvlinkId\tqosCls\tbid\tvnpId\tperiod"<<endl;
 		}
 
-		for (i=0;i<NB_PREVIOUS_REQUEST;i++){
+		for (i=0;i<totVlinksEmbdedAfterPrvTslot;i++){
 			prv_file12>>src>>dest>>vlinkId>>qosCls>>bid>>vnpId>>period;
 
 			if(TRAF_DBG)cout<<"\t"<<src<<"\t"<<dest<<"\t"<<vlinkId<<"\t"<<qosCls<<"\t"<<bid<<"\t"<<vnpId<<"\t"<<period<<endl;
@@ -248,11 +252,11 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot, int bkup){
 		// 				Calculation of active old requests in current period		             -
 		//----------------------------------------------------------------------------------------
 
-		VlinkReqAryType  Reserved_Request_Vect(env, NB_PREVIOUS_REQUEST);
+		VlinkReqAryType  Reserved_Request_Vect(env, totVlinksEmbdedAfterPrvTslot);
 
 		if(TRAF_DBG) cout<<"\ttSlot\tvnp\tvlId\tsrc\tdst\tqos\tbid\tret/drop"<<endl;
 
-		for(i=0;i<NB_PREVIOUS_REQUEST;i++){
+		for(i=0;i<totVlinksEmbdedAfterPrvTslot;i++){
 			vnpId = (IloInt) Previous_Request_Vect[i].getVnpId();
 
 			found = (IloInt) findElementInVector(vnpId, Dropped_VNP_Request_Vect, nb_dropped_vnp_requests);
@@ -684,69 +688,46 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot, int bkup){
 
 
 
-		for(j=0;j<NB_LINK;j++)
-		{
+		for(j=0;j<NB_LINK;j++){
 			link_unit_cost = 1 + (IloInt)((double)rand() / ((double)RAND_MAX + 1) * MAX_BW_UNIT_COST);
 			bw_unit_cost_vect[j] = (IloNum) link_unit_cost;
-
 			file5<<link_unit_cost<<endl;
-
 			if(TRAF_DBG)cout<<"BW unit cost of link:"<<j+1<<": "<<link_unit_cost<<endl;
 		}
 
-
-		for(j=0;j<NB_NODE;j++)
-		{
+		for(j=0;j<NB_NODE;j++){
 			node_cpu_unit_cost = 1 + (IloInt)((double)rand() / ((double)RAND_MAX + 1) * MAX_SUBSTRATE_NODE_COST);
 			cpu_unit_cost_vect[j] = (IloNum) node_cpu_unit_cost;
-
 			file5<<node_cpu_unit_cost<<endl;
-
 			if(TRAF_DBG)cout<<"CPU unit cost of node:"<<j+1<<": "<<node_cpu_unit_cost<<endl;
-
 		}
 
-		for(j=0;j<NB_NODE;j++)
-		{
-			node_gpu_unit_cost = 1 + (IloInt)((double)rand() / ((double)RAND_MAX + 1) * MAX_SUBSTRATE_NODE_GPU_COST);
+		for(j=0;j<NB_NODE;j++){
+			node_gpu_unit_cost = 1 + (IloInt)((double)rand() / ((double)RAND_MAX + 1) * MAX_SUBSTRATE_NODE_COST);
 			gpu_unit_cost_vect[j] = (IloNum) node_gpu_unit_cost;
-
 			file5<<node_gpu_unit_cost<<endl;
-
 			if(TRAF_DBG)cout<<"GPU unit cost of node:"<<j+1<<": "<<node_gpu_unit_cost<<endl;
-
 		}
 
-		for(j=0;j<NB_NODE;j++)
-		{
+		for(j=0;j<NB_NODE;j++){
 			node_ram_unit_cost = 1 + (IloInt)((double)rand() / ((double)RAND_MAX + 1) * MAX_MEMORY_NODE_COST);
 			ram_unit_cost_vect[j] = (IloNum) node_ram_unit_cost;
-
 			file5<<node_ram_unit_cost<<endl;
-
 			if(TRAF_DBG)cout<<"RAM unit cost of node:"<<j+1<<": "<<node_ram_unit_cost<<endl;
-
 		}
-		for(j=0;j<NB_NODE;j++)
-		{
+
+		for(j=0;j<NB_NODE;j++){
 			node_storage_unit_cost = 1 + (IloInt)((double)rand() / ((double)RAND_MAX + 1) * MAX_STORAGE_NODE_COST);
 			storage_unit_cost_vect[j] = (IloNum) node_storage_unit_cost;
-
 			file5<<node_storage_unit_cost<<endl;
-
 			if(TRAF_DBG)cout<<"Storage unit cost of node:"<<j+1<<": "<<node_storage_unit_cost<<endl;
-
 		}
 
-		for(j=0;j<NB_NODE;j++)
-		{
+		for(j=0;j<NB_NODE;j++){
 			node_blade_unit_cost = 1 + (IloInt)((double)rand() / ((double)RAND_MAX + 1) * MAX_BLADE_COST);
 			blades_unit_cost_vect[j] = (IloNum) node_blade_unit_cost;
-
 			file5<<node_blade_unit_cost<<endl;
-
 			if(TRAF_DBG)cout<<"Blades unit cost of node:"<<j+1<<": "<<node_blade_unit_cost<<endl;
-
 		}
 
 		file5.close();
@@ -892,9 +873,9 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot, int bkup){
 		//------------------------------------------------------------------------------------------
 
 		srand((int)time(NULL));
-
-		for(k=0;k<NB_ADD_REQUEST;k++)
-		{
+		cout<<"\n\tvnpId\tvlId\tQosCls\tBW\tsrcDstCost\t\t\tpthUnitCost\tselectd_ppp\treqBID"<<endl;
+		cout<<"\t\t\t\t\tselect(min ~ max)\tselect(min ~ max)"<<endl;
+		for(k=0;k<NB_ADD_REQUEST;k++){
 			qosCls = (IloInt) Add_Request_Vect[k].getVlinkQosCls();
 			vlinkId = (IloInt) Add_Request_Vect[k].getVlinkId();
 
@@ -922,7 +903,8 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot, int bkup){
 
 			selected_path_unit_cost = (IloInt)(alpha*generated_unit_path_cost_part1 + beta*generated_unit_path_cost_part2);
 
-			decimal_selected_ppp =(IloNum) ( 1+(IloInt)((double)rand() / ((double)RAND_MAX + 1) * decim_ppp_max ));
+			//decimal_selected_ppp =(IloNum) ( 1+(IloInt)((double)rand() / ((double)RAND_MAX + 1) * DECIM_PPP_MAX ));		// Original
+			decimal_selected_ppp =(IloNum) ( DECIM_PPP_MIN+(IloInt)((double)rand() / ((double)RAND_MAX + 1) * (DECIM_PPP_MAX- DECIM_PPP_MIN) ));	// Heli copied from initTrafficGenerator
 
 			selected_ppp = (IloNum) (decimal_selected_ppp/10.0);
 
@@ -934,8 +916,10 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot, int bkup){
 			bid = (IloInt)((selected_src_dest_cost + bw*selected_path_unit_cost)*(1 + selected_ppp));
 
 			Add_Request_Vect[k].SetBid((IloInt)bid);
+			cout<<"\t"<<vnpId<<"\t"<<k+1<<"\t"<<qosCls <<"\t"<< bw<<"\t"<< selected_src_dest_cost<<" ( "<<min_src_dest_cost <<" ~ "<<max_src_dest_cost<<" )\t\t"<<selected_path_unit_cost<<" ( "<<min_path_unit_cost<<" ~ "<<max_path_unit_cost<<" )\t\t"<<selected_ppp<<"\t\t"<<bid<<endl;
 
-			if(TRAF_DBG){
+
+			/*if(TRAF_DBG){
 				cout<<endl;
 
 				cout<<"virtual_link_id:"<<k+1<<endl;
@@ -953,7 +937,7 @@ void TrafficGenerator::generatePeriodicTraffic(int currTslot, int bkup){
 
 				cout<<"selected_ppp:"<<selected_ppp<<endl;
 				cout<<"request_bid:"<<bid<<endl;
-			}
+			}*/
 
 		}// boucle for requests*/
 

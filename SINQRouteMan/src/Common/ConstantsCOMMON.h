@@ -21,22 +21,17 @@ const IloInt MAX_SIZE=20;
 const IloInt MAX_NB_LOCATION=3;
 const IloInt H_PATH=5;
 const IloInt GN=10000;
-const IloInt ACTV_PER_VL=5;			// Default: 5  Replaces MAX_PATH
-const IloInt BKUP_PER_ACTV = 3;
+
+
 const IloInt INFINI=100000;			// Used in calculating theta matrix
 
 const IloNum BKUP_COST_PERCENT = 100.0;
 
 
-/*
-//----------------------------------------------------DEBUG Switches-----------------------------------------------------//
-const IloBool LINK_DBG0 = false;	// Reading Files
-const IloBool LINK_DBG1 = false;	// Active path calculation
-const IloBool LINK_DBG2 = true;	// Active/backup pair calculation
-const IloBool LINK_DBG3 = false;	// Constraints and Objective Function
-const IloBool LINK_DBG4 = true;		// Embedding Result
-const IloBool LINK_DBG5 = false;	// Performance Evaluation
-*/
+// Used in SRLG and shared backups. Active paths per vlink snd backup paths per vlink defines max number of
+// shortest paths that are calculated
+const IloInt ACTV_PER_VL	= 4;			// Default: 5  Replaces MAX_PATH
+const IloInt BKUP_PER_ACTV	= 4;		// Set them to <5 for t=0 and >5 for t=1,2,3...
 
 
 

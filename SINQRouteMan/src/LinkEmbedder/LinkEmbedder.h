@@ -22,6 +22,8 @@ const bool LINK_DBG5 = true;	// Embedding Result printing and saving
 const bool LINK_DBG6 = false;	// Performance Evaluation
 
 
+
+
 class LinkEmbedder: public SDNInterDCQoS{
 public:
 	//-----------------------------------------------------------------------------------------------------------------
@@ -44,26 +46,22 @@ public:
 	typedef IloArray<Embdedding_Virtual_Node_Trace> Virtual_Node_Embedding_tab; //  table to save trace of candidate substrate routing paths for VNP requests
 	typedef IloArray<SubstratePath> SubstratePathAryType; //  table to save selected substrate embedding path attributs
 	typedef IloArray<VNRequestTopology> VnReqTopoAryType; //  table to save vn topology attributs
-
 	typedef IloArray<Embdedding_VLink_Trace> VLink_Embedding_Trace_Tab; //  table to save virtual link embedding attributs
-
 	typedef IloArray<Embdedding_VN_Trace> VN_Embedding_Trace_Tab; //  table to save vn embedding attributs
-
 	typedef IloArray<FlowRequest> flowRequest_Tab;					// Table to save all flow requests within given time slot 'tor'
 
+	//static IloInt ACTV_PER_VL, BKUP_PER_ACTV;
+
 	//------------------------------------------------------------------------------------------------------------------
-	//                                                                                                                 -
 	//                              Functions Declaration                                                          -
-	//                                                                                                                 -
-	//                                                                                                                 -
 	//------------------------------------------------------------------------------------------------------------------
 
 	//static char* embedInitLinks();
-	static char* embedPeriodicLinks(int);
-	static char* reEmbedBrokenLinks(int);
-	static char* embedLinks_SharedBkup(int);
-	static char* embedLinks_SlrgBkup(int);
+	static char* embedLinks_NoBkup(int currTslot, bool shrdAsBase);
+	static char* embedLinks_SharedBkup(int currTslot, bool shrdAsBase);
+	static char* embedLinks_SlrgBkup(int currTslot, bool shrdAsBase);
 
+	static char* reEmbedBrokenLinks(int);
 	//void table_initialization(IloNumArray&, IloInt&);
 
 	//void substrate_Graph_creation(Substrate_Graph_tab&, Substrate_Link_tab&, IloInt&, IloInt&, IloEnv&);
@@ -73,7 +71,7 @@ public:
 	//void traffic_matrix_printing(VNP_traffic_tab&, IloInt&);
 	//void printing_meta_path(Meta_Substrate_Path_tab&, IloInt&, IloEnv&);
 
-	static void shortest_path(bool, SnodesAryType&, MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloNumArray&, IloEnv&);
+	static void shortest_path(bool bkupPath, bool SL_COST_FOR_EDGE, int currTslot,  SnodesAryType&, MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloNumArray&, IloEnv&);
 	static void shtstPathWeightedEdge(SnodesAryType&, MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloEnv&);
 	//void search_parent_node_position(Sommet_tab&, IloInt& ,IloInt&, IloInt&);
 	//IloInt search_common_arc(IloNumArray&, IloNumArray&);

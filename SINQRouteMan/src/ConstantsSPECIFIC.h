@@ -25,8 +25,7 @@ const IloInt MAX_STORAGE_NODE_COST=3;
 
 const IloInt MAX_VN_NODE_CPU=5;
 
-const IloNum decim_ppp_max=20;
-const IloNum decim_ppp_min=5;
+
 
 const IloNum alpha=0.9;
 const IloNum beta=0.1;

@@ -114,16 +114,14 @@ void NodeEmbedder::embedInitNodes(){
 
 		IloNumArray location_vect(env,MAX_NB_LOCATION);
 
-		for(IloInt itr=0;itr<NB_NODE_CLASS;itr++)
-		{
-			IloInt class_QoS = 0, cpu=0, memory=0, storage=0, blade=0;
-			file3>>class_QoS>>cpu>>memory>>storage>>blade;
+		for(IloInt itr=0;itr<NB_NODE_CLASS;itr++){
+			IloInt class_QoS = 0, cpu=0;
+			//IloInt  memory=0, storage=0, blade=0;
+			file3>>class_QoS>>cpu;
+			//file3>>class_QoS>>cpu>>memory>>storage>>blade;
 			//		 1->5	 1->5
-
 			arrayZeroInitialize(location_vect, MAX_NB_LOCATION);
-
-			for(IloInt j=0;j<MAX_NB_LOCATION;j++)
-			{
+			for(IloInt j=0;j<MAX_NB_LOCATION;j++){
 				//file3>>loc;
 				//location_vect[j] = (IloNum) loc;
 				file3>>location_vect[j];
@@ -132,10 +130,8 @@ void NodeEmbedder::embedInitNodes(){
 			Node_Class_QoS_Vect[itr].SetNode_QoS_Class_Id(class_QoS);
 			Node_Class_QoS_Vect[itr].SetNode_Location_Tab(location_vect);
 			Node_Class_QoS_Vect[itr].SetRequired_CPU(cpu);
-			Node_Class_QoS_Vect[itr].SetRequired_Memory(memory);
-			Node_Class_QoS_Vect[itr].SetRequired_storage(storage);
-
-
+			//Node_Class_QoS_Vect[itr].SetRequired_Memory(memory);
+			//Node_Class_QoS_Vect[itr].SetRequired_storage(storage);
 		}
 		//cout<<"\t Done reading Node QoS Classes"<<endl;
 		file3.close();
@@ -188,16 +184,16 @@ void NodeEmbedder::embedInitNodes(){
 		IloNumArray    bw_unit_cost_vect(env,numOfSubLinks);
 		IloNumArray    cpu_unit_cost_vect(env,numOfSubNodes);
 		IloNumArray     gpu_unit_cost_vect(env,numOfSubNodes);
-		IloNumArray     storage_unit_cost_vect(env,numOfSubNodes);
-		IloNumArray     ram_unit_cost_vect(env,numOfSubNodes);
-		IloNumArray     blade_unit_cost_vect(env,numOfSubNodes);
+		//IloNumArray     storage_unit_cost_vect(env,numOfSubNodes);
+		//IloNumArray     ram_unit_cost_vect(env,numOfSubNodes);
+		//IloNumArray     blade_unit_cost_vect(env,numOfSubNodes);
 
 		for(IloInt j=0;j<numOfSubLinks;j++){ file5>>bw_unit_cost_vect[j];}
 		for(IloInt j=0;j<numOfSubNodes;j++){ file5>>cpu_unit_cost_vect[j];}
 		for(IloInt j=0;j<numOfSubNodes;j++){ file5>>gpu_unit_cost_vect[j];}
-		for(IloInt j=0;j<numOfSubNodes;j++){ file5>>storage_unit_cost_vect[j];}
-		for(IloInt j=0;j<numOfSubNodes;j++){ file5>>ram_unit_cost_vect[j];}
-		for(IloInt j=0;j<numOfSubNodes;j++){ file5>>blade_unit_cost_vect[j];}
+		//for(IloInt j=0;j<numOfSubNodes;j++){ file5>>storage_unit_cost_vect[j];}
+		//for(IloInt j=0;j<numOfSubNodes;j++){ file5>>ram_unit_cost_vect[j];}
+		//for(IloInt j=0;j<numOfSubNodes;j++){ file5>>blade_unit_cost_vect[j];}
 
 		file5.close();
 		//cout<<"\t Done reading substrate bw unit costs"<<endl;
@@ -536,9 +532,12 @@ void NodeEmbedder::embedInitNodes(){
 		IloExpr substrate_cost(env);
 
 		cout<<"\n\tPrinting Request_Vect. Size = "<<vLinkReQVect.getSize()<<endl;
+//		cout<<"\treqItr\tvnp\tvlink\tvlCls\tbid\t"
+//				"vlSrc\t[ class\tCPU\tMEM\tSTO]\t"
+//				"vlDst\t[ class\tCPU\tMEM\tSTO]\t"<<endl;
 		cout<<"\treqItr\tvnp\tvlink\tvlCls\tbid\t"
-				"vlSrc\t[ class\tCPU\tMEM\tSTO]\t"
-				"vlDst\t[ class\tCPU\tMEM\tSTO]\t"<<endl;
+						"vlSrc\t[ class\tCPU]\t"
+						"vlDst\t[ class\tCPU]\t"<<endl;
 		for(IloInt itr=0;itr<totNumOfvLinkReq;itr++){
 			IloInt vnp_id =  vLinkReQVect[itr].getVnpId();
 			IloInt vLinkId =  vLinkReQVect[itr].getVlinkId();
@@ -546,23 +545,27 @@ void NodeEmbedder::embedInitNodes(){
 			IloInt vlink_src  =  vLinkReQVect[itr].getSrcVnode();
 			IloInt vlink_src_cls =  search_vnode_class(vlink_src, vnp_id,VNode_Potantial_Location_Vect, newVnodesInTslot);
 			IloInt src_cpu=  Node_Class_QoS_Vect[vlink_src_cls-1].getVnodeCpuReq();
-			IloInt src_memory=  Node_Class_QoS_Vect[vlink_src_cls-1].getVnodeMemReq();
-			IloInt src_storage=  Node_Class_QoS_Vect[vlink_src_cls-1].getVnodeStoReq();
+			//IloInt src_memory=  Node_Class_QoS_Vect[vlink_src_cls-1].getVnodeMemReq();
+			//IloInt src_storage=  Node_Class_QoS_Vect[vlink_src_cls-1].getVnodeStoReq();
 
 			IloInt vlink_dest =  vLinkReQVect[itr].getDestVnode();
 			IloInt vlink_dest_cls =  search_vnode_class(vlink_dest, vnp_id, VNode_Potantial_Location_Vect, newVnodesInTslot);
 
 			IloInt dest_cpu=  Node_Class_QoS_Vect[vlink_dest_cls-1].getVnodeCpuReq();
-			IloInt dest_memory=  Node_Class_QoS_Vect[vlink_dest_cls-1].getVnodeMemReq();
-			IloInt dest_storage=  Node_Class_QoS_Vect[vlink_dest_cls-1].getVnodeStoReq();
+			//IloInt dest_memory=  Node_Class_QoS_Vect[vlink_dest_cls-1].getVnodeMemReq();
+			//IloInt dest_storage=  Node_Class_QoS_Vect[vlink_dest_cls-1].getVnodeStoReq();
 
 			IloInt class_QoS =  vLinkReQVect[itr].getVlinkQosCls();
 			IloInt bw = Link_Class_QoS_Vect[class_QoS-1].getQosClsBw();
 			IloInt bid =  vLinkReQVect[itr].getBid();
 
+//			cout<<"\t"<<itr<<"\t"<<vnp_id<<"\t"<<vLinkId<<"\t"<<class_QoS<<"\t"<<bid<<"\t"
+//					<<vlink_src<<"\t[ "<<vlink_src_cls<<"\t"<<src_cpu<<"\t"<<src_memory<<"\t"<<src_storage<<"  ]\t"
+//					<<vlink_dest<<"\t[ "<<vlink_dest_cls<<"\t"<<dest_cpu<<"\t"<<dest_memory<<"\t"<<dest_storage<<"  ]\t"<<endl;
+
 			cout<<"\t"<<itr<<"\t"<<vnp_id<<"\t"<<vLinkId<<"\t"<<class_QoS<<"\t"<<bid<<"\t"
-					<<vlink_src<<"\t[ "<<vlink_src_cls<<"\t"<<src_cpu<<"\t"<<src_memory<<"\t"<<src_storage<<"  ]\t"
-					<<vlink_dest<<"\t[ "<<vlink_dest_cls<<"\t"<<dest_cpu<<"\t"<<dest_memory<<"\t"<<dest_storage<<"  ]\t"<<endl;
+								<<vlink_src<<"\t[ "<<vlink_src_cls<<"\t"<<src_cpu<<"\t"<<"  ]\t"
+								<<vlink_dest<<"\t[ "<<vlink_dest_cls<<"\t"<<dest_cpu<<"\t"<<"  ]\t"<<endl;
 
 			substrate_network_revenue+= bid*z[vnp_id-1];
 
@@ -580,8 +583,14 @@ void NodeEmbedder::embedInitNodes(){
 					IloInt candidSnode = candidSnodeCombiVectForVlinks[j].getCandidSrcSnode();
 					IloInt candidDnode = candidSnodeCombiVectForVlinks[j].getCandidDestSnode();
 
+					//IloInt emb_path_cost = calculate_cost_potantial_emb_shortestpath(candidShortestPathsVect,numOfShortestPaths, candidSnode, candidDnode,
+					//		vnp_id, bw, vLinkId, bw_unit_cost_vect, cpu_unit_cost_vect, src_cpu, dest_cpu, ram_unit_cost_vect, src_memory, dest_memory, storage_unit_cost_vect, src_storage, dest_storage, env);
+
 					IloInt emb_path_cost = calculate_cost_potantial_emb_shortestpath(candidShortestPathsVect,numOfShortestPaths, candidSnode, candidDnode,
-							vnp_id, bw, vLinkId, bw_unit_cost_vect, cpu_unit_cost_vect, src_cpu, dest_cpu, ram_unit_cost_vect, src_memory, dest_memory, storage_unit_cost_vect, src_storage, dest_storage, env);
+						vnp_id, bw, vLinkId, bw_unit_cost_vect, cpu_unit_cost_vect, src_cpu, dest_cpu, env);
+
+
+
 					//cout<<"\t\t\t emb_path_cost: "<<emb_path_cost<<endl;
 
 					IloInt src_emb_index = search_var_index(embedding_trace_x, vlink_src, candidSnode, vnp_id, x_VECT_LENGTH);

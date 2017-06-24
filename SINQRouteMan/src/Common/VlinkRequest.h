@@ -22,6 +22,7 @@ private:
 	IloInt Period;
 	IloInt numAcbkPairs;
 	int acbkPairYindxAry[(ACTV_PER_VL*BKUP_PER_ACTV)];	// yIndxAry of active/backup pairs calculated for this vlink
+	//int acbkPairYindxAry[(MAX_SIZE*MAX_SIZE)];
 	//IloNum thetaMat[][];
 
 

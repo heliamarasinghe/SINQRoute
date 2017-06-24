@@ -11,6 +11,21 @@
 #include "../Common/SDNInterDCQoS.h"
 #include "../ConstantsSPECIFIC.h"
 
+
+//----------------------------------------------------DEBUG Switches-----------------------------------------------------//
+const bool TRAF_DBG0 = false;	// Reading Files
+const bool TRAF_DBG1 = false;	// Generating VN Topologies
+const bool TRAF_DBG2 = false;	// Generating substrate bw unit cost and node costs and Saving in FILE 5
+const bool TRAF_DBG3 = false;	// Smart BID generation with the knowledge of shortest path costs between embedding locations
+const bool TRAF_DBG4 = false;	// Save
+
+// Calculating offered BID values for each vlink request
+// decimal_selected_ppp = decim_ppp_min+ (rand() / (RAND_MAX + 1) * (decim_ppp_max- decim_ppp_min) )
+// bid = (selected_src_dest_cost + bw*selected_path_unit_cost) * (1 + (decimal_selected_ppp/10.0));
+const IloNum DECIM_PPP_MAX=30;			// Original 20
+const IloNum DECIM_PPP_MIN=10;			// Original 5
+
+
 class TrafficGenerator: public SDNInterDCQoS{
 public:
 
@@ -46,7 +61,7 @@ public:
 //       };
 
 	static void generateInitTraffic();
-	static void generatePeriodicTraffic(int currTslot, int bkup);
+	static void generatePeriodicTraffic(int currTslot, int bkup, bool shrdAsBase);
 
 	//static void table_initialization(IloNumArray&, IloInt&);
 

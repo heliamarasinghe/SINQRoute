@@ -7,7 +7,7 @@
 
 #include "../NodeEmbedder/NodeEmbedder.h"
 
-void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
+void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup, bool shrdAsBase){
 	cout<<"\n\t--------------- PeriodicNodeEmbedder: Embedding virtual nodes in TIME SLOT: "<<currTslot<<" ---------------"<<endl;
 
 	int prevTslot = currTslot-1;
@@ -28,10 +28,15 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 	// This file contains both node embedding and link embedding information.
 	// But PeriodicNodeEmbedder only reads node embedding data (first half of file). Hence can use both f11 and fbk11 files
 	char prv_f11_ph2EmbeddedVnodes[50];
-	if(bkup==0) snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_ph2EmbeddedVnodes.txt", prevTslot); // prevTslot/f11_ph2EmbeddedVnodes.txt
-	else if(bkup==1) snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_srlg_ph2EmbeddedVnodes.txt", prevTslot); // prevTslot/f11_ph2EmbeddedVnodes.txt
-	else if (bkup==2) snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_shrd_ph2EmbeddedVnodes.txt", prevTslot); // prevTslot/fbk11_ph2EmbeddedVnodes.txt
-	else cerr<<"\tPeriodicNodeEmbedder: Unable to recognize bkup parameter coming from main"<<endl;
+	if(shrdAsBase)
+		snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_shrd_ph2EmbeddedVnodes.txt", prevTslot); // prevTslot/fbk11_ph2EmbeddedVnodes.txt
+	else{
+		if(bkup==0) snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_ph2EmbeddedVnodes.txt", prevTslot); // prevTslot/f11_ph2EmbeddedVnodes.txt
+		else if(bkup==1) snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_srlg_ph2EmbeddedVnodes.txt", prevTslot); // prevTslot/f11_ph2EmbeddedVnodes.txt
+		else if (bkup==2) snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_shrd_ph2EmbeddedVnodes.txt", prevTslot); // prevTslot/fbk11_ph2EmbeddedVnodes.txt
+		else cerr<<"\tPeriodicNodeEmbedder: Unable to recognize bkup parameter coming from main"<<endl;
+	}
+
 	// Files being written
 	char f8_ph1EmbeddedVnodes[50];
 	snprintf(f8_ph1EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f8_ph1EmbeddedVnodes.txt", currTslot);	//f8_ph1EmbeddedVnodes.txt
@@ -42,8 +47,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 
 	IloEnv env;
 
-	try
-	{
+	try{
 
 
 		//********************************************************************************************************
@@ -74,7 +78,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 		IloInt period=0, NB_RESERVED=0, NB_ADD=0, PIP_profit=0;
 
 		IloInt exit_src=0, exit_dest=0, virtual_link_class=0, current_period=0, nb_accepted_req=0, nb_previous_vnode=0;
-		IloInt vlink_src_cls=0, vlink_dest_cls =0, src_cpu=0, memory=0, storage=0, blade=0, dest_cpu=0, src_memory=0, src_storage=0, dest_memory=0, dest_storage=0, length_vect=0, loc=0, node_cls=0, cpu=0, Nb_reserved_vnode=0;
+		IloInt vlink_src_cls=0, vlink_dest_cls =0, src_cpu=0, dest_cpu=0, length_vect=0, loc=0, node_cls=0, cpu=0, Nb_reserved_vnode=0;
 
 		//------------------------------------------------------------------------------------------
 		//                     Reading of the topology of VN requests                                 -
@@ -92,14 +96,11 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 		//cout<<"\n\tNB_VNP = "<<NB_VNP<<endl;
 		VN_Request_Topology_Tab VN_Request_Topology_Vect(env, NB_VNP);
 
-		for(i=0;i<NB_VNP;i++)
-		{
+		for(i=0;i<NB_VNP;i++){
 			file4>>vnp_id>>nb_vnodes>>nb_vlinks>>period;
-
 			VN_Request_Topology_Vect[i].setVlinkCount((IloInt)nb_vlinks);
 			VN_Request_Topology_Vect[i].setVnodeCount((IloInt)nb_vnodes);
 			VN_Request_Topology_Vect[i].setVnpId((IloInt)vnp_id);
-
 		}
 
 		file4.close();
@@ -124,12 +125,10 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 
 		j=0;
 
-		for(i=0;i<NB_REQUEST;i++)
-		{
+		for(i=0;i<NB_REQUEST;i++){
 			file7>>src>>dest>>virtual_link_id>>class_QoS>>bid>>vnp_id>>period;
 
-			if (i < NB_RESERVED)
-			{
+			if (i < NB_RESERVED){
 				Reserved_Request_Vect[i].setSrcVnode((IloInt)src);
 				Reserved_Request_Vect[i].setDestVnode((IloInt)dest);
 				Reserved_Request_Vect[i].setVlinkId((IloInt)virtual_link_id);
@@ -138,8 +137,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 				Reserved_Request_Vect[i].setVnpId((IloInt)vnp_id);
 				Reserved_Request_Vect[i].SetPeriod((IloInt)period);
 			}
-			else
-			{
+			else{
 				Added_Request_Vect[j].setSrcVnode((IloInt)src);
 				Added_Request_Vect[j].setDestVnode((IloInt)dest);
 				Added_Request_Vect[j].setVlinkId((IloInt)virtual_link_id);
@@ -147,7 +145,6 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 				Added_Request_Vect[j].SetBid((IloInt)bid);
 				Added_Request_Vect[j].setVnpId((IloInt)vnp_id);
 				Added_Request_Vect[j].SetPeriod((IloInt)period);
-
 				j++;
 			}
 		}
@@ -170,16 +167,12 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 
 		SubLinksAryType Vect_Link(env,NB_LINK);
 
-		for(i=0;i<NB_LINK;i++)
-		{
+		for(i=0;i<NB_LINK;i++){
 			file1>>link>>src>>dest;
-
 			Vect_Link[i].setSlinkId((IloInt)link);
 			Vect_Link[i].setSrcSnode((IloInt)src);
 			Vect_Link[i].setDstSnode((IloInt)dest);
-
 		}
-
 		file1.close();
 
 		//----------------------------------------------------------------------------------
@@ -207,15 +200,12 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 
 		LinkQosClsAryType  Link_Class_QoS_Vect(env,NB_LINK_CLASS);
 
-		for(i=0;i<NB_LINK_CLASS;i++)
-		{
+		for(i=0;i<NB_LINK_CLASS;i++){
 			file2>>class_QoS>>bw>>hops;
-
 			Link_Class_QoS_Vect[i].SetQoS_Class_Id((IloInt)class_QoS);
 			Link_Class_QoS_Vect[i].SetQoS_Class_Bandwidth((IloInt)bw);
 			Link_Class_QoS_Vect[i].SetQoS_Class_Max_Hops(hops);
 		}
-
 		file2.close();
 
 		//---------- Node QoS classes------------------
@@ -234,11 +224,9 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 
 		IloNumArray location_vect(env,length_vect);
 
-		for(i=0;i<NB_NODE_CLASS;i++)
-		{
-			//file5>>class_QoS>>cpu;
-
-			file3 >> class_QoS >> cpu >> memory >> storage >> blade;
+		for(i=0;i<NB_NODE_CLASS;i++){
+			file3>>class_QoS>>cpu;
+			//file3 >> class_QoS >> cpu >> memory >> storage >> blade;
 			arrayZeroInitialize(location_vect, length_vect);
 
 			for(j=0;j<MAX_NB_LOCATION;j++)
@@ -266,16 +254,16 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 		IloNumArray    bw_unit_cost_vect(env,NB_LINK);
 		IloNumArray    cpu_unit_cost_vect(env,NB_NODE);
 		IloNumArray     gpu_unit_cost_vect(env,NB_NODE);
-		IloNumArray     storage_unit_cost_vect(env,NB_NODE);
-		IloNumArray     ram_unit_cost_vect(env,NB_NODE);
-		IloNumArray     blade_unit_cost_vect(env,NB_NODE);
+		//IloNumArray     storage_unit_cost_vect(env,NB_NODE);
+		//IloNumArray     ram_unit_cost_vect(env,NB_NODE);
+		//IloNumArray     blade_unit_cost_vect(env,NB_NODE);
 
 		for(j=0;j<NB_LINK;j++){ file5>>bw_unit_cost_vect[j];}
 		for(j=0;j<NB_NODE;j++){ file5>>cpu_unit_cost_vect[j];}
 		for(j=0;j<NB_NODE;j++){ file5>>gpu_unit_cost_vect[j];}
-		for(j=0;j<NB_NODE;j++){ file5>>storage_unit_cost_vect[j];}
-		for(j=0;j<NB_NODE;j++){ file5>>ram_unit_cost_vect[j];}
-		for(j=0;j<NB_NODE;j++){ file5>>blade_unit_cost_vect[j];}
+		//for(j=0;j<NB_NODE;j++){ file5>>storage_unit_cost_vect[j];}
+		//for(j=0;j<NB_NODE;j++){ file5>>ram_unit_cost_vect[j];}
+		//for(j=0;j<NB_NODE;j++){ file5>>blade_unit_cost_vect[j];}
 
 		/*for(j=0;j<NB_LINK;j++)
 			 {
@@ -557,6 +545,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 		ILP_solver.setParam(IloCplex::MIQCPStrat,2);
 		ILP_solver.setParam(IloCplex::TiLim,3600);
 		ILP_solver.setParam(IloCplex::NodeSel,1);
+		//ILP_solver.setParam(IloCplex::Threads, 1);
 
 
 		//*****************************************************************************************************
@@ -567,7 +556,7 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 		//  A- Creation of VN embedding variables								  -
 		//------------------------------------------------------------------------
 		cout<<"\t A- Creation of VN embedding variables xAry"<<endl;
-		x_VECT_LENGTH = (IloInt) creation_node_embedding_var(VNode_Potantial_Location_Vect, NB_VNP_NODE, x, embedding_trace_x, env);
+		x_VECT_LENGTH = creation_node_embedding_var(VNode_Potantial_Location_Vect, NB_VNP_NODE, x, embedding_trace_x, env);
 		if(NODE_DBG2)cout<<"\t\tx_VECT_LENGTH = "<<x_VECT_LENGTH<<endl;
 		//------------------------------------------------------------------------
 		//  B- no partially VN Embedding: accept all virtual links or block all  -
@@ -622,8 +611,11 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 					src_emb = (IloInt)  Potantial_Embedding_Nodes_Vect[j].getCandidSrcSnode();
 					dest_emb = (IloInt) Potantial_Embedding_Nodes_Vect[j].getCandidDestSnode();
 
+					//emb_path_cost = (IloInt) calculate_cost_potantial_emb_shortestpath(Path_Vect,COUNT_PATH, src_emb, dest_emb,
+					//vnp_id, bw, virtual_link_id, bw_unit_cost_vect, cpu_unit_cost_vect, src_cpu, dest_cpu, ram_unit_cost_vect, src_memory, dest_memory, storage_unit_cost_vect, src_storage, dest_storage,env);
+
 					emb_path_cost = (IloInt) calculate_cost_potantial_emb_shortestpath(Path_Vect,COUNT_PATH, src_emb, dest_emb,
-							vnp_id, bw, virtual_link_id, bw_unit_cost_vect, cpu_unit_cost_vect, src_cpu, dest_cpu, ram_unit_cost_vect, src_memory, dest_memory, storage_unit_cost_vect, src_storage, dest_storage,env);
+										vnp_id, bw, virtual_link_id, bw_unit_cost_vect, cpu_unit_cost_vect, src_cpu, dest_cpu, env);
 
 					src_emb_index = (IloInt) search_var_index(embedding_trace_x, vlink_src, src_emb, vnp_id, x_VECT_LENGTH);
 					dest_emb_index = (IloInt) search_var_index(embedding_trace_x, vlink_dest, dest_emb, vnp_id, x_VECT_LENGTH);
@@ -636,13 +628,16 @@ void NodeEmbedder::embedPeriodicNodes(int currTslot, int bkup){
 		}// go through the list of virtual links requests
 
 
-		IloObjective obj_func(IloMaximize(env));
-		ILP_model.add(obj_func);
+		IloObjective objFunc(IloMaximize(env));
+		ILP_model.add(objFunc);
 
-		obj_func.setExpr(substrate_network_revenue - substrate_cost);
+		objFunc.setExpr(substrate_network_revenue - substrate_cost);
 
-		IloRange range_const(env,-obj_func,0);
-		ILP_model.add(range_const);
+		IloRange objRange(env, 0, objFunc, IloInfinity);	// copied from initNodeEmbedder
+		ILP_model.add(objRange);
+
+		//IloRange range_const(env,-obj_func,0);		// Original
+		//ILP_model.add(range_const);
 
 		//*****************************************************************************************************
 		//								Reading of initiale solution										   *

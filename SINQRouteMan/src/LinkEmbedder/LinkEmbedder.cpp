@@ -83,7 +83,16 @@ void LinkEmbedder::search_embedding_path(MetaSubPathAryType& path_tab, IloInt& n
 			//cout<<"Virtual Link id:"<<current_vlink<<endl;
 			//cout<<"Source:"<<current_src<<endl;
 			//cout<<"Destination:"<<current_dest<<endl;
-			if(LINK_DBG5) cout<<"\t"<< vlinkId <<"\t"<< path_id <<"\t"<< srcSnode <<"\t"<< dstSnode<<"\t[";
+			//if(LINK_DBG5) cout<<"\t"<< vlinkId <<"\t"<< path_id <<"\t"<< srcSnode <<"\t"<< dstSnode<<"\t[";
+
+			if(LINK_DBG5) cout<<"\t"<<vnp_num<<"\t"<< vlinkId <<"\t"<< path_id <<"\t"<< srcSnode <<"\t"<< dstSnode<<"\t[";
+
+			IloInt numActvHops =  path_tab[i].getNumHops();
+
+			// actvBkupPathPairAry[acbkItr]
+			embedding_tab[current_nb_path].setNumActvHops(numActvHops);
+			// embdVlItr
+			// newlyEmbdedVlinkAry
 
 
 			path_tab[i].getUsedSnodeAry(node_list);
@@ -108,7 +117,12 @@ void LinkEmbedder::search_embedding_path(MetaSubPathAryType& path_tab, IloInt& n
 
 			bw = QoS_Vect[qos-1].getQosClsBw();
 
-			if(LINK_DBG5) cout<<"]\t[";
+			if(LINK_DBG5){
+				cout<<"]\t";
+				if(j<3)cout<<"\t";
+				cout<<"[";
+
+			}
 
 			j=0;
 			more_arc=0;
@@ -117,8 +131,7 @@ void LinkEmbedder::search_embedding_path(MetaSubPathAryType& path_tab, IloInt& n
 			while ((j<length) && (more_arc==0)){
 				current_arc = arc_list[j];
 				IloBool  estzero=(current_arc==0);
-				if  (!estzero)
-				{
+				if  (!estzero){
 					//cout<< "Num Arc:"<< current_arc<<" ";
 					if(LINK_DBG5)cout<<current_arc<<" ";
 					link_cost = link_cost_tab[current_arc-1];
@@ -128,7 +141,7 @@ void LinkEmbedder::search_embedding_path(MetaSubPathAryType& path_tab, IloInt& n
 				else
 					more_arc=1;
 			}
-			if(LINK_DBG5)cout<<"]"<<endl;
+			if(LINK_DBG5)cout<<"]\t";
 
 			cost+=  ( s_cpu* node_cost_tab[srcSnode-1] + d_cpu*node_cost_tab[dstSnode-1]);
 
@@ -136,6 +149,8 @@ void LinkEmbedder::search_embedding_path(MetaSubPathAryType& path_tab, IloInt& n
 
 			embedding_tab[current_nb_path].setVlEmbdProfit(profit);
 			embedding_tab[current_nb_path].setActvPthCost(cost);
+
+			cout<<bid<<"\t"<<cost<<"\t\t"<<profit<<endl;
 
 			current_nb_path++;
 
@@ -213,21 +228,7 @@ void LinkEmbedder::searchEmbdAcbkPair(MetaActvBkupPairAryType& actvBkupPathPairA
 				IloNum slBwUniCost = slinkBwUnitCostAry[actvSlink-1];
 				actvPthcost += bwUnitsReq * slBwUniCost;
 			}
-			/*
-							//---------- Active path embedding cost ----------//
-				IloNum vlActvPthCost=0;
-				IloNumArray actvSlinkAry(env, MAX_SIZE);
-				actvBkupPathPairAry[yIndx].getActvSlinkAry(actvSlinkAry);
 
-				IloInt actvSlinkCount = actvBkupPathPairAry[yIndx].getNumActvHops();
-				for(IloInt aslItr=0; aslItr<actvSlinkCount; aslItr++){
-					IloInt aslId = actvSlinkAry[aslItr];
-					IloInt bwUniCost = bw_unit_cost_vect[aslId];
-					vlActvPthCost += bwUniCost*vlReqBw;
-				}
-
-
-			*/
 			if(LINK_DBG5){
 				cout<<"]\t";
 				if(actvSlinkCount<2) cout<<"\t";
@@ -625,6 +626,18 @@ void LinkEmbedder::allVlinksOfVnReqEmbdedOnAcbkPairs(VlinkReqAryType& vLinkReqVe
 		cout<<"\t\tActive/Backup pairs checked for each vlink"<<endl;
 		cout<<"\t\tvlink\tacbk Count\tActive/Backup path IDs"<<endl;
 	}
+
+	/*IloInt currTslot = vLinkReqVect[0].getPeriod();					//
+	IloInt ACTV_PER_VL, BKUP_PER_ACTV;
+			if (currTslot <1){
+				ACTV_PER_VL		= 3;
+				BKUP_PER_ACTV 	= 3;
+			}
+			else{
+				ACTV_PER_VL		= 8;
+				BKUP_PER_ACTV 	= 8;
+			}*/
+
 	for(IloInt vlItr=0; vlItr<numVlinkReq; vlItr++){
 		IloInt vLinkId = vLinkReqVect[vlItr].getVlinkId();
 		IloInt vnpId = vLinkReqVect[vlItr].getVnpId();
@@ -907,6 +920,17 @@ void LinkEmbedder::slinkBwCapacityconstraint(SubLinksAryType& subLinksAry, IloIn
 		//IloInt acbkPairCount = 469;		// Get this instead of actvPathCount
 	bool SHOW = false;
 
+	/*IloInt currTslot = newVlinkReqVect[0].getPeriod();
+	IloInt ACTV_PER_VL, BKUP_PER_ACTV;
+		if (currTslot <1){
+			ACTV_PER_VL		= 3;
+			BKUP_PER_ACTV 	= 3;
+		}
+		else{
+			ACTV_PER_VL		= 8;
+			BKUP_PER_ACTV 	= 8;
+		}*/
+
 	for(IloInt slItr=0; slItr<numSubLinks; slItr++){
 		IloInt slinkId =  subLinksAry[slItr].getSlinkId();
 		IloExpr totBwReqOnSlink(env);
@@ -928,6 +952,8 @@ void LinkEmbedder::slinkBwCapacityconstraint(SubLinksAryType& subLinksAry, IloIn
 			IloInt numAcbkPairsOfVl = newVlinkReqVect[vlItr].getNumAcbkPairs();
 			if(SHOW)cout<<"\tslinkId:"<<slinkId<<"  vlinkId:"<<vlinkId<<"  numAcbkPairsOfVl:"<<numAcbkPairsOfVl<<endl;
 			IloNumArray acbkPairYindxAry(env, ACTV_PER_VL*BKUP_PER_ACTV);
+			//IloNumArray acbkPairYindxAry(env, MAX_SIZE*MAX_SIZE);
+
 			newVlinkReqVect[vlItr].getAcbkPairYindxAry(acbkPairYindxAry);	// acbkPairs of vlink
 
 			for(IloInt acbkItr=0; acbkItr<numAcbkPairsOfVl; acbkItr++){
@@ -1042,7 +1068,7 @@ void LinkEmbedder::printVerticeAry(IloEnv& env, VerticesAryType& verticeAry){
 //                        Original H-Shortest Path Algorithm by Abdallah                            *
 //***************************************************************************************************
 //					shortest_path(					subNetGraph, 					metaShtstPathVect, 			srcSnode, 		destSnode, 			maxHops, 		request_id, 		vnpId, 			vlinkId, 		shtstPathCount, 		env);
-void  LinkEmbedder::shortest_path(bool bkupPath, SnodesAryType& subNetGraph,  MetaSubPathAryType& metaShtstPathVect, IloInt& srcSnode, IloInt& destSnode, IloInt& maxHops, IloInt& requestId, IloInt& vnpId, IloInt& vlinkId ,IloInt& shtstPathCount, IloNumArray& bkupBwUnitsReqAry, IloEnv& env){
+void  LinkEmbedder::shortest_path(bool bkupPath, bool SL_COST_FOR_EDGE, int currTslot, SnodesAryType& subNetGraph,  MetaSubPathAryType& metaShtstPathVect, IloInt& srcSnode, IloInt& destSnode, IloInt& maxHops, IloInt& requestId, IloInt& vnpId, IloInt& vlinkId ,IloInt& shtstPathCount, IloNumArray& bkupBwUnitsReqAry, IloEnv& env){
 
 	bool SHOW = false;
 	bool SHOW_MORE = false;
@@ -1051,9 +1077,15 @@ void  LinkEmbedder::shortest_path(bool bkupPath, SnodesAryType& subNetGraph,  Me
 		//SHOW = true;
 		//SHOW_MORE = true;
 	}
-
-	bool SL_COST_FOR_EDGE = false;	// IF true:  slink costs are set as priority values
-									// IF false: priority values are set as 1. After calculating min-hop shortest paths, cost of paths will be calculated by summing up link costs
+	/*IloInt ACTV_PER_VL, BKUP_PER_ACTV;
+	if (currTslot <1){
+		ACTV_PER_VL		= 3;
+		BKUP_PER_ACTV 	= 3;
+	}
+	else{
+		ACTV_PER_VL		= 8;
+		BKUP_PER_ACTV 	= 8;
+	}*/
 
 	if(SHOW)cout<<"\n\tShortest paths for vlink:"<<vlinkId<<" from src:"<<srcSnode<<" to dst:"<<destSnode<<" with maxHops:"<<maxHops<<endl;																//Original SPAl
 

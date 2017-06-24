@@ -10,11 +10,26 @@
 
 
 
-char* LinkEmbedder::embedLinks_SharedBkup(int currTslot){
+char* LinkEmbedder::embedLinks_SharedBkup(int currTslot, bool shrdAsBase){
 	cout<<"\n\n\t----------------------- Executing Link Embedder with Shared Backups for TIME SLOT: "<<currTslot<<" ------------------------"<<endl;
 
+	// Edge weights of the network topology graph used to calculate shortest paths
+	bool SL_COST_FOR_EDGE = true;	// IF true:  slink costs are set as priority values
+	// IF false: priority values are set as 1. After calculating min-hop shortest paths, cost of paths will be calculated by summing up link costs
+	// Note: This shows a difference in effectiveness of Eppstein shortest path algirithm for SHRD and SRLG approaches.
+	// TRUE:  SRLG-BKUP gives better shortest paths
+	// FALSE: SHRD-BKUP gives better shortest paths
+
+	/*IloInt ACTV_PER_VL, BKUP_PER_ACTV;
+		if (currTslot <1){
+			ACTV_PER_VL		= 3;
+			BKUP_PER_ACTV 	= 3;
+		}
+		else{
+			ACTV_PER_VL		= 8;
+			BKUP_PER_ACTV 	= 8;
+		}*/
 	int prevTslot = currTslot-1;
-	//IloInt vect_length=MAX_SIZE;
 
 	// Files being read
 	const char*  f1_subTopo="DataFiles/init/f1_subTopo.txt";														// init/f1_subTopo.txt
@@ -33,11 +48,11 @@ char* LinkEmbedder::embedLinks_SharedBkup(int currTslot){
 	char f9_ph1AcceptedVlinks[50];
 	snprintf(f9_ph1AcceptedVlinks, sizeof(char) * 50, "DataFiles/t%i/f9_ph1AcceptedVlinks.txt", currTslot);			// currTslot/f9_ph1AcceptedVlinks.txt
 
-	char prv_f11_shrd_ph2EmbeddedVnodes[50];
+	char prv_f11_ph2EmbeddedVnodes[50];
 	if(currTslot>0)
-		snprintf(prv_f11_shrd_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_shrd_ph2EmbeddedVnodes.txt", prevTslot);	// currTslot/f11_ph2EmbeddedVnodes.txt
+		snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/t%i/f11_shrd_ph2EmbeddedVnodes.txt", prevTslot);	// currTslot/f11_ph2EmbeddedVnodes.txt
 	else
-		snprintf(prv_f11_shrd_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/init/f11_shrd_ph2EmbeddedVnodes.txt");
+		snprintf(prv_f11_ph2EmbeddedVnodes, sizeof(char) * 50, "DataFiles/init/f11_shrd_ph2EmbeddedVnodes.txt");
 	//char f17_ctrlUpdatedNalocs[50];
 	//snprintf(f17_ctrlUpdatedNalocs, sizeof(char) * 50, "DataFiles/t%i/f17_ctrlUpdatedNalocs.txt", prevTslot);		// currTslot/f12_ph2AcceptedVlinks.txt
 
@@ -55,6 +70,7 @@ char* LinkEmbedder::embedLinks_SharedBkup(int currTslot){
 	snprintf(f20_shrd_ph2PerformanceResults, sizeof(char) * 50, "DataFiles/Performance/f20_shrd_ph2PerfRslts.txt");
 
 	IloEnv env;
+
 
 	try{
 		cout<<"\tReading Input Files: "<<endl;
@@ -279,10 +295,10 @@ char* LinkEmbedder::embedLinks_SharedBkup(int currTslot){
 		//         				FILE 11: 	Reading Embedding result of previous Tslot
 		// 									Finding VN requests retained to current Tslot
 		//------------------------------------------------------------------------------------------------------------
-		cout<<"\tprv_f11\t Embedding result of previous Tslot from File: "<<prv_f11_shrd_ph2EmbeddedVnodes<<endl;
-		ifstream prv_f11(prv_f11_shrd_ph2EmbeddedVnodes);
+		cout<<"\tprv_f11\t Embedding result of previous Tslot from File: "<<prv_f11_ph2EmbeddedVnodes<<endl;
+		ifstream prv_f11(prv_f11_ph2EmbeddedVnodes);
 		if (!prv_f11)
-			cerr << "ERROR: could not open file "<< prv_f11_shrd_ph2EmbeddedVnodes <<"for reading"<< endl;
+			cerr << "ERROR: could not open file "<< prv_f11_ph2EmbeddedVnodes <<"for reading"<< endl;
 		IloInt embdVnodesInPrv = 0;
 		prv_f11>>embdVnodesInPrv;//35
 
@@ -329,7 +345,8 @@ char* LinkEmbedder::embedLinks_SharedBkup(int currTslot){
 		for(IloInt i=0;i<embdVlinksInPrv;i++){
 
 			IloInt srcSnode=0, dstSnode=0, qosCls=0, vnpId=0, vlinkId=0, period=0, acbkPairId=0, numActvHops=0, numBkupHops;
-			IloNum vlEmbdProfit=0.0, vlActvPthCost=0.0, vlBkupPthCost=0.0;
+			IloNum vlEmbdProfit=0.0, vlActvPthCost=0.0;
+			IloNum vlBkupPthCost=0.0;					// Although vlBkupPthCost is read from f11, it is not used
 			string newVl;
 			prv_f11>>newVl;
 			if(newVl!="vl")
@@ -388,68 +405,6 @@ char* LinkEmbedder::embedLinks_SharedBkup(int currTslot){
 				// NOTE: BW reserved for backup were deducted from slink-capacity after finding δ matrix
 			}
 			//cout<<"\t\tprevEmbdBkupSlinkList: "; for(IloInt i=0; i<prevEmbdBkupSlinkList.getSize(); i++) cout<<prevEmbdBkupSlinkList[i]<<" "; cout<<endl;
-
-			/*cerr<<"\n\t Cannot read active and backup paths from prv_f11 using WHILE loop terminated with 0"<<endl;
-			// Reading Snode list along the active path
-			IloInt k=0;
-			IloBool moreElmnts=true;
-			while ((k < MAX_SIZE) && (moreElmnts)){
-				IloInt acPthSnode;
-				prv_f11>>acPthSnode;	//10 9 3 0
-				if (acPthSnode!=0){
-					prevEmbdActvSnodeList[k] = (IloNum) acPthSnode;
-					k++;
-				}
-				else
-					moreElmnts=false;
-			}
-			// Reading Snode list along the backup path
-			k=0;
-			moreElmnts=true;
-			while ((k < MAX_SIZE) && (moreElmnts)){
-				IloInt bkPthSnode;
-				prv_f11>>bkPthSnode;	//10 9 3 0
-				if (bkPthSnode!=0){
-					prevEmbdBkupSnodeList[k] = (IloNum) bkPthSnode;
-					k++;
-				}
-				else
-					moreElmnts=false;
-			}
-
-			// Reading active slink list along the path
-			k=0;
-			moreElmnts=true;
-			//Srarch whether the vlink is retained from previous time slot
-
-			while ((k < MAX_SIZE) && (moreElmnts)){
-				IloInt actvSlink;
-				prv_f11>>actvSlink;	//26 8 0
-				if (actvSlink !=0){
-					prevEmbdActvSlinkList[k] = (IloNum) actvSlink;
-					if (found ==1)
-						slinkResidualBwAry[actvSlink-1] = slinkResidualBwAry[actvSlink-1] - bw;
-					k++;
-				}
-				else
-					moreElmnts=false;
-			}
-
-			// Reading backup slink list along the path
-			k=0;
-			moreElmnts=true;
-			while ((k < MAX_SIZE) && (moreElmnts)){
-				IloInt bkupSlink;
-				prv_f11>>bkupSlink;	//26 8 0
-				if (bkupSlink !=0){
-					prevEmbdBkupSlinkList[k] = bkupSlink;
-					//if (found ==1)
-					//	avlblActvBwAry[bkupSlink-1] = avlblActvBwAry[bkupSlink-1] - bw;
-					k++;
-				}
-				else
-					moreElmnts=false;
-			}*/
 
 			if (found == 1){
 				if(LINK_DBG0)cout<<"\t\tvlink retained"<<endl;
@@ -511,7 +466,7 @@ char* LinkEmbedder::embedLinks_SharedBkup(int currTslot){
 		}
 		prv_f11.close();
 		if(LINK_DBG0)cout<<"\t\t Retained Vlink embedding entries found \t= "<<rtndVlinkEmbdCount<<endl;
-
+		// ===========================================================================================================================//
 
 		cout<<"\tPrinting rtndVlinkEmbeddingVect"<<endl;
 		cout<<"\tvlitr\ttslot\tvnp\tvlink\tacHop\tbkHop\taclinks\tbklinks"<<endl;
@@ -533,8 +488,6 @@ char* LinkEmbedder::embedLinks_SharedBkup(int currTslot){
 			cout<<"]"<<endl;
 
 		}
-
-
 
 		//**********************************************************************************************************
 		cout<<"\n\t ---------------------------------  Network definition  ---------------------------------"<<endl;
@@ -722,7 +675,7 @@ char* LinkEmbedder::embedLinks_SharedBkup(int currTslot){
 
 
 			if(LINK_DBG1)cout<<"\t "<<srcVnode<<"\t\t "<<destVnode<<"\t\t "<<vlinkId<<"\t\t "<<vnpId<<"\t "<<srcSnode<<"\t\t "<<destSnode<<"\t\t "<<class_QoS<<"\t\t "<<maxHops<<endl;
-			shortest_path(false, subNetGraph, actvPathAry, srcSnode, destSnode, maxHops, request_id, vnpId, vlinkId, actvPathCount, bkSlBwUnitsReqAry_beta, env);
+			shortest_path(false, SL_COST_FOR_EDGE, currTslot, subNetGraph, actvPathAry, srcSnode, destSnode, maxHops, request_id, vnpId, vlinkId, actvPathCount, bkSlBwUnitsReqAry_beta, env);
 			//cout<<"\t Next"<<endl;
 
 		}
@@ -956,7 +909,7 @@ char* LinkEmbedder::embedLinks_SharedBkup(int currTslot){
 
 				IloInt class_QoS = newVlinkReqVect[avlItr].getVlinkQosCls();
 				IloInt maxHops = linkQosClsAry[class_QoS-1].GetQoS_Class_Max_Hops();	// Max Hop constraint is used to filter shortest paths. Thus ot need as CPLEX constraint
-				shortest_path(true, subNetGraph, bkupPathAry, srcSnode, dstSnode, maxHops, actvPthId, vnpId, vlinkId, bkupPathCount, bkSlBwUnitsReqAry_beta, env);
+				shortest_path(true, SL_COST_FOR_EDGE, currTslot, subNetGraph, bkupPathAry, srcSnode, dstSnode, maxHops, actvPthId, vnpId, vlinkId, bkupPathCount, bkSlBwUnitsReqAry_beta, env);
 
 				//TODO: Each backup path in bkupPathAry must have a datastructure that store use of backup bandwith units
 				// values from conSlinkCostMap cannot be directly used since available slink bandwidth constraint must be calculated without individual slink bandwidth unit costs
@@ -1067,7 +1020,7 @@ char* LinkEmbedder::embedLinks_SharedBkup(int currTslot){
 		cout<<"\t\t\t-----------------------------------------------------------------------------------"<<endl;
 
 		//-----------------------------------------------------------------------------------------------------
-		cout<<"\t A- Creation of VN embedding variables 'x' and 'z' "<<endl;
+		cout<<"\t A- Creation of VN embedding variables 'y' and 'z' "<<endl;
 		//-----------------------------------------------------------------------------------------------------
 		//IloInt x_VECT_LENGTH = creation_path_embedding_var(adedVlinkReqVect, adedVlinkCountInPhOne, actvPathAry, actvPathCount, x, vlink_embedding_trace_x, env);
 		IloInt yLength = createBinaryVarForActvBkupPairs(acbkPairAry, numActvBkupPairs, yAry, traceYary, env);
@@ -1189,8 +1142,10 @@ char* LinkEmbedder::embedLinks_SharedBkup(int currTslot){
 			if ((IloNum) yVals[i] > EPSELON_1)
 				acptedVlinkCount++;
 
-		if(numVlFromAcptedVnp!=acptedVlinkCount)
+		if(numVlFromAcptedVnp!=acptedVlinkCount){
 			cerr<<"\t Number of vlinks in accepted requests do not match with number of accepted vlinks in yVals";
+			acptedVlinkCount = numVlFromAcptedVnp;
+		}
 
 		if(LINK_DBG5){
 			cout<<"\t\t\t------------------------------------------------------------------------------"<<endl;
@@ -1199,7 +1154,7 @@ char* LinkEmbedder::embedLinks_SharedBkup(int currTslot){
 			cout<<"\tVNP\tvLink\tacbkId\tsSrc\tsDest\tactvSlinks\tbkupSlinks\t\tvlBid\tembdCost\tProfit"<<endl;
 		}
 
-		SubstratePathAryType newlyEmbdedVlinkAry(env, numVlFromAcptedVnp);// Embeedding solution saved in embdngResultSpathAry
+		SubstratePathAryType newlyEmbdedVlinkAry(env, acptedVlinkCount);// Embeedding solution saved in embdngResultSpathAry
 		IloInt embdVlItr=0;
 		for(IloInt i=0;i<yLength;i++){
 			IloNum current_value =  (IloNum) yVals[i];
@@ -1361,7 +1316,6 @@ char* LinkEmbedder::embedLinks_SharedBkup(int currTslot){
 			f11<<actvPthCost<<endl;													//	f11 <<	actvPthCost
 			f11<<bkupPthCost<<endl;													//	f11 <<	bkupPthCost
 			f11<<rtndVlinkEmbeddingVect[rvlItr].getPeriod()<<endl;					//	f11 <<	tSlot
-
 			f11<<rtndVlinkEmbeddingVect[rvlItr].getAcbkPairId()<<endl;				//	f11 <<	acbkPairId
 			f11<<numActvHops<<endl;													//	f11 <<	numActvHops
 			f11<<numBkupHops<<endl;													//	f11 <<	numBkupHops
@@ -1408,8 +1362,8 @@ char* LinkEmbedder::embedLinks_SharedBkup(int currTslot){
 		//IloInt PIP_cost=0;
 		//IloInt used_bw =0;
 		//IloInt nb_total_path_hops=0;
-		VlinkReqAryType  Updated_Request_Vect(env,numVlFromAcptedVnp);
-		IloInt  PIP_cost=0, new_actv_bw=0, used_bkup_bw=0, total_actv_path_hops=0, total_bkup_path_hops=0;
+		VlinkReqAryType  Updated_Request_Vect(env,acptedVlinkCount);
+		IloInt  PIP_cost=0, new_actv_bw=0, total_actv_path_hops=0, total_bkup_path_hops=0;
 		IloNum PIP_cost_actv = 0.0, PIP_cost_bkup = 0.0;
 		IloInt nb_accepted_req=0;
 		/*
@@ -1680,7 +1634,7 @@ char* LinkEmbedder::embedLinks_SharedBkup(int currTslot){
 		IloNum acceptance= (IloNum)acptedVlinkCount/(IloNum)newVlinkEmbedPh1;
 		if(LINK_DBG6){
 			cout<<"\t\t\t------------------------------------------------------------------------------"<<endl;
-			cout<<"\t\t\t------------------     PERFORMANCE RESULTS FOR TSLOT: "<<currTslot<<"     ------------------"<<endl;
+			cout<<"\t\t\t----------------- SHRD PERFORMANCE RESULTS FOR TSLOT: "<<currTslot<<"     ------------------"<<endl;
 			cout<<"\t\t\t------------------------------------------------------------------------------"<<endl;
 			cout<<"\t\tIaaS provider new profit:"<<PIP_profit<<endl;
 			cout<<"\t\tIaaS provider reserved profit:"<<Reserved_PIP_profit<<endl;

@@ -57,7 +57,7 @@ typedef IloArray<VNRequestTopology> VN_Request_Topology_Tab; 					//  table to s
 //------------------------------------------------------------------------------------------------------------------
 
 static void embedInitNodes();
-static void embedPeriodicNodes(int, int);
+static void embedPeriodicNodes(int currTslot, int bkup, bool shrdAsBase);
 //void table_initialization(IloNumArray&, IloInt&);
 
 //void substrate_Graph_creation(Substrate_Graph_tab&, Substrate_Link_tab&, IloInt&, IloInt&, IloEnv&);
@@ -105,7 +105,9 @@ static void VNode_embedding_clash_constraint(VnodeReqAryType&, IloInt&, Virtual_
 static void initSnodeResConstraint(IloInt&, Virtual_Node_Embedding_tab&, IloNumVarArray&, IloInt&, IloCplex&, VnodeReqAryType&, IloInt&, NodeQosClsAryType&, IloEnv&);
 static void  substrate_node_cpu_constraint(IloInt&, Virtual_Node_Embedding_tab&, IloNumVarArray&, IloInt&, IloCplex&, VnodeReqAryType&, IloInt&, NodeQosClsAryType&, IloNumArray&, IloEnv&);
 
-static IloInt calculate_cost_potantial_emb_shortestpath(MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloNumArray&, IloNumArray&, IloInt&, IloInt&, IloNumArray&, IloInt&, IloInt&, IloNumArray&, IloInt&, IloInt&, IloEnv&);
+//static IloInt calculate_cost_potantial_emb_shortestpath(MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloNumArray&, IloNumArray&, IloInt&, IloInt&, IloNumArray&, IloInt&, IloInt&, IloNumArray&, IloInt&, IloInt&, IloEnv&);
+static IloInt calculate_cost_potantial_emb_shortestpath(MetaSubPathAryType&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloInt&, IloNumArray&, IloNumArray&, IloInt&, IloInt&, IloEnv&);
+
 static IloInt search_var_index(Virtual_Node_Embedding_tab& embed_trace_vect, IloInt& vnode, IloInt& emb_node, IloInt& vnp_id, IloInt& length_tab);
 
 static IloInt search_vnode_class(IloInt&, IloInt&, VnodeReqAryType&, IloInt&);

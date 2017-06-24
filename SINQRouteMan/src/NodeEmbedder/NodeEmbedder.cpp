@@ -623,8 +623,13 @@ void  NodeEmbedder::substrate_node_cpu_constraint(IloInt& nbr_node, Virtual_Node
 
 IloInt NodeEmbedder::calculate_cost_potantial_emb_shortestpath(MetaSubPathAryType& emb_path_vect, IloInt& nb_path, IloInt& src, IloInt& dest,
 		IloInt& vnp_num, IloInt& bandwidth, IloInt& vlink, IloNumArray& link_cost_tab,
-		IloNumArray& cpu_unit_cost_tab, IloInt& s_cpu, IloInt& d_cpu, IloNumArray& ram_unit_cost_vect, IloInt& s_mem, IloInt& d_mem, IloNumArray& storage_unit_cost_vect, IloInt& s_sto, IloInt& d_sto, IloEnv& env_0)
+		IloNumArray& cpu_unit_cost_tab, IloInt& s_cpu, IloInt& d_cpu, IloEnv& env_0)
 {
+
+//IloInt NodeEmbedder::calculate_cost_potantial_emb_shortestpath(MetaSubPathAryType& emb_path_vect, IloInt& nb_path, IloInt& src, IloInt& dest,
+//		IloInt& vnp_num, IloInt& bandwidth, IloInt& vlink, IloNumArray& link_cost_tab,
+//		IloNumArray& cpu_unit_cost_tab, IloInt& s_cpu, IloInt& d_cpu, IloNumArray& ram_unit_cost_vect, IloInt& s_mem, IloInt& d_mem, IloNumArray& storage_unit_cost_vect, IloInt& s_sto, IloInt& d_sto, IloEnv& env_0)
+//{
 
 	IloInt emb_cost=0, src_request=0, dest_request=0, vlink_num=0, current_vnp=0, nb_hops=0;
 	IloInt k=0,l=0, current_arc=0, more_arc=0, path_cost=0, exit=0, length = MAX_SIZE;
@@ -663,15 +668,19 @@ IloInt NodeEmbedder::calculate_cost_potantial_emb_shortestpath(MetaSubPathAryTyp
 			k++;
 	}
 	IloInt srcCpuUnitCost = (IloInt) cpu_unit_cost_tab[src-1];
-	IloInt srcRamUnitCost = (IloInt) ram_unit_cost_vect[src-1];
-	IloInt srcStoUnitCost = (IloInt) storage_unit_cost_vect[src-1];
+	//IloInt srcRamUnitCost = (IloInt) ram_unit_cost_vect[src-1];
+	//IloInt srcStoUnitCost = (IloInt) storage_unit_cost_vect[src-1];
 
 	IloInt destCpuUnitCost = (IloInt) cpu_unit_cost_tab[dest-1];
-	IloInt destRamUnitCost = (IloInt) ram_unit_cost_vect[dest-1];
-	IloInt destStoUnitCost = (IloInt) storage_unit_cost_vect[dest-1];
+	//IloInt destRamUnitCost = (IloInt) ram_unit_cost_vect[dest-1];
+	//IloInt destStoUnitCost = (IloInt) storage_unit_cost_vect[dest-1];
 
-	IloInt srcNodeCost = srcCpuUnitCost* s_cpu + srcRamUnitCost* s_mem + srcStoUnitCost* s_sto;
-	IloInt destNodeCost = destCpuUnitCost* d_cpu + destRamUnitCost* d_mem + destStoUnitCost* d_sto;
+	//IloInt srcNodeCost = srcCpuUnitCost* s_cpu + srcRamUnitCost* s_mem + srcStoUnitCost* s_sto;
+	//IloInt destNodeCost = destCpuUnitCost* d_cpu + destRamUnitCost* d_mem + destStoUnitCost* d_sto;
+
+	//emb_cost =  srcNodeCost + destNodeCost + (bandwidth*path_cost);
+	IloInt srcNodeCost = srcCpuUnitCost* s_cpu ;
+	IloInt destNodeCost = destCpuUnitCost* d_cpu;
 
 	emb_cost =  srcNodeCost + destNodeCost + (bandwidth*path_cost);
 

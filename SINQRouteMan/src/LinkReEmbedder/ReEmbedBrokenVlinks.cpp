@@ -10,6 +10,14 @@
 char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
 
 	cout<<"\n\t *** Periodic Link Embedder ***"<<endl;
+
+	// Edge weights of the network topology graph used to calculate shortest paths
+	bool SL_COST_FOR_EDGE = false;	// IF true:  slink costs are set as priority values
+	// IF false: priority values are set as 1. After calculating min-hop shortest paths, cost of paths will be calculated by summing up link costs
+	// Note: This shows a difference in effectiveness of Eppstein shortest path algirithm for SHRD and SRLG approaches.
+	// TRUE:  SRLG-BKUP gives better shortest paths
+	// FALSE: SHRD-BKUP gives better shortest paths
+
 	// Files being read
 
 	int prevSubTslot = currSubTslot-1;
@@ -544,7 +552,7 @@ char* LinkEmbedder::reEmbedBrokenLinks(int currSubTslot){
 
 
 
-    	        	 shortest_path(false, Vect_Substrate_Graph, Path_Vect, src, dest, hops, request_id, vnp_id, virtual_link_id, COUNT_PATH, bkupBwUnitsReqAry, env);
+    	        	 shortest_path(false, SL_COST_FOR_EDGE, currSubTslot, Vect_Substrate_Graph, Path_Vect, src, dest, hops, request_id, vnp_id, virtual_link_id, COUNT_PATH, bkupBwUnitsReqAry, env);
     	        	 //cout<<"\t Next"<<endl;
     	          }
 
