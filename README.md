@@ -1,4 +1,9 @@
+SDN-Based Framework for Infrastructure as a Service Clouds, Published in 2016 IEEE 9th International Conference on Cloud Computing (CLOUD)
+Fault-tolerant IaaS management for networked cloud infrastructure with SDN, Published in 2017 IEEE International Conference on Communications (ICC)
+Survivable IaaS Management with SDN, Published in 2019 IEEE Transactions on Cloud Computing (Journal)
+
 # SINQRoute
+
 
 ##SINQRouteMan:
   C++ source code that has following components;
